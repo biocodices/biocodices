@@ -12,3 +12,6 @@ PCA:
         alpha: 1
         linewidth: 0.25
         zorder: 1
+
+assoc:
+    palette_name: 'Set1'

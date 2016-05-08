@@ -4,6 +4,7 @@ from os.path import expanduser, isfile, basename, dirname
 from analyzers.smart_pca import SmartPCA
 from analyzers.sklearn_pca import SklearnPCA
 from analyzers.admixture import Admixture
+from analyzers.association_test import AssociationTest
 from components.panel import Panel
 from components.sample_group import SampleGroup
 from helpers.plink import Plink
@@ -27,6 +28,11 @@ class Dataset:
     def genotypes(self):
         raise Exception('Not yet implemented')
 
+    def association_tests(self, model='allelic'):
+        assoc = AssociationTest(dataset=self)
+        assoc.run()
+        return assoc
+
     def pca(self, implementation='smartpca', overwrite=False,
             normalize=True, args={}):
         """
@@ -34,8 +40,6 @@ class Dataset:
         dataset. Returns a PCA object that responds to #results and #plot().
         """
         if implementation == 'smartpca':
-            #  if not isfile(self._filename('ped')):
-                #  self.plink.make_ped()
             pca = SmartPCA(dataset=self)
             pca.run(overwrite=overwrite, args=args)
             return pca
@@ -55,10 +59,6 @@ class Dataset:
         admixture = Admixture(self)
         admixture.run(Ks, cores, infer_components, overwrite)
         return admixture
-
-    def assoc(self):
-        self.plink.assoc(adjust=False)
-        return pd.read_table(self._filename('assoc'), sep='\s+')
 
     def _filename(self, extension):
         return '{}.{}'.format(self.path_label, extension)

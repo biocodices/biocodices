@@ -32,7 +32,13 @@ class Plink:
         options = '--assoc'
         if adjust:
             options += ' --adjust'
-        return self.run(options, make_bed=False)
+        outname = self.run(options, make_bed=False) + '.assoc'
+        if adjust:
+            outname += '.adjusted'
+        return outname
+
+    def model(self):
+        return self.run('--model') + '.model'
 
     def run(self, options, out=None, make_bed=True):
         if out is None:

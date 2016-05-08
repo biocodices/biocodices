@@ -5,6 +5,10 @@ import pandas as pd
 
 
 class PowerCalculator:
+    """
+    Visits 'http://pngu.mgh.harvard.edu/~purcell/cgi-bin/cc2k.cgi' to get the
+    number of cases needed for a case-control test. Checkout the parameters.
+    """
     def case_control_for_discrete_trait(self, high_risk_allele_freq,
             prevalence, rel_risk_Aa, rel_risk_AA, d_prime, marker_allele_freq,
             number_of_cases, case_control_ratio=1, unselected_controls=True,

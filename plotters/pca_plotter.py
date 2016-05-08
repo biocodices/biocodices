@@ -14,7 +14,7 @@ class PCAPlotter(BasePlotter):
         self.colors = Config('colors')  # FIXME use super()__init__()!
         self.base_dir = plots_dir  # FIXME should be in super too
         if plots_dir is None:
-            self.base_dir = self.pca.dataset.source.plots_dir
+            self.base_dir = self.pca.dataset.dir
         self.plot_settings = Config('plots')['PCA']
         self.explained_variance = self.pca.explained_variance
 
