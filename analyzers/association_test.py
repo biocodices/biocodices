@@ -14,6 +14,16 @@ class AssociationTest:
                                     self.dataset.label)
 
     def run(self):
+        """
+        Run a battery of association tests per SNP and store the output in
+        .result. FIXME: should be improved.
+        """
+        fn1 = self.dataset.plink.assoc(adjust=False)
+        df1 = pd.read_table(fn1, sep='\s+').set_index('SNP')
+        fn2 = self.dataset.plink.assoc(adjust=True)
+        df2 = pd.read_table(fn2, sep='\s+').set_index('SNP')
+
+        df = df1.join(df2, rsuffix='_dupe')
         fn1 = self.dataset.plink.assoc(adjust=False)
         df1 = pd.read_table(fn1, sep='\s+').set_index('SNP')
         fn2 = self.dataset.plink.assoc(adjust=True)
