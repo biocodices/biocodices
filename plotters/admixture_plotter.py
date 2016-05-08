@@ -14,11 +14,10 @@ class AdmixturePlotter:
         self.base_dir = plots_dir  # FIXME should be in super too
         if plots_dir is None:
             self.base_dir = self.admixture.dataset.source.plots_dir
-        self.plot_settings = Config('plots')['admixture']
 
     def draw_ax(self, ax, K_to_plot, population_means=False):
         ancestries = self.admixture.result[K_to_plot]
-        ancestries = self._reorder_samples_and_parse(ancestries)
+        #  ancestries = self._reorder_samples_and_parse(ancestries)
         if population_means:
             ancestries = ancestries.groupby(level='population').mean()
             population_order = self.plot_settings['population_order']
@@ -66,22 +65,22 @@ class AdmixturePlotter:
         ax.set_xticks(Ks)
         return ax
 
-    def _reorder_samples_and_parse(self, ancestries):
-        ancestries = ancestries.reset_index()
-        # Use the same sample order through plots once defined.
-        if not hasattr(self, 'plot_samples_order'):
-            if 'AMR' in ancestries.columns:
-                ancestries = ancestries.sort_values(['population', 'AMR'],
-                                                    ascending=False)
-            self.plot_samples_order = ancestries['sample']
-        ancestries = ancestries.set_index('sample')
-        ancestries = ancestries.loc[self.plot_samples_order]
-        ancestries = ancestries.reset_index()
-        ancestries = ancestries.drop(['region', 'family', 'sample'], axis=1)
-        ancestries = ancestries.set_index("population")
-        population_order = self.plot_settings['population_order']
-        ancestries = ancestries.loc[population_order].dropna()
-        return ancestries
+    #  def _reorder_samples_and_parse(self, ancestries):
+        #  ancestries = ancestries.reset_index()
+        #  # Use the same sample order through plots once defined.
+        #  if not hasattr(self, 'plot_samples_order'):
+            #  if 'AMR' in ancestries.columns:
+                #  ancestries = ancestries.sort_values(['population', 'AMR'],
+                                                    #  ascending=False)
+            #  self.plot_samples_order = ancestries['sample']
+        #  ancestries = ancestries.set_index('sample')
+        #  ancestries = ancestries.loc[self.plot_samples_order]
+        #  ancestries = ancestries.reset_index()
+        #  ancestries = ancestries.drop(['region', 'family', 'sample'], axis=1)
+        #  ancestries = ancestries.set_index("population")
+        #  population_order = self.plot_settings['population_order']
+        #  ancestries = ancestries.loc[population_order].dropna()
+        #  return ancestries
 
     def _generate_palette(self, ancestry_labels):
         defined_colors = Config('colors')
@@ -137,5 +136,5 @@ class AdmixturePlotter:
 
     def _make_title(self, K):
         dataset = self.admixture.dataset
-        return "{} - {} (K = {})".format(dataset.samplegroup.name,
-                                         dataset.panel.name, K)
+        return "{} - {} (K = {})".format(dataset.samplegroup.label,
+                                         dataset.panel.label, K)

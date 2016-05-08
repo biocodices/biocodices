@@ -52,7 +52,6 @@ class Dataset:
         instead of rerunning the analysis, to save time.
         Returns an admixture object that responds to #results and #plot().
         """
-        self.make_bed()
         admixture = Admixture(self)
         admixture.run(Ks, cores, infer_components, overwrite)
         return admixture
