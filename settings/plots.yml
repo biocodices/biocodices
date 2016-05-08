@@ -1,0 +1,14 @@
+PCA:
+    # Phenotypes:
+    1:
+        # marker: 'o'
+        markersize: 50
+        alpha: 1
+        linewidth: 0.25
+        zorder: 1
+    2:
+        # marker: 'D'
+        markersize: 30
+        alpha: 1
+        linewidth: 0.25
+        zorder: 1

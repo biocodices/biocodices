@@ -12,8 +12,11 @@ class Plink:
     def __repr__(self):
         return '<Plink for "{}">'.format(self.input_bfile)
 
-    def ped(self):
+    def make_ped(self):
         return self.run('--recode', make_bed=False) + '.ped'
+
+    def make_traw(self):
+        return self.run('--recode A-transpose', make_bed=False) + '.traw'
 
     def extract(self, snps_filename, out):
         return self.run('--extract {}'.format(snps_filename), out=out)
@@ -59,4 +62,3 @@ class Plink:
         subprocess.run(command.split(' '))
 
         return path_label
-

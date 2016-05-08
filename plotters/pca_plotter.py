@@ -1,7 +1,7 @@
 import seaborn as sns
 
 from plotters.base_plotter import BasePlotter
-from helpers.helpers import hide_spines_and_ticks
+from helpers.helpers import hide_spines_and_ticks, marker_from_sexcode
 from helpers.config import Config
 
 
@@ -28,12 +28,16 @@ class PCAPlotter(BasePlotter):
             raise ValueError(error_msg)
         selected_components = self.pca.result[components_to_plot]
 
-        grouped_results = selected_components.groupby(level='population')
-        for population, values in grouped_results:
-            kwargs = self._plot_kwargs(population)
-            x, y = components_to_plot
-            values.plot(kind='scatter', x=x, y=y, ax=ax, label=population,
-                        **kwargs)
+        by_phenotype = selected_components.groupby(level='phenotype')
+        for phenotype, df in by_phenotype:
+            color = self._new_color()
+            for sexcode, values in df.groupby(level='sexcode'):
+                marker = marker_from_sexcode(sexcode)
+                kwargs = self._plot_kwargs(phenotype)
+                x, y = components_to_plot
+                label = 'Phenotype {}'.format(phenotype)
+                values.plot(kind='scatter', x=x, y=y, ax=ax, label=label,
+                            marker=marker, color=color, **kwargs)
 
         # Set the axes labels
         xlabel_prefix = '-' if self.pca.inverted_x else ''
@@ -58,26 +62,24 @@ class PCAPlotter(BasePlotter):
 
         return ax
 
-    def _plot_kwargs(self, population):
-        primary = population in self.plot_settings['primary_populations']
-        importance = 'primary' if primary else 'secondary'
+    def _plot_kwargs(self, phenotype):
         kwargs = {
-            # Generate a new color for a population if there's no color defined
+            # Generate a new color for a phenotype if there's no color defined
             # in the settings yml.
-            'color': self.colors.get(population, self._new_color()),
-            'marker': self.plot_settings[importance]['marker'],
-            'lw': self.plot_settings[importance]['linewidth'],
-            'alpha': self.plot_settings[importance]['alpha'],
-            's': self.plot_settings[importance]['markersize'],
-            'zorder': self.plot_settings[importance]['zorder'],
+            # 'color': self.colors.get(phenotype, self._new_color()),
+            # 'marker': self.plot_settings[phenotype]['marker'],
+            'lw': self.plot_settings[phenotype]['linewidth'],
+            'alpha': self.plot_settings[phenotype]['alpha'],
+            's': self.plot_settings[phenotype]['markersize'],
+            'zorder': self.plot_settings[phenotype]['zorder'],
         }
         return kwargs
 
     def _new_color(self):
         if not hasattr(self, '_more_colors'):
             palette_name = self.colors['QualitativePalette']
-            populations = self.pca.result.index.get_level_values('population')
-            number_of_populations = len(populations.unique())
+            phenotypes = self.pca.result.index.get_level_values('phenotype')
+            number_of_phenotypes = len(phenotypes.unique())
             self._more_colors = sns.color_palette(palette_name,
-                                                  number_of_populations)
+                                                  number_of_phenotypes)
         return self._more_colors.pop(0)

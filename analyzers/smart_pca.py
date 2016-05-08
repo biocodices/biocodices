@@ -68,7 +68,7 @@ class SmartPCA(BasePCA):
         return args
 
     def _create_parameters_file(self):
-        parfile_path = join(self.dataset.bedfile + '.pca.par')
+        parfile_path = join(self.dataset.path_label + '.pca.par')
         with open(parfile_path, 'w+') as parfile:
             for argname, argvalue in self.args.items():
                 parfile.write('{}: {}\n'.format(argname, argvalue))
@@ -77,14 +77,14 @@ class SmartPCA(BasePCA):
     def _create_pedsnp(self):
         # .pedsnp format is exactly the same as .bim, but smartpca needs
         # the file to have that extension.
-        pedsnp_filepath = self.dataset.bedfile + '.pedsnp'
+        pedsnp_filepath = self.dataset.path_label + '.pedsnp'
         copyfile(self.dataset.bimfile, pedsnp_filepath)
         return pedsnp_filepath
 
     def _create_pedind(self):
         ped = pd.read_table(self.dataset.pedfile, header=None, sep='\s+')
         pedind = ped.ix[:, :6]  # .pedind = the first 6 columns of .ped
-        pedind_filepath = self.dataset.bedfile + '.pedind'
+        pedind_filepath = self.dataset.path_label + '.pedind'
         pedind.to_csv(pedind_filepath, sep=' ', header=False, index=False)
         return pedind_filepath
 
@@ -95,7 +95,7 @@ class SmartPCA(BasePCA):
         df.columns = ['PC{}'.format(column) for column in df.columns]
         df.index.name = 'sample'
         df = df.join(self.dataset.samplegroup.samples).reset_index()
-        df = df.set_index(['region', 'population', 'family', 'sample'])
+        df = df.set_index(['phenotype', 'sexcode', 'sample'])
         df = df.sort_index()
         return df
 

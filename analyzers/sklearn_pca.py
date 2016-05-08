@@ -12,9 +12,7 @@ class SklearnPCA(BasePCA):
     def run(self, normalize=True):
         """
         Receive a dataset with genotypes. The genotypes should be a DataFrame
-        which index should at least have "sample" IDs (e.g. HG00096 ...) and
-        ideally would also be a MultiIndex with "population" and
-        "superpopulation" levels.
+        which index should at least have "sample" IDs (e.g. HG00096 ...).
 
         Return:
         - a PCA object that responds to 'result' and 'explained_variance'
@@ -24,12 +22,16 @@ class SklearnPCA(BasePCA):
             per eigenvector.
 
         """
-        genotypes = self.dataset.genotypes()
+        genotypes = self.dataset.genotypes.ix[:, 5:]
+        # ^ Hacky way to avoid sample info and keep allele-dosage columns
         if normalize:
             genotypes = genotypes.apply(self._normalize)
 
         # Leave only SNPs with genotype defined at every sample
         genotypes.dropna(axis=1, inplace=True)
+        if len(genotypes.columns) == 0:
+            msg = 'No SNPs left after dropping the ones with missing values.'
+            raise Exception(msg)
 
         components_to_take = 15
         sklearn_pca = sklearn.decomposition.PCA()
