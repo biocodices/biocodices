@@ -5,6 +5,7 @@ from analyzers.smart_pca import SmartPCA
 from analyzers.sklearn_pca import SklearnPCA
 from analyzers.admixture import Admixture
 from analyzers.association_test import AssociationTest
+from analyzers.quality_control import QualityControl
 from components.panel import Panel
 from components.sample_group import SampleGroup
 from helpers.plink import Plink
@@ -28,7 +29,20 @@ class Dataset:
     def genotypes(self):
         raise Exception('Not yet implemented')
 
-    def association_tests(self, model='allelic'):
+    def quality_control(self):
+        """
+        Run a battery of quality control tests and store the output in a
+        QualityControl object that responds to #result and #plot().
+        """
+        quali = QualityControl(dataset=self)
+        quali.run()
+        return quali
+
+    def association_tests(self):
+        """
+        Run a battery of association tests per SNP and store the output in
+        an AssociationTest object that responds to #result and #plot().
+        """
         assoc = AssociationTest(dataset=self)
         assoc.run()
         return assoc
@@ -37,7 +51,7 @@ class Dataset:
             normalize=True, args={}):
         """
         Computes a Principal Components Analysis with the genotypes in this
-        dataset. Returns a PCA object that responds to #results and #plot().
+        dataset. Returns a PCA object that responds to #result and #plot().
         """
         if implementation == 'smartpca':
             pca = SmartPCA(dataset=self)
@@ -54,7 +68,7 @@ class Dataset:
         CPU cores for admixture to use. Set 'overwrite=True' to make it ignore
         existing results files if it finds them; otherwise, it will read them
         instead of rerunning the analysis, to save time.
-        Returns an admixture object that responds to #results and #plot().
+        Returns an admixture object that responds to #result and #plot().
         """
         admixture = Admixture(self)
         admixture.run(Ks, cores, infer_components, overwrite)

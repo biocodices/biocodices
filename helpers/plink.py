@@ -60,10 +60,10 @@ class Plink:
         with open(out_label + '.log', 'r') as logfile:
             # Take the last lines from the logfile:
             lines = [line.strip() for line in logfile.readlines()][-4:]
-        pattern = r'({}.*)\b'.format(out_label)
+        pattern = r'({}.*?)(\s|$)'.format(out_label)
         matches = [re.search(pattern, line) for line in lines]
         # Assuming a single match for the filepath in the last lines of the log
-        return [match for match in matches if match][0].group(0)
+        return [match for match in matches if match][0].group(0).strip()
 
     @staticmethod
     def execute(command):
