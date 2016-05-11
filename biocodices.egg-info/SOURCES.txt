@@ -1,0 +1,9 @@
+setup.py
+biocodices/__init__.py
+biocodices/biocodices.py
+biocodices/power_calculator.py
+biocodices.egg-info/PKG-INFO
+biocodices.egg-info/SOURCES.txt
+biocodices.egg-info/dependency_links.txt
+biocodices.egg-info/not-zip-safe
+biocodices.egg-info/top_level.txt
