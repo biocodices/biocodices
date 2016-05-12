@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from plotters.association_test_plotter import AssociationTestPlotter
+from biocodices.plotters.association_test_plotter import AssociationTestPlotter
 
 
 class AssociationTest:

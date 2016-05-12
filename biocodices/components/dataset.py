@@ -1,13 +1,13 @@
 import pandas as pd
 from os.path import expanduser, isfile, basename, dirname
 
-from analyzers.smart_pca import SmartPCA
-from analyzers.sklearn_pca import SklearnPCA
-from analyzers.admixture import Admixture
-from analyzers.association_test import AssociationTest
-from components.panel import Panel
-from components.sample_group import SampleGroup
-from helpers.plink import Plink
+from biocodices.analyzers.smart_pca import SmartPCA
+from biocodices.analyzers.sklearn_pca import SklearnPCA
+from biocodices.analyzers.admixture import Admixture
+from biocodices.analyzers.association_test import AssociationTest
+from .panel import Panel
+from .sample_group import SampleGroup
+from biocodices.helpers.plink import Plink
 
 
 class Dataset:

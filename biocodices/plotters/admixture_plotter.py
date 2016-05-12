@@ -1,7 +1,7 @@
 import seaborn as sns
 import ternary
-from helpers.config import Config
-from helpers.helpers import hide_spines_and_ticks
+from biocodices.helpers.config import Config
+from biocodices.helpers.helpers import hide_spines_and_ticks
 
 
 class AdmixturePlotter:

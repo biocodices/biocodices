@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 
 from os import chdir, getcwd
 from os.path import expanduser, isfile
-from plotters.admixture_plotter import AdmixturePlotter
-from helpers.config import Config
+from biocodices.plotters.admixture_plotter import AdmixturePlotter
+from biocodices.helpers.config import Config
 
 
 class Admixture:

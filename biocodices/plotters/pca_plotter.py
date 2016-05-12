@@ -1,8 +1,8 @@
 import seaborn as sns
 
-from plotters.base_plotter import BasePlotter
-from helpers.helpers import hide_spines_and_ticks, marker_from_sexcode
-from helpers.config import Config
+from biocodices.plotters.base_plotter import BasePlotter
+from biocodices.helpers.helpers import hide_spines_and_ticks, marker_from_sexcode
+from biocodices.helpers.config import Config
 
 
 class PCAPlotter(BasePlotter):

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 #  import numpy as np
 #  from math import sin, cos, degrees
-from plotters.pca_plotter import PCAPlotter
+from biocodices.plotters.pca_plotter import PCAPlotter
 #  from helpers.config import Config
 
 

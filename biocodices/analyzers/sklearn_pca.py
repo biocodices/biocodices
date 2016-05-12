@@ -1,8 +1,8 @@
 import sklearn.decomposition
 from math import sqrt
 from pandas import DataFrame
-from analyzers.base_pca import BasePCA
-from helpers.helpers import percentage_fmt
+from biocodices.analyzers.base_pca import BasePCA
+from biocodices.helpers.helpers import percentage_fmt
 
 
 class SklearnPCA(BasePCA):
