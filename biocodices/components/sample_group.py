@@ -1,7 +1,7 @@
 import pandas as pd
 
 # from helpers.config import Config
-from helpers.plink import Plink
+from biocodices.helpers.plink import Plink
 
 
 class SampleGroup:

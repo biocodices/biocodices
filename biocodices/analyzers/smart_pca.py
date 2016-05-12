@@ -4,9 +4,9 @@ import subprocess
 from os.path import expanduser, join, isfile, getsize
 from shutil import copyfile
 
-from analyzers.base_pca import BasePCA
-from helpers.helpers import percentage_fmt
-from helpers.config import Config
+from .base_pca import BasePCA
+from biocodices.helpers.helpers import percentage_fmt
+from biocodices.helpers.config import Config
 
 
 class SmartPCA(BasePCA):

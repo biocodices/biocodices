@@ -2,8 +2,8 @@ import pandas as pd
 
 from os.path import basename
 
-from helpers.plink import Plink
-from helpers.config import Config
+from biocodices.helpers.plink import Plink
+from biocodices.helpers.config import Config
 
 
 class Panel:
