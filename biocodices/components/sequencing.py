@@ -10,7 +10,7 @@ class Sequencing:
         """
         A sequencing object expects the path to a directory that will have
         'data' and 'results' subdirectories. Samples will be looked for in the
-        results dir.
+        data dir.
         """
         self.dir = normpath(expanduser(directory))
         self.id = basename(self.dir)
@@ -22,7 +22,7 @@ class Sequencing:
         return tmpl.format(self.id, len(self.samples()))
 
     def samples(self):
-        glob_expr = join(self.results_dir, '*.{}'.format(Sample.reads_format))
+        glob_expr = join(self.data_dir, '*.{}'.format(Sample.reads_format))
         all_reads_filenames = sorted(glob(glob_expr))
         sample_ids = [re.search(r'(.*).R1', basename(reads_fn)).groups(1)[0]
                       for reads_fn in all_reads_filenames

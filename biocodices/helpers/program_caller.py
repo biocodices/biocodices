@@ -14,8 +14,14 @@ class ProgramCaller:
             self._write_command(log_file)
 
         with open(self.log_filepath, 'a+') as log_file:
-            self.proc = subprocess.run(self.command.split(' '), stdout=log_file,
-                                       stderr=subprocess.STDOUT)
+            try:
+                self.proc = subprocess.run(self.command.split(' '),
+                                           stdout=log_file,
+                                           stderr=subprocess.STDOUT,
+                                           check=True)
+            except subprocess.CalledProcessError as error:
+                print('This command failed:\n{}'.format(self.command))
+                raise(error)
             self.t2 = datetime.now()
             self._write_timestamp(log_file)
         return self.proc
