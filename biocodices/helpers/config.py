@@ -4,7 +4,10 @@ from os.path import join, expanduser
 
 
 class Config:
-    BASE_DIR = expanduser('~/biocodices/settings')
-
     def __new__(self, config_label):
-        return yaml.load(open(join(self.BASE_DIR, config_label + '.yml')))
+        """
+        Expects a ~/.biocodices dir with yml config files in it.
+        Call directly Config('<config_label'>) to get a dictionary with settings
+        """
+        self.base_dir = expanduser('~/.biocodices')
+        return yaml.load(open(join(self.base_dir, config_label + '.yml')))

@@ -10,7 +10,7 @@ from biocodices.helpers.config import Config
 
 
 class SmartPCA(BasePCA):
-    _EXECUTABLE = expanduser(Config('executables')['smartpca'])
+    _EXECUTABLE = Config('executables')['smartpca']
 
     def __init__(self, dataset):
         self.dataset = dataset
