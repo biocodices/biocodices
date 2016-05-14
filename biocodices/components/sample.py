@@ -2,7 +2,7 @@
 from os import makedirs
 from os.path import isdir, join, isfile
 
-from variant_calling.reads_munger import ReadsMunger
+from biocodices.variant_calling.reads_munger import ReadsMunger
 
 
 class Sample:

@@ -1,5 +1,4 @@
 import yaml
-
 from os.path import join, expanduser
 
 

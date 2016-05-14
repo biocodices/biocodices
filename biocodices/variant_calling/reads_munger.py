@@ -1,7 +1,7 @@
 from os.path import join, basename
 
-from helpers.config import Config
-from helpers.program_caller import ProgramCaller
+from biocodices.helpers.config import Config
+from biocodices.helpers.program_caller import ProgramCaller
 
 
 class ReadsMunger:
