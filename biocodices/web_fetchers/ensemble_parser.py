@@ -24,7 +24,6 @@ class EnsembleParser:
                 # ClinVar via Ensemble doesn't include publication info
                 continue
 
-            print(study)
             publication = {
                 'genes': study['genes'],
                 'pvalue': study['pvalue'],
