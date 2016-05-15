@@ -26,7 +26,7 @@ class EnsembleParser:
 
             publication = {
                 'genes': study['genes'],
-                'pvalue': study['pvalue'],
+                'pvalue': study.get('pvalue'),
                 'trait': study['trait'],
             }
             if 'study' in study:

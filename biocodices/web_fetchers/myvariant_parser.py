@@ -31,8 +31,6 @@ class MyvariantParser:
                 'phenotype': ''.join(pub['phenotype']),
                 # ^ applies to str and lists
                 'date': pub['date_pub'],
-                'note': '',
-                'review': '',
             })
 
         return publications
