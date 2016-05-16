@@ -58,6 +58,5 @@ class Sample:
     def _log_total_time(self, t1, t2):
         timedelta = (t2 - t1).seconds
         with open(self.log('time'), 'w') as logfile:
-            msg = 'Variant calling took {} seconds.\n'.format(timedelta)
-            logfile.write(msg)
-
+            msg = 'Variant calling for {} took {} seconds.\n'
+            logfile.write(msg.format(self.id, timedelta))
