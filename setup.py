@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(name='biocodices',
@@ -7,5 +7,5 @@ setup(name='biocodices',
       url='http://github.com/biocodices/biocodices',
       author='Juan Manuel Berros',
       license='MIT',
-      packages=['biocodices'],
+      packages=find_packages(),
       zip_safe=False)
