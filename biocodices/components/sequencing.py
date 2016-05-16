@@ -9,8 +9,8 @@ class Sequencing:
     def __init__(self, directory):
         """
         A sequencing object expects the path to a directory that will have
-        'data' and 'results' subdirectories. Samples will be looked for in the
-        data dir.
+        'data' and 'results' subdirectories. fastq files from samples will be
+        looked for in the 'data' subdir.
         """
         self.dir = normpath(expanduser(directory))
         self.id = basename(self.dir)

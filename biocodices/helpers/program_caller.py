@@ -27,12 +27,12 @@ class ProgramCaller:
         return self.proc
 
     def _write_command(self, file_handle):
-        tmpl = 'Started at {}:\n{}\n---\n\n'
+        tmpl = 'Started at {}\n{}\n---\n\n'
         file_handle.write(tmpl.format(self._timestamp(), self.command))
 
     def _write_timestamp(self, file_handle):
         elapsed = (self.t2 - self.t1).seconds
-        tmpl = '\n---\nFinished at {}.\nTook {} seconds.\n'
+        tmpl = '\n---\nFinished at {}\nTook {} seconds.\n'
         file_handle.write(tmpl.format(self._timestamp(), elapsed))
 
     def _timestamp(self):

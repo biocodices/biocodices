@@ -1,4 +1,5 @@
 # import pandas as pd
+from datetime import datetime
 from os import makedirs
 from os.path import isdir, join, isfile
 
@@ -23,21 +24,23 @@ class Sample:
         if not isdir(self.results_dir):
             makedirs(self.results_dir, exist_ok=True)
 
+    def __repr__(self):
+        return '<Sample {} from {}>'.format(self.id, self.sequencing.id)
+
     def call_variants(self):
-        reads_munger = ReadsMunger(self.results_dir)
+        t1 = datetime.now()
+        munger = ReadsMunger(self.results_dir)
         for reads_filepath in self.files['reads']:
-            reads_munger.analyze_reads(reads_filepath, self.log('fastqc'))
-        trimmed_reads = self.trim_adapters(self.files['reads'],
-                                           self.log('fastq-mcf'))
-        reads_munger.analyze_reads(trimmed_reads, self.log('trimmed.fastqc'))
-        self.files['trimmed_reads'] = trimmed_reads
+            munger.analyze_reads(reads_filepath)
+        self.files['trimmed_reads'] = munger.trim_adapters(self.files['reads'])
+        for trimmed_filepath in self.files['trimmed_reads']:
+            munger.analyze_reads(trimmed_filepath)
 
         #  self.align_to_reference(self.files['trimmed_reads'])
 
         #  self.variant_call()
-
-    def __repr__(self):
-        return '<Sample {} from {}>'.format(self.id, self.sequencing.id)
+        t2 = datetime.now()
+        self._log_total_time(t1, t2)
 
     def _reads_filepaths(self):
         read_filepath = join(self.sequencing.data_dir, '{}.R1.{}')
@@ -52,3 +55,10 @@ class Sample:
 
     def log(self, extension):
         return join(self.results_dir, '{}.{}.log'.format(self.id, extension))
+
+    def _log_total_time(self, t1, t2):
+        timedelta = (t2 - t1).seconds
+        with open(self.log('time'), 'w') as logfile:
+            msg = 'Variant calling took {} seconds.\n'.format(timedelta)
+            logfile.write(msg)
+

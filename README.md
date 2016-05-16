@@ -11,6 +11,15 @@ Get these programs and install them:
 * SmartPCA (EIGENSOFT): http://www.hsph.harvard.edu/alkes-price/software/
 * Admixture: https://www.genetics.ucla.edu/software/admixture/download.html
 
+```
+# Ptyhon ternary for triangle plots
+conda config --add channels conda-forge
+conda install python-ternary
+
+# Client for MyVariant.info
+pip install myvariant
+```
+
 Create the settings file `~/.biocodices/executables.yml` with paths to every executable. This is mine, for instance:
 ```
 admixture: /home/juan/software/admixture_linux-1.3.0/admixture
@@ -23,6 +32,14 @@ gatk: java -jar /home/juan/software/GenomeAnalysisTK/GenomeAnalysisTK.jar
 vcftools: /usr/local/bin/vcftools
 picard-tools: java -jar /home/juan/software/picard-tools-2.2.4/picard.jar
 ```
+
+Create a `~/.biocodices/resources.yml` file. Mine looks like this:
+```
+
+```
+
+
+
 
 # Recipes
 ## The Sequencing object and its Samples
