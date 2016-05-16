@@ -29,14 +29,13 @@ class Sample:
 
     def call_variants(self):
         t1 = datetime.now()
-        munger = ReadsMunger(self.results_dir)
+        munger = ReadsMunger(self.id, self.results_dir)
         for reads_filepath in self.files['reads']:
             munger.analyze_reads(reads_filepath)
         self.files['trimmed_reads'] = munger.trim_adapters(self.files['reads'])
         for trimmed_filepath in self.files['trimmed_reads']:
             munger.analyze_reads(trimmed_filepath)
-
-        #  self.align_to_reference(self.files['trimmed_reads'])
+        munger.align_to_reference(self.files['trimmed_reads'])
 
         #  self.variant_call()
         t2 = datetime.now()
