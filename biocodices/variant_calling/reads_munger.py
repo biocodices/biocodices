@@ -1,6 +1,7 @@
 from os.path import join, basename
 
 from biocodices.helpers.config import Config
+from biocodices.helpers.resource import Resource
 from biocodices.helpers.program_caller import ProgramCaller
 
 
@@ -33,7 +34,7 @@ class ReadsMunger:
                                           *trimmed_reads_filepaths)
         for k, v in Config('parameters')['fastq-mcf'].items():
             command += ' -{}{}'.format(k, v)
-        adapters_file = Config('resources')['illumina_adapters_file']
+        adapters_file = Resource('illumina_adapters_file')
         command += ' {} {} {}'.format(adapters_file, *reads_filepaths)
 
         log_filepath = self._log_filepath('fastq-mcf')

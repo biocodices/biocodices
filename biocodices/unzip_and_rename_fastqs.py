@@ -16,6 +16,7 @@ def main(data_dir):
     gzipped_fastq_glob = join(data_dir, '*.fastq.gz')
     gzipped_fastq_filepaths = glob(gzipped_fastq_glob)
 
+    print('Copying and renaming {} files..'.format(len(gzipped_fastq_filepaths)))
     for fp in gzipped_fastq_filepaths:
         # Copy original files to archive directory
         original_files_dir = join(data_dir, 'zipped_fastqs')
@@ -31,10 +32,13 @@ def main(data_dir):
             new_fp = join(data_dir, 'ENPv1_{}.{}.fastq.gz'.format(sample_id, read))
         rename(fp, new_fp)
 
-    # Unzip
+    print('Unzipping!')
     for fp in glob(join(data_dir, "*.fastq.gz")):  # Get the renamed filepaths
         command = 'gzip -d {}'.format(fp)
+        print(command)
         subprocess.run(command.split(' '), check=True)
+
+    print('\n=> Done. Go check {}'.format(data_dir))
 
 
 if __name__ == '__main__':
