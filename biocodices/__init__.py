@@ -1,3 +1,5 @@
+from os.path import expanduser
+
 from .components.sequencing import Sequencing
 from .components.sample import Sample
 from .components.dataset import Dataset

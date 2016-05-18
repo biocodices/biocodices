@@ -9,13 +9,12 @@ class ReadsMunger:
     def __init__(self, sample_id, results_dir):
         self.sample_id = sample_id
         self.results_dir = results_dir
-        self.fastq_executable = Config('executables')['fastqc']
-        self.fastq_mcf_executable = Config('executables')['fastq-mcf']
-        self.aligner_executable = Config('executables')['bwa']
+        self.executables = Config('executables')
+        self.params = Config('parameters')
 
     def analyze_reads(self, reads_filepath):
-        command = '{} {} -o {}'.format(self.fastq_executable, reads_filepath,
-                                       self.results_dir)
+        command = '{} {} -o {}'.format(self.executables['fastqc'],
+                                       reads_filepath, self.results_dir)
         log_filepath = self._log_filepath('fastqc')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
@@ -30,9 +29,9 @@ class ReadsMunger:
             new_filepath = join(self.results_dir, new_fn)
             trimmed_reads_filepaths.append(new_filepath)
 
-        command = '{} -o {} -o {}'.format(self.fastq_mcf_executable,
+        command = '{} -o {} -o {}'.format(self.executables['fastq-mcf'],
                                           *trimmed_reads_filepaths)
-        for k, v in Config('parameters')['fastq-mcf'].items():
+        for k, v in self.params['fastq-mcf'].items():
             command += ' -{}{}'.format(k, v)
         adapters_file = Resource('illumina_adapters_file')
         command += ' {} {} {}'.format(adapters_file, *reads_filepaths)
@@ -47,15 +46,26 @@ class ReadsMunger:
         Expects a list of two files: forward and reverse reads of the same
         sample. It will search for a reference genome defined by Config.
         """
-        params_dict = Config('parameters')['bwa']
+        params_dict = self.params['bwa']
         params = ['-{} {}'.format(k, v) for k, v in params_dict.items()]
-        command = '{} {} {} {}'.format(self.aligner_executable,
+        command = '{} {} {} {}'.format(self.executables['bwa'],
                                        ' '.join(params), *reads_filepaths)
         # redirect stdout to samfile and stderr  to logfile
         log_filepath = self._log_filepath('bwa')
         sam_filepath = join(self.results_dir, self.sample_id + '.sam')
         ProgramCaller(command).run(stdout_sink=sam_filepath,
                                    log_filepath=log_filepath)
+
+    def read_groups(self, sample):
+        params = self.params['AddOrReplaceReadGroups']
+        params = params.format(**{
+            'sample_id': sample.id,
+            'library_id': library_id,
+            'ngs_id': sample.sequencing.id,
+            'sam_filepath': sam_filepath,
+            'bam_filepath': bam_filepath,
+        })
+        command = '{} '.format()
 
     def _log_filepath(self, label):
         return join(self.results_dir, label + '.log')

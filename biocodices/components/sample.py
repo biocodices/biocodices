@@ -1,4 +1,4 @@
-# import pandas as pd
+import logging
 from datetime import datetime
 from os import makedirs
 from os.path import isdir, join, isfile
@@ -11,7 +11,7 @@ class Sample:
 
     def __init__(self, sample_id, sequencing):
         """
-        This class expects a sample_id and a Sequencing object.
+        Expects a sample_id and a Sequencing object.
         It will look for its fastq files in the sequencing.data_dir with
         filenames like: <sample_id>.R1.fastq, <sample_id>.R2.fastq
         (for the forward and reverse reads, respectively).
@@ -21,20 +21,29 @@ class Sample:
         self.results_dir = join(self.sequencing.results_dir, self.id)
         self.files = {}
         self.files['reads'] = self._reads_filepaths()
-        if not isdir(self.results_dir):
-            makedirs(self.results_dir, exist_ok=True)
 
     def __repr__(self):
         return '<Sample {} from {}>'.format(self.id, self.sequencing.id)
 
     def call_variants(self):
+        if not isdir(self.results_dir):
+            makedirs(self.results_dir, exist_ok=True)
+
         t1 = datetime.now()
         munger = ReadsMunger(self.id, self.results_dir)
+
+        logging.info('[{}] Analyzing reads.'.format(self.id))
         for reads_filepath in self.files['reads']:
             munger.analyze_reads(reads_filepath)
+
+        logging.info('[{}] Trimming reads.'.format(self.id))
         self.files['trimmed_reads'] = munger.trim_adapters(self.files['reads'])
+
+        logging.info('[{}] Analyzing trimmed reads.'.format(self.id))
         for trimmed_filepath in self.files['trimmed_reads']:
             munger.analyze_reads(trimmed_filepath)
+
+        logging.info('[{}] Aligning reads to reference.'.format(self.id))
         munger.align_to_reference(self.files['trimmed_reads'])
 
         #  self.variant_call()

@@ -16,12 +16,12 @@ Get these programs and install them:
 conda config --add channels conda-forge
 conda install python-ternary
 
-# Client for MyVariant.info
 pip install myvariant
+pip install multiqc
 ```
 
 Create the settings file `~/.biocodices/executables.yml` with paths to every executable. This is mine, for instance:
-```
+```yaml
 admixture: /home/juan/software/admixture_linux-1.3.0/admixture
 smartpca: /home/juan/software/eigensoft6/src/eigensrc/smartpca
 fastqc: /home/juan/software/FastQC/fastqc
@@ -33,13 +33,27 @@ vcftools: /usr/local/bin/vcftools
 picard-tools: java -jar /home/juan/software/picard-tools-2.2.4/picard.jar
 ```
 
-Create a `~/.biocodices/resources.yml` file. Mine looks like this:
+Create a `~/.biocodices/resources.yml` file where you will specify a base
+directory for some resources and the filenames they have inside that directory. Mine looks like this:
+```yaml
+base_dir: /home/juan/biocodices/resources
+illumina_adapters_file: illumina_adapters.fasta
+gwas_catalog_v1.0.1: &gwas_catalog_default gwas_catalog_v1.0-associations_e84_r2016-05-08.tsv
+gwas_catalog: *gwas_catalog_default
+clinvar:
+    disease_names: clinvar_disease_names
+    variants:
+        GRCh37: clinvar_20160502_GRCh37.vcf
+        GRCh38: clinvar_20160502_GRCh38.vcf
 ```
 
-```
+You need to download some resources from the web.
 
+* Browse GATK bundle ftp servers to get the reference genome. For the GRCh37
+    version, this was the command I run: `wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/b37/human_g1k_v37.fasta.gz`. Warning: the decompressed file will weight ~3Gb.
+    - After getting the reference genome, unzip it (`gunzip -d human_g1k_v37.fasta.gz`) and run `bwa index -a bwtsw human_g1k_v37.fasta` to create the index files that bwa will need.
 
-
+* A file with the adapters to trim from your reads.
 
 # Recipes
 ## The Sequencing object and its Samples
