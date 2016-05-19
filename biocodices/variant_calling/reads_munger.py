@@ -6,11 +6,14 @@ from biocodices.helpers.program_caller import ProgramCaller
 
 
 class ReadsMunger:
-    def __init__(self, sample_id, results_dir):
-        self.sample_id = sample_id
+    def __init__(self, sample, results_dir):
+        self.sample = sample
         self.results_dir = results_dir
         self.executables = Config('executables')
         self.params = Config('parameters')
+
+    def __repr__(self):
+        return '<{} for {}>'.format(self.__class__.__name__, self.sample.id)
 
     def analyze_reads(self, reads_filepath):
         command = '{} {} -o {}'.format(self.executables['fastqc'],
@@ -55,7 +58,7 @@ class ReadsMunger:
                                        *reads_filepaths)
         # redirect stdout to samfile and stderr  to logfile
         log_filepath = self._log_filepath('bwa')
-        sam_filepath = join(self.results_dir, self.sample_id + '.sam')
+        sam_filepath = join(self.results_dir, self.sample.id + '.sam')
         ProgramCaller(command).run(stdout_sink=sam_filepath,
                                    log_filepath=log_filepath)
 

@@ -19,6 +19,7 @@ class Sample:
         self.id = sample_id
         self.sequencing = sequencing
         self.results_dir = join(self.sequencing.results_dir, self.id)
+        self.reads_munger = ReadsMunger(self, self.results_dir)
 
     def __repr__(self):
         return '<Sample {} from {}>'.format(self.id, self.sequencing.id)
@@ -28,20 +29,19 @@ class Sample:
             makedirs(self.results_dir, exist_ok=True)
 
         t1 = datetime.now()
-        munger = ReadsMunger(self.id, self.results_dir)
 
         #  for reads_filepath in self._files('fastq'):
-            #  munger.analyze_reads(reads_filepath)
+            #  self.reads_munger.analyze_reads(reads_filepath)
 
-        munger.trim_adapters(self._files('fastq'))
+        self.reads_munger.trim_adapters(self._files('fastq'))
         #  for trimmed_filepath in self._files('trimmed.fastq'):
-            #  munger.analyze_reads(trimmed_filepath)
+            #  self.reads_munger.analyze_reads(trimmed_filepath)
 
         # TODO: implement this
-        # munger.multiqc(self._files('fastq') + self._files('trimmed.fastq'))
+        # self.reads_munger.multiqc(self._files('fastq') + self._files('trimmed.fastq'))
 
-        munger.align_to_reference(self._files('trimmed.fastq'))
-        munger.add_or_replace_read_groups(self)
+        self.reads_munger.align_to_reference(self._files('trimmed.fastq'))
+        self.reads_munger.add_or_replace_read_groups(self)
         # TODO: delete the bamfile
 
         #  self.variant_call()
