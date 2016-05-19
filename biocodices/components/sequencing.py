@@ -16,6 +16,7 @@ class Sequencing:
         self.id = basename(self.dir)
         self.data_dir = join(self.dir, 'data')
         self.results_dir = join(self.dir, 'results')
+        self.library_id = 'ENPv1_LIB_00001'  ## FIXME: ! Check this!!!!
 
     def __repr__(self):
         tmpl = '<Sequencing {} with {} samples>'

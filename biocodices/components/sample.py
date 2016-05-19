@@ -19,8 +19,6 @@ class Sample:
         self.id = sample_id
         self.sequencing = sequencing
         self.results_dir = join(self.sequencing.results_dir, self.id)
-        self.files = {}
-        self.files['reads'] = self._reads_filepaths()
 
     def __repr__(self):
         return '<Sample {} from {}>'.format(self.id, self.sequencing.id)
@@ -32,34 +30,23 @@ class Sample:
         t1 = datetime.now()
         munger = ReadsMunger(self.id, self.results_dir)
 
-        logging.info('[{}] Analyzing reads.'.format(self.id))
-        for reads_filepath in self.files['reads']:
-            munger.analyze_reads(reads_filepath)
+        #  for reads_filepath in self._files('fastq'):
+            #  munger.analyze_reads(reads_filepath)
 
-        logging.info('[{}] Trimming reads.'.format(self.id))
-        self.files['trimmed_reads'] = munger.trim_adapters(self.files['reads'])
+        munger.trim_adapters(self._files('fastq'))
+        #  for trimmed_filepath in self._files('trimmed.fastq'):
+            #  munger.analyze_reads(trimmed_filepath)
 
-        logging.info('[{}] Analyzing trimmed reads.'.format(self.id))
-        for trimmed_filepath in self.files['trimmed_reads']:
-            munger.analyze_reads(trimmed_filepath)
+        # TODO: implement this
+        # munger.multiqc(self._files('fastq') + self._files('trimmed.fastq'))
 
-        logging.info('[{}] Aligning reads to reference.'.format(self.id))
-        munger.align_to_reference(self.files['trimmed_reads'])
+        munger.align_to_reference(self._files('trimmed.fastq'))
+        munger.add_or_replace_read_groups(self)
+        # TODO: delete the bamfile
 
         #  self.variant_call()
         t2 = datetime.now()
         self._log_total_time(t1, t2)
-
-    def _reads_filepaths(self):
-        read_filepath = join(self.sequencing.data_dir, '{}.R1.{}')
-        forward_filepath = read_filepath.format(self.id,
-                                                self.__class__.reads_format)
-        reverse_filepath = forward_filepath.replace('R1', 'R2')
-        if not isfile(forward_filepath) or not isfile(reverse_filepath):
-            msg = "I couldn't find both R1 and R2 reads: {}, {}"
-            raise OSError(msg.format(forward_filepath, reverse_filepath))
-
-        return forward_filepath, reverse_filepath
 
     def log(self, extension):
         return join(self.results_dir, '{}.{}.log'.format(self.id, extension))
@@ -69,3 +56,25 @@ class Sample:
         with open(self.log('time'), 'w') as logfile:
             msg = 'Variant calling for {} took {} seconds.\n'
             logfile.write(msg.format(self.id, timedelta))
+
+    def _files(self, ext):
+        if ext in ['fastq', 'trimmed.fastq']:
+            setattr(self, ext, self._reads_files(ext))
+            return getattr(self, ext)
+
+        filepath = '{}.{}'.format(join(self.results_dir, self.id), ext)
+        setattr(self, ext, filepath)
+        return getattr(self, ext)
+
+    def _reads_files(self, ext):
+        location = self.sequencing.data_dir
+        if ext == 'trimmed.fastq':
+            location = self.results_dir
+        read_filepath = join(location, '{}.{}.{}')
+        forward_filepath = read_filepath.format(self.id, 'R1', ext)
+        reverse_filepath = read_filepath.format(self.id, 'R2', ext)
+        if not isfile(forward_filepath) or not isfile(reverse_filepath):
+            msg = "I couldn't find BOTH R1 and R2 reads: {}, {}"
+            raise OSError(msg.format(forward_filepath, reverse_filepath))
+
+        return forward_filepath, reverse_filepath

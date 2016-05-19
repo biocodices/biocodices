@@ -48,24 +48,30 @@ class ReadsMunger:
         """
         params_dict = self.params['bwa']
         params = ['-{} {}'.format(k, v) for k, v in params_dict.items()]
-        command = '{} {} {} {}'.format(self.executables['bwa'],
-                                       ' '.join(params), *reads_filepaths)
+        params_str = ' '.join(params).format(**{
+            'reference_genome': Resource('reference_genome')
+        })
+        command = '{} {} {} {}'.format(self.executables['bwa'], params_str,
+                                       *reads_filepaths)
         # redirect stdout to samfile and stderr  to logfile
         log_filepath = self._log_filepath('bwa')
         sam_filepath = join(self.results_dir, self.sample_id + '.sam')
         ProgramCaller(command).run(stdout_sink=sam_filepath,
                                    log_filepath=log_filepath)
 
-    def read_groups(self, sample):
+    def add_or_replace_read_groups(self, sample):
         params = self.params['AddOrReplaceReadGroups']
-        params = params.format(**{
+        params = ['{}={}'.format(k, v) for k, v in params.items()]
+        params_str = ' '.join(params).format(**{
             'sample_id': sample.id,
-            'library_id': library_id,
+            'library_id': sample.sequencing.library_id,
             'ngs_id': sample.sequencing.id,
-            'sam_filepath': sam_filepath,
-            'bam_filepath': bam_filepath,
+            'sam_filepath': sample._files('sam'),
+            'bam_filepath': sample._files('bam'),
         })
-        command = '{} '.format()
+        command = '{} AddOrReplaceReadGroups {}'.format(
+            self.executables['picard-tools'], params_str)
+        ProgramCaller(command).run(log_filepath=self._log_filepath('AddOrReplaceReadGroups'))
 
     def _log_filepath(self, label):
         return join(self.results_dir, label + '.log')
