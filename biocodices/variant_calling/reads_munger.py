@@ -3,6 +3,7 @@ from os.path import join, basename
 from biocodices.helpers.config import Config
 from biocodices.helpers.resource import Resource
 from biocodices.helpers.program_caller import ProgramCaller
+from biocodices.helpers.gatk import GATK
 
 
 class ReadsMunger:
@@ -75,6 +76,9 @@ class ReadsMunger:
         command = '{} AddOrReplaceReadGroups {}'.format(
             self.executables['picard-tools'], params_str)
         ProgramCaller(command).run(log_filepath=self._log_filepath('AddOrReplaceReadGroups'))
+
+    def realign_indels(self, bam_filepath):
+        GATK.realign_indels(bam_filepath)
 
     def _log_filepath(self, label):
         return join(self.results_dir, label + '.log')

@@ -1,6 +1,5 @@
-import logging
 from datetime import datetime
-from os import makedirs
+from os import makedirs, remove
 from os.path import isdir, join, isfile
 
 from biocodices.variant_calling.reads_munger import ReadsMunger
@@ -30,19 +29,25 @@ class Sample:
 
         t1 = datetime.now()
 
+        #  print('[{}] Analyze reads'.format(self.id))
         #  for reads_filepath in self._files('fastq'):
             #  self.reads_munger.analyze_reads(reads_filepath)
 
-        self.reads_munger.trim_adapters(self._files('fastq'))
+        #  print('[{}] Trimming adapters'.format(self.id))
+        #  self.reads_munger.trim_adapters(self._files('fastq'))
+        #  print('[{}] Analyze trimmed reads'.format(self.id))
         #  for trimmed_filepath in self._files('trimmed.fastq'):
             #  self.reads_munger.analyze_reads(trimmed_filepath)
 
-        # TODO: implement this
-        # self.reads_munger.multiqc(self._files('fastq') + self._files('trimmed.fastq'))
+        #  # TODO: implement this
+        #  # self.reads_munger.multiqc(self._files('fastq') + self._files('trimmed.fastq'))
 
-        self.reads_munger.align_to_reference(self._files('trimmed.fastq'))
-        self.reads_munger.add_or_replace_read_groups(self)
-        # TODO: delete the bamfile
+        #  print('[{}] Aligning to reference'.format(self.id))
+        #  self.reads_munger.align_to_reference(self._files('trimmed.fastq'))
+        #  print('[{}] Add or replaced read groups'.format(self.id))
+        #  self.reads_munger.add_or_replace_read_groups(self)
+        # remove(self._files('sam'))
+        self.reads_munger.realign_indels(self._files('bam'))
 
         #  self.variant_call()
         t2 = datetime.now()
