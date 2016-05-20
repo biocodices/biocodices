@@ -75,10 +75,13 @@ class ReadsMunger:
         })
         command = '{} AddOrReplaceReadGroups {}'.format(
             self.executables['picard-tools'], params_str)
-        ProgramCaller(command).run(log_filepath=self._log_filepath('AddOrReplaceReadGroups'))
+        log_filepath = self._log_filepath('AddOrReplaceReadGroups')
+        ProgramCaller(command).run(log_filepath=log_filepath)
 
     def realign_indels(self, bam_filepath):
-        GATK.realign_indels(bam_filepath)
+        gatk = GATK(bam_filepath)
+        gatk.realign_indels()
+        gatk.recalibrate_quality_scores()
 
     def _log_filepath(self, label):
         return join(self.results_dir, label + '.log')

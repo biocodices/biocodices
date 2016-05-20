@@ -32,7 +32,6 @@ class Sample:
         print('[{}] Analyze reads'.format(self.id))
         for reads_filepath in self._files('fastq'):
             self.reads_munger.analyze_reads(reads_filepath)
-
         print('[{}] Trimming adapters'.format(self.id))
         self.reads_munger.trim_adapters(self._files('fastq'))
         print('[{}] Analyze trimmed reads'.format(self.id))
@@ -46,7 +45,9 @@ class Sample:
         self.reads_munger.align_to_reference(self._files('trimmed.fastq'))
         print('[{}] Add or replaced read groups'.format(self.id))
         self.reads_munger.add_or_replace_read_groups(self)
+        print('[{}] Remove sam file'.format(self.id))
         remove(self._files('sam'))
+        print('[{}] Realign indels'.format(self.id))
         self.reads_munger.realign_indels(self._files('bam'))
 
         #  self.variant_call()

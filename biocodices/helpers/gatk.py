@@ -18,15 +18,18 @@ class GATK:
 
     def realign_indels(self):
         targets_filepath = self._realigner_target_creator()
-        self._indel_realigner(self.bam, targets_filepath)
+        self._indel_realigner(targets_filepath)
         return self.realigned_bam
 
     def recalibrate_quality_scores(self):
         recalibration_table = self._create_recalibration_table()
-        self._recalibrate_bam(self.bam, recalibration_table)
+        self._recalibrate_bam(recalibration_table)
         return self.recalibrated_bam
 
     def _create_recalibration_table(self):
+        pass
+
+    def _recalibrate_bam(self, recalibration_table):
         pass
 
     def _realigner_target_creator(self):
