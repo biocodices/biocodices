@@ -29,33 +29,44 @@ class Sample:
 
         t1 = datetime.now()
 
-        print('[{}] Analyze reads'.format(self.id))
+        self.printlog('Analyze reads')
         for reads_filepath in self._files('fastq'):
             self.reads_munger.analyze_reads(reads_filepath)
-        print('[{}] Trimming adapters'.format(self.id))
+
+        self.printlog('Trimming adapters')
         self.reads_munger.trim_adapters(self._files('fastq'))
-        print('[{}] Analyze trimmed reads'.format(self.id))
+
+        self.printlog('Analyze trimmed reads')
         for trimmed_filepath in self._files('trimmed.fastq'):
             self.reads_munger.analyze_reads(trimmed_filepath)
 
         # TODO: implement this
         # self.reads_munger.multiqc(self._files('fastq') + self._files('trimmed.fastq'))
 
-        print('[{}] Aligning to reference'.format(self.id))
+        self.printlog('Align reads to reference')
         self.reads_munger.align_to_reference(self._files('trimmed.fastq'))
-        print('[{}] Add or replaced read groups'.format(self.id))
+
+        self.printlog('Add or replaced read groups')
         self.reads_munger.add_or_replace_read_groups(self)
-        print('[{}] Remove sam file'.format(self.id))
+
+        self.printlog('Remove sam file')
         remove(self._files('sam'))
-        print('[{}] Realign indels'.format(self.id))
+
+        self.printlog('Realign indels')
         self.reads_munger.realign_indels(self._files('bam'))
 
-        #  self.variant_call()
+        self.printlog('Recalibrate read quality scores')
+        self.reads_munger.recalibrate_quality_scores(self._files('bam'))
+
         t2 = datetime.now()
         self._log_total_time(t1, t2)
 
     def log(self, extension):
         return join(self.results_dir, '{}.{}.log'.format(self.id, extension))
+
+    def printlog(self, msg):
+        timestamp = datetime.now().strftime('%H:%M:%S')
+        print('[{}][{}] {}'.format(timestamp, self.id, msg))
 
     def _log_total_time(self, t1, t2):
         timedelta = (t2 - t1).seconds

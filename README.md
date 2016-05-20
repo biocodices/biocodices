@@ -9,8 +9,7 @@
 conda config --add channels conda-forge
 conda install python-ternary
 
-pip install myvariant
-pip install multiqc
+pip install myvariant, multiqc, termcolor
 ```
 
 ## Software and resources

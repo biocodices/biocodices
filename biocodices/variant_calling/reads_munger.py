@@ -70,8 +70,8 @@ class ReadsMunger:
             'sample_id': sample.id,
             'library_id': sample.sequencing.library_id,
             'ngs_id': sample.sequencing.id,
-            'sam_filepath': sample._files('sam'),
-            'bam_filepath': sample._files('bam'),
+            'input': sample._files('sam'),
+            'output': sample._files('bam'),
         })
         command = '{} AddOrReplaceReadGroups {}'.format(
             self.executables['picard-tools'], params_str)
@@ -81,6 +81,9 @@ class ReadsMunger:
     def realign_indels(self, bam_filepath):
         gatk = GATK(bam_filepath)
         gatk.realign_indels()
+
+    def recalibrate_quality_scores(self, bam_filepath):
+        gatk = GATK(bam_filepath)
         gatk.recalibrate_quality_scores()
 
     def _log_filepath(self, label):
