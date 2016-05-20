@@ -1,5 +1,18 @@
 # Installation
 
+## Python and some libraries
+
+(TODO: This section needs more detail, conda, etc.)
+
+```
+# Ptyhon ternary for triangle plots
+conda config --add channels conda-forge
+conda install python-ternary
+
+pip install myvariant
+pip install multiqc
+```
+
 ## Software and resources
 
 Get these programs and install them:
@@ -16,12 +29,18 @@ Get these programs and install them:
 
 You also need to download some resources from the web:
 
-* Browse GATK bundle ftp servers to get the reference genome. For the GRCh37
-    version, this was the command I run: `wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/b37/human_g1k_v37.fasta.gz`. Warning: the decompressed file will weight ~3Gb.
-* Also from GATK bundle ftp, information about known indels:
-    - 1000 Genomes indels: `wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/b37/1000G_phase1.indels.b37.vcf.gz`
-    - Mills and 1000 Genomes Gold Standard: `wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/b37/Mills_and_1000G_gold_standard.indels.b37.vcf.gz`
-    - All known variants in GRCh37: `wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/b37/dbsnp_138.b37.vcf.gz`
+Browse GATK bundle ftp servers to get the reference genome. For the GRCh37 version, I ran this command: `wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/b37/human_g1k_v37.fasta.gz`. **Warning**: the decompressed file will weight ~3Gb.
+
+Also from GATK servers, get files for known indels:
+    - 1000 Genomes indels
+    - Mills and 1000 Genomes Gold Standard
+    - All known variants in GRCh37
+
+```
+wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/b37/1000G_phase1.indels.b37.vcf.gz
+wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/b37/Mills_and_1000G_gold_standard.indels.b37.vcf.gz
+wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/b37/dbsnp_138.b37.vcf.gz
+```
 
 Unzip all the GATK bundle files with a `gunzip <filename>` command.
 
@@ -34,30 +53,17 @@ java -jar picard.jar CreateSequenceDictionary \
     OUTPUT=human_g1k_v37.dict
 ```
 
-* A file with the adapters to trim from your reads. I got mine from [Illumina's TruSeq documentation](http://support.illumina.com/content/dam/illumina-support/documents/documentation/chemistry_documentation/experiment-design/illumina-adapter-sequences_1000000002694-01.pdf)
-
-And finally, Python libraries:
-
-(TODO: This section needs more detail, conda, etc.)
-
-```
-# Ptyhon ternary for triangle plots
-conda config --add channels conda-forge
-conda install python-ternary
-
-pip install myvariant
-pip install multiqc
-```
+Finally, create a fasta file with the adapters to trim from your reads. I got the sequences from [Illumina's TruSeq documentation](http://support.illumina.com/content/dam/illumina-support/documents/documentation/chemistry_documentation/experiment-design/illumina-adapter-sequences_1000000002694-01.pdf). Make sure you create a valid fasta file ('>ID' in one line, sequence in the next one, repeat). The IDs don't really matter, the sequences will be read.
 
 # Settings before running `biocodices`
 
-`biocodices` will search for its config files in `~/.biocodices`, so create
-that directory with `mkdir -p ~/.biocodices`. You will also need an organized
+`biocodices` will search for its config files in a `~/.biocodices` directory,
+so create it with `mkdir -p ~/.biocodices`. You will also need an organized
 resource folder, so I recommend creating a `~/biocodices/resources` directory:
 `mkdir -p ~/biocodices/resources`. Put the resources you downloaded from the
 web in there.
 
-Create the settings file `~/.biocodices/executables.yml` with paths to every executable from the software you downloaded earlier. This is mine, for instance:
+Create the settings file `~/.biocodices/executables.yml` with paths to every executable from the software you downloaded earlier. Avoid tildes (`~`), write whole paths. This is my file, for instance:
 
 ```yaml
 admixture: /home/juan/software/admixture_linux-1.3.0/admixture
@@ -66,18 +72,24 @@ fastqc: /home/juan/software/FastQC/fastqc
 fastq-mcf: /home/juan/software/ea-utils.1.1.2-537/fastq-mcf
 bedtools: /home/juan/software/bedtools2/bin/bedtools
 samtools: /home/juansoftware/samtools-1.3/samtools
-gatk: java -jar /home/juan/software/GenomeAnalysisTK/GenomeAnalysisTK.jar
+GATK: java -jar /home/juan/software/GenomeAnalysisTK/GenomeAnalysisTK.jar
 vcftools: /usr/local/bin/vcftools
 picard-tools: java -jar /home/juan/software/picard-tools-2.2.4/picard.jar
 ```
 
 Create a `~/.biocodices/resources.yml` file where you will specify a base
-directory for the resources (`~/biocodices/resources` if you followed along)
-and the filenames they have inside that directory. Mine looks like this:
+directory for the resources and the filenames they have inside that directory.
+Mine looks like this:
 
 ```yaml
 base_dir: /home/juan/biocodices/resources
 illumina_adapters_file: illumina_adapters.fasta
+panel_amplicons:
+    ENPv1: ENPv1_amplicons_sorted.bed
+reference_genome_hg19: &reference_genome_default human_g1k_v37.fasta
+reference_genome: *reference_genome_default
+1000G_indels: 1000G_phase1.indels.b37.vcf
+mills_indels: Mills_and_1000G_gold_standard.indels.b37.vcf
 gwas_catalog_v1.0.1: &gwas_catalog_default gwas_catalog_v1.0-associations_e84_r2016-05-08.tsv
 gwas_catalog: *gwas_catalog_default
 clinvar:
@@ -92,7 +104,7 @@ clinvar:
 ## Feed `biocodices` with the input `fastq` files
 
 Create a directory for a given sequencer run and create a `data` subdirectory
-in it. Put the forward and reverse `fastq` files from all samples there.
+in it. Put the forward and reverse `fastq` files from all samples in `data`.
 `biocodices` expects them to be named following this pattern:
 `<sample_ID>.R1.fastq` for the forward reads, and `<sample_ID>.R2.fastq` for
 the reverse reads of the same sample.
@@ -102,8 +114,8 @@ After putting the input `fastq` files in there, you're good to go!
 ## The Sequencing object and its Samples
 
 ```python
-# Instatiate a Sequencing object with the root dir for its data.
-# The directory should have a 'results' subdir with reads files.
+# Instatiate a Sequencing object with the root dir of a sequencer run.
+# The directory should have a 'data' subdir with the fastq files.
 sequencing = Sequencing('~/MyProject/NGS0001')
 samples = sequencing.samples()  # => A list of sample objects
 sample = samples[0]
@@ -112,8 +124,8 @@ sample.reads_filenames()  # => The forward and reverse reads files
 
 ## Variant calling
 
-Each Sample object will take care of creating and stuffing its own results
-directory (named after the sample ID under the sequencing results directory).
+Each Sample object will take care of creating its own results directory
+(named after the sample ID under the sequencing results directory).
 
 You can call variants for each sample easily:
 
@@ -121,3 +133,8 @@ You can call variants for each sample easily:
 for sample in sequencing.samples():
     sample.call_variants()
 ```
+
+The process will take some times (i.e. 5 mins per sample, YMMV) and each step
+of the process will be logged to a different log file under the sample's result
+directory. To check where that is, you can ask: `sample.results_dir`, but in
+general results and logs will be stored in `<sequencing_dir>/results/<sample_dir>/`.
