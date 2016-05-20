@@ -5,52 +5,62 @@ from biocodices.helpers.program_caller import ProgramCaller
 
 
 class GATK:
-    @classmethod
-    def realign_indels(cls, bam_filepath):
-        targets_filepath = cls._realigner_target_creator(bam_filepath)
-        cls._indel_realigner(bam_filepath, targets_filepath)
+    def __init__(self, bam_filepath):
+        self.executable = Config('executables')['GATK']
+        self.reference = Resource('reference_genome')
+        self.params = Config('parameters')['GATK']
 
-    @staticmethod
-    def _realigner_target_creator(bam_filepath):
-        executable = Config('executables')['GATK']
-        targets_filepath = bam_filepath.replace('.bam', '.intervals')
+        self.bam = bam_filepath
+        self.realigned_bam = self.bam.replace('.bam', '.realigned.bam')
+        self.recalibrated_bam = self.realigned_bam.replace('.bam',
+                                                           '.recalibrated.bam')
 
-        params = []
-        for k, v in Config('parameters')['RealignerTargetCreator'].items():
-            params.append('-{} {}'.format(k, v))
-        for indels_file in [Resource('1000G_indels'), Resource('mills_indels')]:
-            params.append('-known {}'.format(indels_file))
+
+    def realign_indels(self):
+        targets_filepath = self._realigner_target_creator()
+        self._indel_realigner(self.bam, targets_filepath)
+        return self.realigned_bam
+
+    def recalibrate_quality_scores(self):
+        recalibration_table = self._create_recalibration_table()
+        self._recalibrate_bam(self.bam, recalibration_table)
+        return self.recalibrated_bam
+
+    def _create_recalibration_table(self):
+        pass
+
+    def _realigner_target_creator(self):
+        params = ['-{} {}'.format(k, v) for k, v in
+                  self.params['RealignerTargetCreator'].items()]
+
+        indels_files = [Resource('1000G_indels'), Resource('mills_indels')]
+        params += ['-known {}'.format(fn) for fn in indels_files]
+
+        targets_filepath = self.bam.replace('.bam', '.intervals')
         params_str = ' '.join(params).format(**{
-            'reference_genome': Resource('reference_genome'),
-            'input': bam_filepath,
+            'reference_genome': self.reference,
+            'input': self.bam,
             'output': targets_filepath,
             'panel_amplicons': Resource('panel_amplicons:ENPv1'),
             # ^ TODO: consider other panels instead of hardcoding ENPv1
         })
 
-        command = '{} {}'.format(executable, params_str)
-        log_filepath = join(dirname(bam_filepath), 'RealignerTargetCreator.log')
+        command = '{} {}'.format(self.executable, params_str)
+        log_filepath = join(dirname(self.bam), 'RealignerTargetCreator.log')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
         return targets_filepath
 
-    @staticmethod
-    def _indel_realigner(bam_filepath, targets_filepath):
-        executable = Config('executables')['GATK']
-        realigned_bam_filepath = bam_filepath.replace('.bam', '.realigned.bam')
-
-        params = []
-        for k, v in Config('parameters')['IndelRealigner'].items():
-            params.append('-{} {}'.format(k, v))
+    def _indel_realigner(self, targets_filepath):
+        params = ['-{} {}'.format(k, v) for k, v in
+                  self.params['IndelRealigner'].items()]
         params_str = ' '.join(params).format(**{
-            'reference_genome': Resource('reference_genome'),
-            'input': bam_filepath,
-            'output': realigned_bam_filepath,
+            'reference_genome': self.reference,
+            'input': self.bam,
+            'output': self.realigned_bam,
             'target_intervals': targets_filepath,
         })
 
-        command = '{} {}'.format(executable, params_str)
-        log_filepath = join(dirname(bam_filepath), 'IndelRealigner.log')
+        command = '{} {}'.format(self.executable, params_str)
+        log_filepath = join(dirname(self.bam), 'IndelRealigner.log')
         ProgramCaller(command).run(log_filepath=log_filepath)
-
-        return realigned_bam_filepath
