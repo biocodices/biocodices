@@ -47,7 +47,7 @@ class GATK:
         ProgramCaller(command).run(log_filepath=log_filepath)
 
     def create_gvcf(self):
-        params_dict = self.params['HaplotypeCaller']['vcf']
+        params_dict = self.params['HaplotypeCaller']['gvcf']
         params_str = params_dict_to_str(params_dict).format(**{
             'reference_genome': self.reference_genome,
             'limits': Resource('panel_amplicons'),
