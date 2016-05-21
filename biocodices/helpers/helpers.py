@@ -20,3 +20,28 @@ def hide_spines_and_ticks(ax, spines=["top", "right", "left"]):
 
     ax.set_xticks([])
     ax.set_yticks([])
+
+
+def seconds_to_hms_string(seconds):
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+
+    hms_string = ''
+
+    if h > 0:
+        if h == 1:
+            hms_string += '{} hour, '.format(h)
+        if h > 1:
+            hms_string += '{} hours, '.format(h)
+    if m > 0:
+        if m == 1:
+            hms_string += '{} minute, '.format(m)
+        if m > 1:
+            hms_string += '{} minutes, '.format(m)
+
+    if s == 1:
+        hms_string += '{} second'.format(s)
+    else:
+        hms_string += '{} seconds'.format(s)
+
+    return hms_string

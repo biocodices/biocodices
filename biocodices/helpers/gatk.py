@@ -14,6 +14,8 @@ class GATK:
         self.realigned_bam = self.bam.replace('.bam', '.realigned.bam')
         self.recalibrated_bam = self.realigned_bam.replace('.bam',
                                                            '.recalibrated.bam')
+        self.vcf = self.bam.replace('.bam', '.vcf')
+        self.gvcf = self.bam.replace('.bam', '.gvcf')
 
     def realign_indels(self):
         targets_filepath = self._realigner_target_creator()
@@ -25,6 +27,35 @@ class GATK:
         self._recalibrate_bam(recalibration)
         return self.recalibrated_bam
 
+    def create_vcf(self):
+        params = ['-{} {}'.format(k, v) for k, v in
+                  self.params['HaplotypeCaller']['vcf'].items()]
+        params_str = ' '.join(params).format(**{
+            'reference_genome': self.reference_genome,
+            'limits': Resource('panel_amplicons'),
+            'input': self.recalibrated_bam,
+            'output': self.vcf,
+        })
+
+        command = '{} {}'.format(self.executable, params_str)
+        log_filepath = join(dirname(self.bam), 'HaplotypeCaller_vcf.log')
+        ProgramCaller(command).run(log_filepath=log_filepath)
+
+    def create_gvcf(self):
+        params = ['-{} {}'.format(k, v) for k, v in
+                  self.params['HaplotypeCaller']['gvcf'].items()]
+        params_str = ' '.join(params).format(**{
+            'reference_genome': self.reference_genome,
+            'limits': Resource('panel_amplicons'),
+            'input': self.recalibrated_bam,
+            'output': self.gvcf,
+        })
+
+        command = '{} {}'.format(self.executable, params_str)
+        log_filepath = join(dirname(self.bam), 'HaplotypeCaller_gvcf.log')
+        ProgramCaller(command).run(log_filepath=log_filepath)
+
+
     def _create_recalibration_table(self):
         params = ['-{} {}'.format(k, v) for k, v in
                   self.params['BaseRecalibrator'].items()]
@@ -34,10 +65,9 @@ class GATK:
         params += ['-knownSites {}'.format(fn) for fn in indels_files]
         params_str = ' '.join(params).format(**{
             'reference_genome': self.reference_genome,
+            'limits': Resource('panel_amplicons'),
             'input': self.realigned_bam,
             'output': recalibration,
-            'limits': Resource('panel_amplicons:ENPv1'),
-            # ^ TODO: consider other panels instead of hardcoding ENPv1
         })
 
         command = '{} {}'.format(self.executable, params_str)
@@ -69,12 +99,12 @@ class GATK:
         params += ['-known {}'.format(fn) for fn in indels_files]
 
         targets_filepath = self.bam.replace('.bam', '.intervals')
+
         params_str = ' '.join(params).format(**{
             'reference_genome': self.reference_genome,
             'input': self.bam,
             'output': targets_filepath,
-            'limits': Resource('panel_amplicons:ENPv1'),
-            # ^ TODO: consider other panels instead of hardcoding ENPv1
+            'limits': Resource('panel_amplicons'),
         })
 
         command = '{} {}'.format(self.executable, params_str)

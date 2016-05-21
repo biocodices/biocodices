@@ -110,7 +110,16 @@ the reverse reads of the same sample.
 
 After putting the input `fastq` files in there, you're good to go!
 
-## The Sequencing object and its Samples
+## Variant calling
+
+You can just call biocodices from the command line:
+
+`<path_to_biocodices>/biocodices/scripts/call_variants <base_directory_of_sequencing>`
+
+The directory you pass as argument should have a `data` subfolder with the R1 and R2 `fastq`s for each sample.
+
+Otherwise, you can instantiate the `Sequencing` class and call variants for each of its samples. Each Sample object will take care of creating its own results directory
+(named after the sample ID under the sequencing results directory). 
 
 ```python
 # Instatiate a Sequencing object with the root dir of a sequencer run.
@@ -119,16 +128,7 @@ sequencing = Sequencing('~/MyProject/NGS0001')
 samples = sequencing.samples()  # => A list of sample objects
 sample = samples[0]
 sample.reads_filenames()  # => The forward and reverse reads files
-```
 
-## Variant calling
-
-Each Sample object will take care of creating its own results directory
-(named after the sample ID under the sequencing results directory).
-
-You can call variants for each sample easily:
-
-```python
 for sample in sequencing.samples():
     sample.call_variants()
 ```

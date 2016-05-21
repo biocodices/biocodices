@@ -1,5 +1,6 @@
 import subprocess
 from datetime import datetime
+from biocodices.helpers.helpers import seconds_to_hms_string
 
 
 class ProgramCaller:
@@ -63,13 +64,14 @@ class ProgramCaller:
         return self.proc
 
     def _log_executed_command(self, file_handle):
-        tmpl = 'Started at {}\n{}\n---\n\n'
-        file_handle.write(tmpl.format(self._timestamp(), self.command))
+        start_msg = 'Started at {}\n{}\n---\n\n'
+        file_handle.write(start_msg.format(self._timestamp(), self.command))
 
     def _log_elapsed_time(self, file_handle):
-        elapsed = (self.t2 - self.t1).seconds
-        tmpl = '\n---\nFinished at {}\nTook {} seconds.\n'
-        file_handle.write(tmpl.format(self._timestamp(), elapsed))
+        seconds = (self.t2 - self.t1).seconds
+        end_msg = '\n---\nFinished at {}\nTook '.format(self._timestamp())
+        end_msg += seconds_to_hms_string(seconds) + '.'
+        file_handle.write(end_msg)
 
     def _timestamp(self):
         return datetime.now().strftime('%Y-%b-%d %X')

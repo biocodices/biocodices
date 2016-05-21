@@ -1,6 +1,7 @@
-from datetime import datetime
 from os import makedirs, remove
 from os.path import isdir, join, isfile
+from datetime import datetime
+from termcolor import colored
 
 from biocodices.variant_calling.reads_munger import ReadsMunger
 
@@ -28,12 +29,15 @@ class Sample:
             makedirs(self.results_dir, exist_ok=True)
 
         t1 = datetime.now()
+        print('Calling variants for ' + colored('{}'.format(self.id), 'yellow'))
+        print('Result files and logs will be put in:')
+        print(self.results_dir, '\n')
 
         self.printlog('Analyze reads')
         for reads_filepath in self._files('fastq'):
             self.reads_munger.analyze_reads(reads_filepath)
 
-        self.printlog('Trimming adapters')
+        self.printlog('Trim adapters')
         self.reads_munger.trim_adapters(self._files('fastq'))
 
         self.printlog('Analyze trimmed reads')
@@ -46,17 +50,20 @@ class Sample:
         self.printlog('Align reads to reference')
         self.reads_munger.align_to_reference(self._files('trimmed.fastq'))
 
-        self.printlog('Add or replaced read groups')
+        self.printlog('Add or replace read groups')
         self.reads_munger.add_or_replace_read_groups(self)
 
-        self.printlog('Remove sam file')
-        remove(self._files('sam'))
+        self.printlog('Delete sam file')
+        #  remove(self._files('sam'))
 
         self.printlog('Realign indels')
         self.reads_munger.realign_indels(self._files('bam'))
 
         self.printlog('Recalibrate read quality scores')
         self.reads_munger.recalibrate_quality_scores(self._files('bam'))
+
+        self.printlog('Call variants')
+        self.reads_munger.call_variants(self._files('bam'))
 
         t2 = datetime.now()
         self._log_total_time(t1, t2)
@@ -66,7 +73,8 @@ class Sample:
 
     def printlog(self, msg):
         timestamp = datetime.now().strftime('%H:%M:%S')
-        print('[{}][{}] {}'.format(timestamp, self.id, msg))
+        prefix = colored('[{}][{}]'.format(timestamp, self.id), 'blue')
+        print('{} {}'.format(prefix, msg))
 
     def _log_total_time(self, t1, t2):
         timedelta = (t2 - t1).seconds

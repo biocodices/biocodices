@@ -1,6 +1,6 @@
 import re
 from glob import glob
-from os.path import expanduser, normpath, basename, join
+from os.path import expanduser, basename, join, abspath
 
 from .sample import Sample
 
@@ -12,7 +12,7 @@ class Sequencing:
         'data' and 'results' subdirectories. fastq files from samples will be
         looked for in the 'data' subdir.
         """
-        self.dir = normpath(expanduser(directory))
+        self.dir = abspath(expanduser(directory))
         self.id = basename(self.dir)
         self.data_dir = join(self.dir, 'data')
         self.results_dir = join(self.dir, 'results')

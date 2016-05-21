@@ -86,5 +86,10 @@ class ReadsMunger:
         gatk = GATK(bam_filepath)
         gatk.recalibrate_quality_scores()
 
+    def call_variants(self, bam_filepath):
+        gatk = GATK(bam_filepath)
+        gatk.create_vcf()
+        gatk.create_gvcf()
+
     def _log_filepath(self, label):
         return join(self.results_dir, label + '.log')

@@ -8,27 +8,26 @@ from biocodices import Sequencing
 
 def call_variants_for_all_samples(base_dir):
     sequencing = Sequencing(expanduser(base_dir))
-    print('\n' + biocodices_logo())
+    print(biocodices_logo())
     print('Welcome to biocodices! Anlyzing reads for:')
     print(colored(sequencing, 'green'))
-    print('---')
+    print()
 
     for sample in sequencing.samples():
         sample.call_variants()
-        print('---')
+        print()
 
     print(colored('\nDone! Bless your heart.\n', 'green'))
 
 
 def biocodices_logo():
-    return (r"""---
+    return (r"""
  _     _                     _ _
 | |__ (_) ___   ___ ___   __| (_) ___ ___  ___
 | '_ \| |/ _ \ / __/ _ \ / _` | |/ __/ _ \/ __|
 | |_) | | (_) | (_| (_) | (_| | | (_|  __/\__ \
 |_.__/|_|\___/ \___\___/ \__,_|_|\___\___||___/
-
----""")
+""")
 
 
 if __name__ == '__main__':
