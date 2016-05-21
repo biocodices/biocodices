@@ -2,6 +2,7 @@ from os.path import join, basename
 
 from biocodices.helpers import Config, Resource
 from biocodices.programs import ProgramCaller, GATK
+from biocodices.helpers.general import params_dict_to_str
 
 
 class ReadsMunger:
@@ -26,45 +27,47 @@ class ReadsMunger:
         Expects a list of two files: forward and reverse reads of the same
         sample. It will search for an adapters file defined by Config.
         """
-        trimmed_reads_filepaths = []
+        trimmed_fastqs = []
         for reads_filepath in reads_filepaths:
             new_fn = basename(reads_filepath).replace('.fastq', '.trimmed.fastq')
             new_filepath = join(self.results_dir, new_fn)
-            trimmed_reads_filepaths.append(new_filepath)
+            trimmed_fastqs.append(new_filepath)
 
-        command = '{} -o {} -o {}'.format(self.executables['fastq-mcf'],
-                                          *trimmed_reads_filepaths)
-        for k, v in self.params['fastq-mcf'].items():
-            command += ' -{}{}'.format(k, v)
+        params_str = params_dict_to_str(self.params['fastq-mcf'])
+        for trimmed_fastq in trimmed_fastqs:
+            params_str += ' -o {}'.format(trimmed_fastq)
+
+        command = '{} {}'.format(self.executables['fastq-mcf'], params_str)
         adapters_file = Resource('illumina_adapters_file')
         command += ' {} {} {}'.format(adapters_file, *reads_filepaths)
 
         log_filepath = self._file('fastq-mcf')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
-        return trimmed_reads_filepaths
+        return trimmed_fastqs
 
     def align_to_reference(self, reads_filepaths, ref='GRCh37'):
         """
         Expects a list of two files: forward and reverse reads of the same
         sample. It will search for a reference genome defined by Config.
         """
-        params_dict = self.params['bwa']
-        params = ['-{} {}'.format(k, v) for k, v in params_dict.items()]
-        params_str = ' '.join(params).format(**{
+        output_sam = join(self.results_dir, self.sample.id + '.sam')
+
+        params_str = params_dict_to_str(self.params['bwa']).format(**{
             'reference_genome': Resource('reference_genome')
         })
-        command = '{} {} {} {}'.format(self.executables['bwa'], params_str,
-                                       *reads_filepaths)
+        for reads_file in reads_filepaths:
+            params_str += ' {}'.format(reads_file)
+
+        command = '{} {}'.format(self.executables['bwa'], params_str)
         # redirect stdout to samfile and stderr  to logfile
         log_filepath = self._file('bwa')
-        sam_filepath = join(self.results_dir, self.sample.id + '.sam')
-        ProgramCaller(command).run(stdout_sink=sam_filepath,
+        ProgramCaller(command).run(stdout_sink=output_sam,
                                    log_filepath=log_filepath)
 
     def add_or_replace_read_groups(self, sample):
-        params = self.params['AddOrReplaceReadGroups']
-        params = ['{}={}'.format(k, v) for k, v in params.items()]
+        params_dict = self.params['AddOrReplaceReadGroups']
+        params = ['{}={}'.format(k, v) for k, v in params_dict.items()]
         params_str = ' '.join(params).format(**{
             'sample_id': sample.id,
             'library_id': sample.sequencer_run.library_id,

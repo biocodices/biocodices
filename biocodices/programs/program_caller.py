@@ -5,7 +5,8 @@ from biocodices.helpers.language import seconds_to_hms_string
 
 class ProgramCaller:
     def __init__(self, command):
-        self.command = command
+        self.command = command.replace('  ', ' ')
+        # Trim double spaces, so they don't create a 'phantom' empty argument.
 
     def run(self, stdout_sink=None, stderr_sink=None, log_filepath=None):
         """
