@@ -18,7 +18,7 @@ class ReadsMunger:
     def analyze_reads(self, reads_filepath):
         command = '{} {} -o {}'.format(self.executables['fastqc'],
                                        reads_filepath, self.results_dir)
-        log_filepath = self._log_filepath('fastqc')
+        log_filepath = self._file('fastqc')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
     def trim_adapters(self, reads_filepaths):
@@ -39,7 +39,7 @@ class ReadsMunger:
         adapters_file = Resource('illumina_adapters_file')
         command += ' {} {} {}'.format(adapters_file, *reads_filepaths)
 
-        log_filepath = self._log_filepath('fastq-mcf')
+        log_filepath = self._file('fastq-mcf')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
         return trimmed_reads_filepaths
@@ -57,7 +57,7 @@ class ReadsMunger:
         command = '{} {} {} {}'.format(self.executables['bwa'], params_str,
                                        *reads_filepaths)
         # redirect stdout to samfile and stderr  to logfile
-        log_filepath = self._log_filepath('bwa')
+        log_filepath = self._file('bwa')
         sam_filepath = join(self.results_dir, self.sample.id + '.sam')
         ProgramCaller(command).run(stdout_sink=sam_filepath,
                                    log_filepath=log_filepath)
@@ -67,14 +67,14 @@ class ReadsMunger:
         params = ['{}={}'.format(k, v) for k, v in params.items()]
         params_str = ' '.join(params).format(**{
             'sample_id': sample.id,
-            'library_id': sample.sequencing.library_id,
-            'ngs_id': sample.sequencing.id,
+            'library_id': sample.sequencer_run.library_id,
+            'ngs_id': sample.sequencer_run.id,
             'input': sample._files('sam'),
             'output': sample._files('bam'),
         })
         command = '{} AddOrReplaceReadGroups {}'.format(
             self.executables['picard-tools'], params_str)
-        log_filepath = self._log_filepath('AddOrReplaceReadGroups')
+        log_filepath = self._file('AddOrReplaceReadGroups')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
     def realign_indels(self, bam_filepath):
@@ -90,5 +90,5 @@ class ReadsMunger:
         self.gatk.create_vcf()
         self.gatk.create_gvcf()
 
-    def _log_filepath(self, label):
-        return join(self.results_dir, label + '.log')
+    def _file(self, label):
+        return join(self.results_dir, label)

@@ -16,7 +16,7 @@ def call_variants_for_all_samples(base_dir):
     print('Welcome to {}! Anlyzing reads for:'.format(software_name))
     print(colored(sequencer_run, 'green'))
     print('\nYou can follow the details of the process with:')
-    print('`tail -f {}/*/*.log`\n'.format(sequencer_run.results_dir))
+    print('`tail -n0 -f {}/*/*.log`\n'.format(sequencer_run.results_dir))
 
     dir_list = [sample.results_dir for sample in samples]
     touch_all_the_logs(dir_list)

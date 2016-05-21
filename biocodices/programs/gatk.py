@@ -7,8 +7,12 @@ from biocodices.helpers.general import params_dict_to_str
 class GATK:
     def __init__(self):
         self.executable = Config('executables')['GATK']
-        self.reference_genome = Resource('reference_genome')
         self.params = Config('parameters')['GATK']
+
+        self.reference_genome = Resource('reference_genome')
+        self.known_indels = [Resource('indels:1000G'),
+                             Resource('indels:mills')]
+        self.known_variants = Resource('dbsnp:GRCh37')
 
     def set_bamfile(self, bam_filepath):
         # TODO: this doesn't convince me. Think of a better way.
@@ -30,9 +34,8 @@ class GATK:
         return self.recalibrated_bam
 
     def create_vcf(self):
-        params = ['-{} {}'.format(k, v) for k, v in
-                  self.params['HaplotypeCaller']['vcf'].items()]
-        params_str = ' '.join(params).format(**{
+        params_dict = self.params['HaplotypeCaller']['vcf']
+        params_str = params_dict_to_str(params_dict).format(**{
             'reference_genome': self.reference_genome,
             'limits': Resource('panel_amplicons'),
             'input': self.recalibrated_bam,
@@ -44,9 +47,8 @@ class GATK:
         ProgramCaller(command).run(log_filepath=log_filepath)
 
     def create_gvcf(self):
-        params = ['-{} {}'.format(k, v) for k, v in
-                  self.params['HaplotypeCaller']['gvcf'].items()]
-        params_str = ' '.join(params).format(**{
+        params_dict = self.params['HaplotypeCaller']['vcf']
+        params_str = params_dict_to_str(params_dict).format(**{
             'reference_genome': self.reference_genome,
             'limits': Resource('panel_amplicons'),
             'input': self.recalibrated_bam,
@@ -59,10 +61,9 @@ class GATK:
 
     def joint_genotyping(self, gvcf_list, output_gvcf_filepath):
         params_dict = self.params['GATK']['GenotypeGVCFs']
-        params_str = params_dict_to_str(params_dict)
-        params_str = params_str.format(**{
+        params_str = params_dict_to_str(params_dict).format(**{
             'reference_genome': self.reference_genome,
-            'reference_variants': self.reference_variants,
+            'known_variants': self.known_variants,
             'output': output_gvcf_filepath,
         })
         for gvcf_filename in gvcf_list:
@@ -74,18 +75,17 @@ class GATK:
         ProgramCaller(command).run(log_filepath=log_filepath)
 
     def _create_recalibration_table(self):
-        params = ['-{} {}'.format(k, v) for k, v in
-                  self.params['BaseRecalibrator'].items()]
-
         recalibration = self.bam.replace('.bam', '.recalibration')
-        indels_files = [Resource('1000G_indels'), Resource('mills_indels')]
-        params += ['-knownSites {}'.format(fn) for fn in indels_files]
-        params_str = ' '.join(params).format(**{
+
+        params_dict = self.params['BaseRecalibrator']
+        params_str = params_dict_to_str(params_dict).format(**{
             'reference_genome': self.reference_genome,
             'limits': Resource('panel_amplicons'),
             'input': self.realigned_bam,
             'output': recalibration,
         })
+        for indels_file in self.known_indels:
+            params_str += ' -knownSites {}'.format(indels_file)
 
         command = '{} {}'.format(self.executable, params_str)
         log_filepath = join(dirname(self.bam), 'BaseRecalibrator')
@@ -94,10 +94,8 @@ class GATK:
         return recalibration
 
     def _recalibrate_bam(self, recalibration):
-        params = ['-{} {}'.format(k, v) for k, v in
-                  self.params['PrintReads'].items()]
-
-        params_str = ' '.join(params).format(**{
+        params_dict = self.params['PrintReads']
+        params_str = params_dict_to_str(params_dict).format(**{
             'reference_genome': self.reference_genome,
             'input': self.realigned_bam,
             'recalibration': recalibration,
@@ -109,20 +107,17 @@ class GATK:
         ProgramCaller(command).run(log_filepath=log_filepath)
 
     def _realigner_target_creator(self):
-        params = ['-{} {}'.format(k, v) for k, v in
-                  self.params['RealignerTargetCreator'].items()]
-
-        indels_files = [Resource('1000G_indels'), Resource('mills_indels')]
-        params += ['-known {}'.format(fn) for fn in indels_files]
-
         targets_filepath = self.bam.replace('.bam', '.intervals')
 
-        params_str = ' '.join(params).format(**{
+        params_dict = self.params['RealignerTargetCreator']
+        params_str = params_dict_to_str(params_dict).format(**{
             'reference_genome': self.reference_genome,
             'input': self.bam,
             'output': targets_filepath,
             'limits': Resource('panel_amplicons'),
         })
+        for indels_file in self.known_indels:
+            params_str += ' -known {}'.format(indels_file)
 
         command = '{} {}'.format(self.executable, params_str)
         log_filepath = join(dirname(self.bam), 'RealignerTargetCreator')
@@ -131,9 +126,8 @@ class GATK:
         return targets_filepath
 
     def _indel_realigner(self, targets_filepath):
-        params = ['-{} {}'.format(k, v) for k, v in
-                  self.params['IndelRealigner'].items()]
-        params_str = ' '.join(params).format(**{
+        params_dict = self.params['IndelRealigner']
+        params_str = params_dict_to_str(params_dict).format(**{
             'reference_genome': self.reference_genome,
             'input': self.bam,
             'output': self.realigned_bam,

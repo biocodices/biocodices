@@ -73,7 +73,7 @@ class ProgramCaller:
     def _log_elapsed_time(self, file_handle):
         seconds = (self.t2 - self.t1).seconds
         end_msg = '\n---\nFinished at {}\nTook '.format(self._timestamp())
-        end_msg += seconds_to_hms_string(seconds) + '.'
+        end_msg += seconds_to_hms_string(seconds) + '.\n'
         file_handle.write(end_msg)
 
     def _timestamp(self):
