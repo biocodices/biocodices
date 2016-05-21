@@ -1,3 +1,6 @@
+__version__ = '1.2'
+software_name = 'biocodices {}'.format(__version__)
+
 from .components.sequencing import Sequencing
 from .components.sample import Sample
 #  from .components.dataset import Dataset

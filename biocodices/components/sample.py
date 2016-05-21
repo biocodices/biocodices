@@ -4,6 +4,7 @@ from datetime import datetime
 from termcolor import colored
 
 from biocodices.variant_calling.reads_munger import ReadsMunger
+from biocodices.helpers.helpers import seconds_to_hms_string
 
 
 class Sample:
@@ -77,10 +78,10 @@ class Sample:
         print('{} {}'.format(prefix, msg))
 
     def _log_total_time(self, t1, t2):
-        timedelta = (t2 - t1).seconds
+        elapsed = seconds_to_hms_string((t2 - t1).seconds)
         with open(self.log('time'), 'w') as logfile:
-            msg = 'Variant calling for {} took {} seconds.\n'
-            logfile.write(msg.format(self.id, timedelta))
+            msg = 'Variant calling for {} took {}.\n'
+            logfile.write(msg.format(self.id, elapsed))
 
     def _files(self, ext):
         if ext in ['fastq', 'trimmed.fastq']:

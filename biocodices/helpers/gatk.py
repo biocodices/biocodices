@@ -15,7 +15,7 @@ class GATK:
         self.recalibrated_bam = self.realigned_bam.replace('.bam',
                                                            '.recalibrated.bam')
         self.vcf = self.bam.replace('.bam', '.vcf')
-        self.gvcf = self.bam.replace('.bam', '.gvcf')
+        self.gvcf = self.bam.replace('.bam', '.g.vcf')
 
     def realign_indels(self):
         targets_filepath = self._realigner_target_creator()
