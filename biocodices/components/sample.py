@@ -39,6 +39,15 @@ class Sample:
         print('Result files and logs will be put in:')
         print(self.results_dir, '\n')
 
+        self.analyze_and_trim_reads()
+        self.align_reads()
+        self.process_alignment_files()
+        self.create_variant_files()
+
+        t2 = datetime.now()
+        self._log_total_time(t1, t2)
+
+    def analyze_and_trim_reads(self):
         self.printlog('Analyze reads')
         for reads_filepath in self.fastqs:
             self.reads_munger.analyze_reads(reads_filepath)
@@ -53,9 +62,11 @@ class Sample:
         # TODO: implement this
         # self.reads_munger.multiqc
 
+    def align_reads(self):
         self.printlog('Align reads to reference')
         self.reads_munger.align_to_reference(self.trimmed_fastqs)
 
+    def process_alignment_files(self):
         self.printlog('Add or replace read groups')
         self.reads_munger.add_or_replace_read_groups(self)
 
@@ -68,11 +79,13 @@ class Sample:
         self.printlog('Recalibrate read quality scores')
         self.reads_munger.recalibrate_quality_scores(self.bam)
 
-        self.printlog('Call variants')
-        self.reads_munger.call_variants(self.bam)
-
-        t2 = datetime.now()
-        self._log_total_time(t1, t2)
+    def create_variant_files(self, vcf=True, gvcf=True):
+        if vcf:
+            self.printlog('Create vcf')
+            self.reads_munger.create_vcf(self.bam)
+        if gvcf:
+            self.printlog('Create gvcf')
+            self.reads_munger.create_gvcf(self.bam)
 
     def log(self, extension):
         return join(self.results_dir, '{}.{}.log'.format(self.id, extension))

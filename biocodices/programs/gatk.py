@@ -59,19 +59,18 @@ class GATK:
         log_filepath = join(dirname(self.bam), 'HaplotypeCaller_gvcf')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
-    def joint_genotyping(self, gvcf_list, output_gvcf_filepath):
-        params_dict = self.params['GATK']['GenotypeGVCFs']
+    def joint_genotyping(self, gvcf_list, output_gvcf_dir):
+        params_dict = self.params['GenotypeGVCFs']
         params_str = params_dict_to_str(params_dict).format(**{
             'reference_genome': self.reference_genome,
             'known_variants': self.known_variants,
-            'output': output_gvcf_filepath,
+            'output': join(output_gvcf_dir, 'joint_genotyping.g.vcf'),
         })
         for gvcf_filename in gvcf_list:
             params_str += ' --variant {}'.format(gvcf_filename)
 
         command = '{} {}'.format(self.executable, params_str)
-        log_filepath = join(dirname(output_gvcf_filepath),
-                            'GenotypeGVCFs')
+        log_filepath = join(output_gvcf_dir, 'GenotypeGVCFs')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
     def _create_recalibration_table(self):

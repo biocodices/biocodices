@@ -88,9 +88,12 @@ class ReadsMunger:
         self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
         self.gatk.recalibrate_quality_scores()
 
-    def call_variants(self, bam_filepath):
+    def create_vcf(self, bam_filepath):
         self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
         self.gatk.create_vcf()
+
+    def create_gvcf(self, bam_filepath):
+        self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
         self.gatk.create_gvcf()
 
     def _file(self, label):

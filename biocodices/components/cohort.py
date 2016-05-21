@@ -1,5 +1,6 @@
 from biocodices.programs.gatk import GATK
 from biocodices.helpers.language import plural
+from biocodices.components import SequencerRun
 
 
 class Cohort:
@@ -9,18 +10,20 @@ class Cohort:
         sequencer run.
         """
         self.samples = samples
-        seq_ids = list(set(sample.sequencing.id for sample in self.samples))
-        self.sequencer_runs = [SequencerRun]
+        self.sequencer_runs = [sample.sequencer_run for sample in self.samples]
         if len(self.samples) == 0:
             raise Exception('Are you trying to create empty Cohort?')
 
     def __repr__(self):
+        return '<{}>'.format(self.__str__())
+
+    def __str__(self):
         n_sequencer_runs = len(self.sequencer_runs)
         n_samples = len(self.samples)
-        tmpl = '<{} with {} from sequencer {}>'
+        tmpl = '{} with {} from {}'
         return tmpl.format(self.__class__.__name__,
                            plural('sample', n_samples),
-                           plural('run', n_sequencer_runs))
+                           plural('sequencer run', n_sequencer_runs))
 
     def joint_genotyping(self):
         gatk = GATK()
