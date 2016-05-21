@@ -2,8 +2,7 @@ import requests
 import sys
 from myvariant import MyVariantInfo
 
-from .myvariant_parser import MyvariantParser
-from .ensemble_parser import EnsembleParser
+from biocodices.web_fetchers import MyvariantParser, EnsembleParser
 
 
 class VariantFetcher:

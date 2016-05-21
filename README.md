@@ -9,7 +9,7 @@
 conda config --add channels conda-forge
 conda install python-ternary
 
-pip install myvariant, multiqc, termcolor
+pip install myvariant, multiqc, termcolor, inflect
 ```
 
 ## Software and resources

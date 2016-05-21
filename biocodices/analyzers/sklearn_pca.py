@@ -2,7 +2,7 @@ import sklearn.decomposition
 from math import sqrt
 from pandas import DataFrame
 from biocodices.analyzers.base_pca import BasePCA
-from biocodices.helpers.helpers import percentage_fmt
+from biocodices.helpers.language import percentage_fmt
 
 
 class SklearnPCA(BasePCA):

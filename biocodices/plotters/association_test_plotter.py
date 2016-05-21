@@ -2,7 +2,6 @@ import numpy as np
 import seaborn as sns
 
 from biocodices.plotters.base_plotter import BasePlotter
-# from helpers.helpers import hide_spines_and_ticks
 from biocodices.helpers.config import Config
 
 

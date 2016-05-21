@@ -5,7 +5,7 @@ from os.path import expanduser, join, isfile, getsize
 from shutil import copyfile
 
 from .base_pca import BasePCA
-from biocodices.helpers.helpers import percentage_fmt
+from biocodices.helpers.language import percentage_fmt
 from biocodices.helpers.config import Config
 
 

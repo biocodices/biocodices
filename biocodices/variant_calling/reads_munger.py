@@ -1,9 +1,7 @@
 from os.path import join, basename
 
-from biocodices.helpers.config import Config
-from biocodices.helpers.resource import Resource
-from biocodices.helpers.program_caller import ProgramCaller
-from biocodices.helpers.gatk import GATK
+from biocodices.helpers import Config, Resource
+from biocodices.programs import ProgramCaller, GATK
 
 
 class ReadsMunger:
@@ -12,6 +10,7 @@ class ReadsMunger:
         self.results_dir = results_dir
         self.executables = Config('executables')
         self.params = Config('parameters')
+        self.gatk = GATK()
 
     def __repr__(self):
         return '<{} for {}>'.format(self.__class__.__name__, self.sample.id)
@@ -79,17 +78,17 @@ class ReadsMunger:
         ProgramCaller(command).run(log_filepath=log_filepath)
 
     def realign_indels(self, bam_filepath):
-        gatk = GATK(bam_filepath)
-        gatk.realign_indels()
+        self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
+        self.gatk.realign_indels()
 
     def recalibrate_quality_scores(self, bam_filepath):
-        gatk = GATK(bam_filepath)
-        gatk.recalibrate_quality_scores()
+        self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
+        self.gatk.recalibrate_quality_scores()
 
     def call_variants(self, bam_filepath):
-        gatk = GATK(bam_filepath)
-        gatk.create_vcf()
-        gatk.create_gvcf()
+        self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
+        self.gatk.create_vcf()
+        self.gatk.create_gvcf()
 
     def _log_filepath(self, label):
         return join(self.results_dir, label + '.log')

@@ -1,6 +1,6 @@
 import subprocess
 from datetime import datetime
-from biocodices.helpers.helpers import seconds_to_hms_string
+from biocodices.helpers.language import seconds_to_hms_string
 
 
 class ProgramCaller:
@@ -14,7 +14,10 @@ class ProgramCaller:
         stderr to filepaths of your choice.
         """
         self.t1 = datetime.now()
+
         self.log_filepath = log_filepath or 'biocodices_output.log'
+        if not self.log_filepath.endswith('.log'):
+            self.log_filepath += '.log'
 
         with open(self.log_filepath, 'w') as log_file:
             # This file write neeeds to be separated from the following one.

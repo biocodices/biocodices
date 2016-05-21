@@ -3,12 +3,13 @@ from glob import glob
 from os.path import expanduser, basename, join, abspath
 
 from .sample import Sample
+from biocodices.helpers.language import plural
 
 
-class Sequencing:
+class SequencerRun:
     def __init__(self, directory):
         """
-        A sequencing object expects the path to a directory that will have
+        A SequencerRun object expects the path to a directory that will have
         'data' and 'results' subdirectories. fastq files from samples will be
         looked for in the 'data' subdir.
         """
@@ -19,8 +20,13 @@ class Sequencing:
         self.library_id = 'ENPv1_LIB_00001'  ## FIXME: ! Check this!!!!
 
     def __repr__(self):
-        tmpl = '<Sequencing {} with {} samples>'
-        return tmpl.format(self.id, len(self.samples()))
+        tmpl = '<SequencerRun({})>'
+        return tmpl.format(self.dir)
+
+    def __str__(self):
+        n_samples = len(self.samples())
+        tmpl = 'Sequencer run "{}" with {}'
+        return tmpl.format(self.id, plural('sample', n_samples))
 
     def samples(self):
         glob_expr = join(self.data_dir, '*.{}'.format(Sample.reads_format))

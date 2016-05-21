@@ -1,15 +1,17 @@
 from os.path import dirname, join
-from biocodices.helpers.config import Config
-from biocodices.helpers.resource import Resource
-from biocodices.helpers.program_caller import ProgramCaller
+from biocodices.helpers import Config, Resource
+from biocodices.programs import ProgramCaller
+from biocodices.helpers.general import params_dict_to_str
 
 
 class GATK:
-    def __init__(self, bam_filepath):
+    def __init__(self):
         self.executable = Config('executables')['GATK']
         self.reference_genome = Resource('reference_genome')
         self.params = Config('parameters')['GATK']
 
+    def set_bamfile(self, bam_filepath):
+        # TODO: this doesn't convince me. Think of a better way.
         self.bam = bam_filepath
         self.realigned_bam = self.bam.replace('.bam', '.realigned.bam')
         self.recalibrated_bam = self.realigned_bam.replace('.bam',
@@ -38,7 +40,7 @@ class GATK:
         })
 
         command = '{} {}'.format(self.executable, params_str)
-        log_filepath = join(dirname(self.bam), 'HaplotypeCaller_vcf.log')
+        log_filepath = join(dirname(self.bam), 'HaplotypeCaller_vcf')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
     def create_gvcf(self):
@@ -52,9 +54,24 @@ class GATK:
         })
 
         command = '{} {}'.format(self.executable, params_str)
-        log_filepath = join(dirname(self.bam), 'HaplotypeCaller_gvcf.log')
+        log_filepath = join(dirname(self.bam), 'HaplotypeCaller_gvcf')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
+    def joint_genotyping(self, gvcf_list, output_gvcf_filepath):
+        params_dict = self.params['GATK']['GenotypeGVCFs']
+        params_str = params_dict_to_str(params_dict)
+        params_str = params_str.format(**{
+            'reference_genome': self.reference_genome,
+            'reference_variants': self.reference_variants,
+            'output': output_gvcf_filepath,
+        })
+        for gvcf_filename in gvcf_list:
+            params_str += ' --variant {}'.format(gvcf_filename)
+
+        command = '{} {}'.format(self.executable, params_str)
+        log_filepath = join(dirname(output_gvcf_filepath),
+                            'GenotypeGVCFs')
+        ProgramCaller(command).run(log_filepath=log_filepath)
 
     def _create_recalibration_table(self):
         params = ['-{} {}'.format(k, v) for k, v in
@@ -71,7 +88,7 @@ class GATK:
         })
 
         command = '{} {}'.format(self.executable, params_str)
-        log_filepath = join(dirname(self.bam), 'BaseRecalibrator.log')
+        log_filepath = join(dirname(self.bam), 'BaseRecalibrator')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
         return recalibration
@@ -88,7 +105,7 @@ class GATK:
         })
 
         command = '{} {}'.format(self.executable, params_str)
-        log_filepath = join(dirname(self.bam), 'PrintReads.log')
+        log_filepath = join(dirname(self.bam), 'PrintReads')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
     def _realigner_target_creator(self):
@@ -108,7 +125,7 @@ class GATK:
         })
 
         command = '{} {}'.format(self.executable, params_str)
-        log_filepath = join(dirname(self.bam), 'RealignerTargetCreator.log')
+        log_filepath = join(dirname(self.bam), 'RealignerTargetCreator')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
         return targets_filepath
@@ -124,5 +141,5 @@ class GATK:
         })
 
         command = '{} {}'.format(self.executable, params_str)
-        log_filepath = join(dirname(self.bam), 'IndelRealigner.log')
+        log_filepath = join(dirname(self.bam), 'IndelRealigner')
         ProgramCaller(command).run(log_filepath=log_filepath)

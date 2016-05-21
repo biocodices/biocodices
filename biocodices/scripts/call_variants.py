@@ -5,18 +5,18 @@ from itertools import product
 from termcolor import colored
 from os import makedirs
 from os.path import expanduser, dirname, join, exists
-from biocodices import Sequencing, software_name
+from biocodices import SequencerRun, software_name
 
 
 def call_variants_for_all_samples(base_dir):
-    sequencing = Sequencing(expanduser(base_dir))
-    samples = sequencing.samples()
+    sequencer_run = SequencerRun(expanduser(base_dir))
+    samples = sequencer_run.samples()
 
     print(biocodices_logo())
     print('Welcome to {}! Anlyzing reads for:'.format(software_name))
-    print(colored(sequencing, 'green'))
+    print(colored(sequencer_run, 'green'))
     print('\nYou can follow the details of the process with:')
-    print('`tail -f {}/*/*.log`\n'.format(sequencing.results_dir))
+    print('`tail -f {}/*/*.log`\n'.format(sequencer_run.results_dir))
 
     dir_list = [sample.results_dir for sample in samples]
     touch_all_the_logs(dir_list)
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     args = sys.argv
     if len(args) != 2:
         print('\nUsage:')
-        print('{} <root dir of sequencing>'.format(__file__))
+        print('{} <root dir of sequencer_run>'.format(__file__))
         sys.exit()
 
     base_dir = args[1]

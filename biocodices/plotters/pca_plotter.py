@@ -1,7 +1,8 @@
 import seaborn as sns
 
 from biocodices.plotters.base_plotter import BasePlotter
-from biocodices.helpers.helpers import hide_spines_and_ticks, marker_from_sexcode
+from biocodices.helpers.plotting import (hide_spines_and_ticks,
+                                         marker_from_sexcode)
 from biocodices.helpers.config import Config
 
 

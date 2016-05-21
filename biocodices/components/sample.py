@@ -3,27 +3,32 @@ from os.path import isdir, join, isfile
 from datetime import datetime
 from termcolor import colored
 
-from biocodices.variant_calling.reads_munger import ReadsMunger
-from biocodices.helpers.helpers import seconds_to_hms_string
+from biocodices.variant_calling import ReadsMunger
+from biocodices.helpers.language import seconds_to_hms_string
 
 
 class Sample:
     reads_format = 'fastq'
 
-    def __init__(self, sample_id, sequencing):
+    def __init__(self, sample_id, sequencer_run):
         """
-        Expects a sample_id and a Sequencing object.
-        It will look for its fastq files in the sequencing.data_dir with
+        Expects a sample_id and a sequencer_run object.
+        It will look for its fastq files in the sequencer_run.data_dir with
         filenames like: <sample_id>.R1.fastq, <sample_id>.R2.fastq
         (for the forward and reverse reads, respectively).
         """
         self.id = sample_id
-        self.sequencing = sequencing
-        self.results_dir = join(self.sequencing.results_dir, self.id)
+        self.sequencer_run = sequencer_run
+        self.results_dir = join(self.sequencer_run.results_dir, self.id)
         self.reads_munger = ReadsMunger(self, self.results_dir)
+        self.fastqs = self._files('fastq')
+        self.trimmed_fastqs = self._files('trimmed.fastq')
+        self.bam = self._files('bam')
+        self.vcf = self._files('vcf')
+        self.gvcf = self._files('g.vcf')
 
     def __repr__(self):
-        return '<Sample {} from {}>'.format(self.id, self.sequencing.id)
+        return '<Sample {} from {}>'.format(self.id, self.sequencer_run.id)
 
     def call_variants(self):
         if not isdir(self.results_dir):
@@ -35,36 +40,36 @@ class Sample:
         print(self.results_dir, '\n')
 
         self.printlog('Analyze reads')
-        for reads_filepath in self._files('fastq'):
+        for reads_filepath in self.fastqs:
             self.reads_munger.analyze_reads(reads_filepath)
 
         self.printlog('Trim adapters')
-        self.reads_munger.trim_adapters(self._files('fastq'))
+        self.reads_munger.trim_adapters(self.fastqs)
 
         self.printlog('Analyze trimmed reads')
-        for trimmed_filepath in self._files('trimmed.fastq'):
+        for trimmed_filepath in self.trimmed_fastqs:
             self.reads_munger.analyze_reads(trimmed_filepath)
 
         # TODO: implement this
-        # self.reads_munger.multiqc(self._files('fastq') + self._files('trimmed.fastq'))
+        # self.reads_munger.multiqc
 
         self.printlog('Align reads to reference')
-        self.reads_munger.align_to_reference(self._files('trimmed.fastq'))
+        self.reads_munger.align_to_reference(self.trimmed_fastqs)
 
         self.printlog('Add or replace read groups')
         self.reads_munger.add_or_replace_read_groups(self)
 
         self.printlog('Delete sam file')
-        #  remove(self._files('sam'))
+        remove(self._files('sam'))
 
         self.printlog('Realign indels')
-        self.reads_munger.realign_indels(self._files('bam'))
+        self.reads_munger.realign_indels(self.bam)
 
         self.printlog('Recalibrate read quality scores')
-        self.reads_munger.recalibrate_quality_scores(self._files('bam'))
+        self.reads_munger.recalibrate_quality_scores(self.bam)
 
         self.printlog('Call variants')
-        self.reads_munger.call_variants(self._files('bam'))
+        self.reads_munger.call_variants(self.bam)
 
         t2 = datetime.now()
         self._log_total_time(t1, t2)
@@ -93,7 +98,7 @@ class Sample:
         return getattr(self, ext)
 
     def _reads_files(self, ext):
-        location = self.sequencing.data_dir
+        location = self.sequencer_run.data_dir
         if ext == 'trimmed.fastq':
             location = self.results_dir
         read_filepath = join(location, '{}.{}.{}')
