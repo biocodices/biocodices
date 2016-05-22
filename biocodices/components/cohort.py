@@ -1,7 +1,6 @@
-from os.path import join
-from biocodices.programs import ProgramCaller, GATK
+from biocodices.programs import GATK
 from biocodices.helpers.language import plural
-from biocodices.helpers import Config
+from biocodices.variant_calling import VcfMunger
 
 
 class Cohort:
@@ -48,11 +47,7 @@ class Cohort:
         self.split_joint_vcf()
 
     def split_joint_vcf(self):
-        executable = Config('executables')['vcf-subset']
         for sample in self.samples:
-            params = '-c {} {}'.format(sample.id, self.joint_vcf)
-            command = '{} {}'.format(executable, params)
-            log_filepath = join(sample.results_dir, 'vcf-subset.log')
             outfile = sample._files('post-joint.vcf')
-            ProgramCaller(command).run(stdout_sink=outfile,
-                                       log_filepath=log_filepath)
+            VcfMunger.subset(vcf=self.joint_vcf, sample_ids=[sample.id],
+                             outfile=outfile)

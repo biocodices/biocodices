@@ -1,8 +1,7 @@
-from os.path import join, basename
+from os.path import join, dirname
 
-from biocodices.helpers import Config, Resource
+from biocodices.helpers import Config
 from biocodices.programs import ProgramCaller, GATK
-from biocodices.helpers.general import params_dict_to_str, rename_tempfile
 
 
 class VcfMunger:
@@ -24,3 +23,19 @@ class VcfMunger:
     def apply_filters(self, vcf, variant_type):
         filtered_vcf = self.gatk.filter_variants_vcf(vcf, variant_type)
         return filtered_vcf
+
+    @staticmethod
+    def subset(vcf, sample_ids, outfile):
+        """
+        vcf should be an absolute path to a vcf file. columns should be a
+        list of the columns (i.e. samples ids) you want to subset.
+        outfile should be an absolute path for the new vcf file.
+        """
+        command = Config('executables')['vcf-subset']
+        for sample_id in sample_ids:
+            command += ' -c {}'.format(sample_id)
+        command += ' {}'.format(vcf)
+
+        log_filepath = join(dirname(outfile), 'vcf-subset.log')
+        ProgramCaller(command).run(stdout_sink=outfile,
+                                   log_filepath=log_filepath)
