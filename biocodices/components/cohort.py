@@ -1,6 +1,8 @@
+from os.path import join
 from biocodices.programs import GATK
 from biocodices.helpers.language import plural
 from biocodices.variant_calling import VcfMunger
+from biocodices.components import SequencerRun
 
 
 class Cohort:
@@ -10,9 +12,15 @@ class Cohort:
         sequencer run.
         """
         self.samples = samples
-        self.sequencer_runs = [sample.sequencer_run for sample in self.samples]
+        seq_run_dirs = set([sample.sequencer_run.dir
+                            for sample in self.samples])
+        self.sequencer_runs = [SequencerRun(seq_dir)
+                               for seq_dir in seq_run_dirs]
         if len(self.samples) == 0:
             raise Exception('Are you trying to create empty Cohort?')
+        if len(self.sequencer_runs) == 1:
+            self.joint_vcf = join(self.sequencer_runs[0].results_dir,
+                                  'joint_genotyping.vcf')
 
     def __repr__(self):
         return '<{}>'.format(self.__str__())

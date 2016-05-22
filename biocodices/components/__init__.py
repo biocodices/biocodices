@@ -1,3 +1,3 @@
 from .sample import Sample
-from .sequencing import SequencerRun
+from .sequencer_run import SequencerRun
 from .cohort import Cohort
