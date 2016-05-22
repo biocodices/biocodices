@@ -96,10 +96,12 @@ class GATK:
         return outfile
 
     def filter_variants_vcf(self, vcf, variant_type):
-        filters = self.params['VariantFiltration_filters'][variant_type]
+        filters = self.params['VariantFiltration_filters']
+        filter_order = filters['{}_order'.format(variant_type)]
         params_dict = self.params['VariantFiltration']
         input_vcf = vcf
-        for filter_name, filter_expression in filters.items():
+        for filter_name in filter_order:
+            filter_expression = filters[variant_type][filter_name]
             outfile = input_vcf.replace('.vcf', '.{}.vcf'.format(filter_name))
             params_str = params_dict_to_str(params_dict).format(**{
                 'reference_genome': self.reference_genome,

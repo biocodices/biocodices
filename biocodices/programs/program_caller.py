@@ -16,6 +16,7 @@ class ProgramCaller:
         stderr to filepaths of your choice.
         """
         self.t1 = datetime.now()
+        self.arglist = self._command_to_arglist(self.command)
 
         self.log_filepath = log_filepath or 'biocodices_output.log'
         if not self.log_filepath.endswith('.log'):
@@ -47,8 +48,7 @@ class ProgramCaller:
                 stderr_sink_IO = subprocess.STDOUT  # Both outputs to the log
 
             try:
-                argument_list = self._command_to_arg_list(self.command)
-                self.proc = subprocess.run(argument_list,
+                self.proc = subprocess.run(self.arglist,
                                            stdout=stdout_sink_IO,
                                            stderr=stderr_sink_IO,
                                            check=True)
@@ -70,7 +70,7 @@ class ProgramCaller:
         return self.proc
 
     @staticmethod
-    def _command_to_arg_list(command):
+    def _command_to_arglist(command):
         # GATK parameters include filter expressions as strings that must be
         # passed as a single argument, so I can't just do a command.split(' ').
         # I have to take them out first and restore them to the argument list
@@ -78,21 +78,28 @@ class ProgramCaller:
         # passed as two arguments, not four.
         string_arguments = re.findall(r'(".*?")', command)
         dummy_keys = ['#{}#'.format(i) for i in range(len(string_arguments))]
-        string_arguments = dict(zip(dummy_keys, string_arguments))
-        for key, arg in string_arguments.items():
+        dummy_to_arg = dict(zip(dummy_keys, string_arguments))
+        for key, arg in dummy_to_arg.items():
             # Replace the quoted expression with a dummy key
             command = command.replace(arg, key)
 
-        arg_list = command.split(' ')
-        for i, arg in enumerate(arg_list):
-            if arg in string_arguments:
-                arg_list[i] = string_arguments[arg]
+        arglist = command.split(' ')
+        for i, arg in enumerate(arglist):
+            if arg in dummy_to_arg:  # if the arg is actually a dummy key
+                arglist[i] = dummy_to_arg[arg].replace('"', '')
+                # Removing the quotations is necessary! GATK filter expressions
+                # will come here surrounded in double quotes, but to pass the
+                # expression correctly to GATK via subprocess, we need to
+                # remove them (otherwise they are taken to be part of the
+                # expression itself, they break the VCF and the filter is not
+                # applied).
 
-        return arg_list
+        return arglist
 
     def _log_executed_command(self, file_handle):
         start_msg = 'Started at {}\n{}\n---\n\n'
-        file_handle.write(start_msg.format(self._timestamp(), self.command))
+        file_handle.write(start_msg.format(self._timestamp(),
+                                           ' '.join(self.arglist)))
 
     def _log_elapsed_time(self, file_handle):
         seconds = (self.t2 - self.t1).seconds

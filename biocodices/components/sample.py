@@ -1,5 +1,5 @@
 from os import makedirs, remove
-from os.path import isdir, join, isfile
+from os.path import isdir, join, isfile, basename
 from datetime import datetime
 from termcolor import colored
 
@@ -96,13 +96,27 @@ class Sample:
                    "so I'll use the regular one: {}".format(self.vcf))
             self.printlog(msg)
             input_vcf = self.vcf
-        created_files = self.vcf_munger.create_snp_and_indel_vcfs(input_vcf)
-        self.snps_vcf, self.indels_vcf = created_files
+
+        variant_files = self.vcf_munger.create_snp_and_indel_vcfs(input_vcf)
+        self.snps_vcf, self.indels_vcf = variant_files
+
+        self.printlog('Apply SNP filters')
         self.snps_vcf = self.vcf_munger.apply_filters(self.snps_vcf, 'snps')
+
+        self.printlog('Apply indel filters')
         self.indels_vcf = self.vcf_munger.apply_filters(self.indels_vcf,
                                                         'indels')
+        self.printlog('Merge the filtered vcfs')
         self.vcf_munger.merge_variant_vcfs([self.snps_vcf, self.indels_vcf],
-                                           outfile=self.filtered_vcf)
+                                            outfile=self.filtered_vcf)
+
+    def analyze_vcfs(self):
+        vcfs = [self.vcf, self.joint_vcf, self.filtered_vcf]
+        labels = ['.'.join(basename(fn).split('.')[1:]) for fn in vcfs]
+
+        for label, vcf in dict(zip(labels, vcfs)).items():
+            pass
+            # self.vcf_munger.stats(vcf)
 
     def log(self, extension):
         return join(self.results_dir, '{}.{}.log'.format(self.id, extension))

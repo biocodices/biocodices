@@ -44,11 +44,13 @@ class Cohort:
         # the expected one (the results directory parent to all sample
         # directories).
         output_dir = self.sequencer_runs[0].results_dir
+        print('\nJoint Genotyping for {}\n'.format(plural('sample',
+                                                          len(self.samples))))
         self.joint_vcf = gatk.joint_genotyping(gvcf_list, output_dir)
         self.split_joint_vcf()
 
     def split_joint_vcf(self):
         for sample in self.samples:
-            outfile = sample._files('post-joint.vcf')
+            outfile = sample.joint_vcf
             VcfMunger.subset(vcf=self.joint_vcf, sample_ids=[sample.id],
                              outfile=outfile)
