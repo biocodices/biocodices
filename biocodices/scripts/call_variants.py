@@ -17,26 +17,27 @@ def call_variants_for_all_samples(base_dir):
     print('Welcome to {}! Anlyzing reads for:'.format(software_name))
     print(colored(sequencer_run, 'green'))
     print('\nYou can follow the details of the process with:')
-    print('`tail -n0 -f {}/*/*.log`\n'.format(sequencer_run.results_dir))
+    print('`tail -n0 -f {}/{{*/,}}*.log`\n'.format(sequencer_run.results_dir))
 
     dir_list = [sample.results_dir for sample in samples]
-    touch_all_the_logs(dir_list)
+    touch_all_the_logs(sequencer_run.base_dir, dir_list)
 
     cohort.call_variants()
 
     print('\nDone! Bless your heart.\n')
 
 
-def touch_all_the_logs(dir_list):
+def touch_all_the_logs(base_dir, dir_list):
     # I wrote this just to be able to run a `tail -f *.log` on every log
     # during the variant calling, even for logs that don't yet exist but that
     # will be created during the process. It's a necessarily hardcoded list,
     # I guess:
     [makedirs(d, exist_ok=True) for d in dir_list]
-    logs = ['AddOrReplaceReadGroups', 'BaseRecalibrator', 'bwa', 'fastqc',
-            'fastq-mcf', 'HaplotypeCaller_gvcf', 'HaplotypeCaller_vcf',
-            'IndelRealigner', 'PrintReads', 'RealignerTargetCreator']
-    log_filepaths = [join(d, fn + '.log') for d, fn in product(dir_list, logs)]
+    with open(join(dirname(__file__), 'log_filenames.txt')) as f:
+        log_filenames = [l.strip() for l in f.readlines()]
+    log_filepaths = [join(d, fn + '.log')
+                     for d, fn in product(dir_list, log_filenames)]
+    log_filepaths += join(base_dir, 'GenotypeGVCFs')
     for log_filepath in log_filepaths:
         if not exists(log_filepath):
             open(log_filepath, 'a').close()
