@@ -3,7 +3,7 @@ from os.path import isdir, join, isfile
 from datetime import datetime
 from termcolor import colored
 
-from biocodices.variant_calling import ReadsMunger
+from biocodices.variant_calling import ReadsMunger, VcfMunger
 from biocodices.helpers.language import seconds_to_hms_string
 
 
@@ -21,6 +21,7 @@ class Sample:
         self.sequencer_run = sequencer_run
         self.results_dir = join(self.sequencer_run.results_dir, self.id)
         self.reads_munger = ReadsMunger(self, self.results_dir)
+        self.vcf_munger = VcfMunger(self, self.results_dir)
         self.fastqs = self._files('fastq')
         self.trimmed_fastqs = self._files('trimmed.fastq')
         self.bam = self._files('bam')
@@ -46,6 +47,7 @@ class Sample:
 
         t2 = datetime.now()
         self._log_total_time(t1, t2)
+        print()
 
     def analyze_and_trim_reads(self):
         self.printlog('Analyze reads')
@@ -58,9 +60,6 @@ class Sample:
         self.printlog('Analyze trimmed reads')
         for trimmed_filepath in self.trimmed_fastqs:
             self.reads_munger.analyze_reads(trimmed_filepath)
-
-        # TODO: implement this
-        # self.reads_munger.multiqc
 
     def align_reads(self):
         self.printlog('Align reads to reference')
@@ -87,6 +86,12 @@ class Sample:
             self.printlog('Create gvcf')
             self.reads_munger.create_gvcf(self.bam)
 
+    def apply_filters_to_vcf(self):
+        created_files = self.vcf_munger.create_snp_and_indel_vcfs(self.vcf)
+        self.snps_vcf, self.indels_vcf = created_files
+        self.vcf_munger.apply_filters(self.snps_vcf, 'snps')
+        self.vcf_munger.apply_filters(self.indels_vcf, 'indels')
+
     def log(self, extension):
         return join(self.results_dir, '{}.{}.log'.format(self.id, extension))
 
@@ -103,12 +108,9 @@ class Sample:
 
     def _files(self, ext):
         if ext in ['fastq', 'trimmed.fastq']:
-            setattr(self, ext, self._reads_files(ext))
-            return getattr(self, ext)
+            return self._reads_files(ext)
 
-        filepath = '{}.{}'.format(join(self.results_dir, self.id), ext)
-        setattr(self, ext, filepath)
-        return getattr(self, ext)
+        return '{}.{}'.format(join(self.results_dir, self.id), ext)
 
     def _reads_files(self, ext):
         location = self.sequencer_run.data_dir
@@ -117,8 +119,9 @@ class Sample:
         read_filepath = join(location, '{}.{}.{}')
         forward_filepath = read_filepath.format(self.id, 'R1', ext)
         reverse_filepath = read_filepath.format(self.id, 'R2', ext)
-        if not isfile(forward_filepath) or not isfile(reverse_filepath):
-            msg = "I couldn't find BOTH R1 and R2 reads: {}, {}"
-            raise OSError(msg.format(forward_filepath, reverse_filepath))
+        if ext == 'fastq':
+            if not isfile(forward_filepath) or not isfile(reverse_filepath):
+                msg = "I couldn't find BOTH R1 and R2 reads: {}, {}"
+                raise OSError(msg.format(forward_filepath, reverse_filepath))
 
         return forward_filepath, reverse_filepath

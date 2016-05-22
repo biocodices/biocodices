@@ -5,12 +5,13 @@ from itertools import product
 from termcolor import colored
 from os import makedirs
 from os.path import expanduser, dirname, join, exists
-from biocodices import SequencerRun, software_name
+from biocodices import SequencerRun, Cohort, software_name
 
 
 def call_variants_for_all_samples(base_dir):
     sequencer_run = SequencerRun(expanduser(base_dir))
     samples = sequencer_run.samples()
+    cohort = Cohort(samples)
 
     print(biocodices_logo())
     print('Welcome to {}! Anlyzing reads for:'.format(software_name))
@@ -21,11 +22,9 @@ def call_variants_for_all_samples(base_dir):
     dir_list = [sample.results_dir for sample in samples]
     touch_all_the_logs(dir_list)
 
-    for sample in samples:
-        sample.call_variants()
-        print()
+    cohort.call_variants()
 
-    print(colored('\nDone! Bless your heart.\n', 'green'))
+    print('\nDone! Bless your heart.\n')
 
 
 def touch_all_the_logs(dir_list):

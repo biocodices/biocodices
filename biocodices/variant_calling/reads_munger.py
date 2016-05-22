@@ -2,7 +2,7 @@ from os.path import join, basename
 
 from biocodices.helpers import Config, Resource
 from biocodices.programs import ProgramCaller, GATK
-from biocodices.helpers.general import params_dict_to_str
+from biocodices.helpers.general import params_dict_to_str, rename_tempfile
 
 
 class ReadsMunger:
@@ -51,7 +51,7 @@ class ReadsMunger:
         Expects a list of two files: forward and reverse reads of the same
         sample. It will search for a reference genome defined by Config.
         """
-        output_sam = join(self.results_dir, self.sample.id + '.sam')
+        outfile = join(self.results_dir, self.sample.id + '.sam')
 
         params_str = params_dict_to_str(self.params['bwa']).format(**{
             'reference_genome': Resource('reference_genome')
@@ -62,10 +62,12 @@ class ReadsMunger:
         command = '{} {}'.format(self.executables['bwa'], params_str)
         # redirect stdout to samfile and stderr  to logfile
         log_filepath = self._file('bwa')
-        ProgramCaller(command).run(stdout_sink=output_sam,
+        ProgramCaller(command).run(stdout_sink=outfile + '.temp',
                                    log_filepath=log_filepath)
+        rename_tempfile(outfile)
 
     def add_or_replace_read_groups(self, sample):
+        outfile = sample._files('bam')
         params_dict = self.params['AddOrReplaceReadGroups']
         params = ['{}={}'.format(k, v) for k, v in params_dict.items()]
         params_str = ' '.join(params).format(**{
@@ -73,12 +75,13 @@ class ReadsMunger:
             'library_id': sample.sequencer_run.library_id,
             'ngs_id': sample.sequencer_run.id,
             'input': sample._files('sam'),
-            'output': sample._files('bam'),
+            'output': outfile + '.temp',
         })
         command = '{} AddOrReplaceReadGroups {}'.format(
             self.executables['picard-tools'], params_str)
         log_filepath = self._file('AddOrReplaceReadGroups')
         ProgramCaller(command).run(log_filepath=log_filepath)
+        rename_tempfile(outfile, 'bai')
 
     def realign_indels(self, bam_filepath):
         self.gatk.set_bamfile(bam_filepath)  # TODO: improve this

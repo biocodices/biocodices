@@ -1,6 +1,7 @@
-from biocodices.programs.gatk import GATK
+from os.path import join
+from biocodices.programs import ProgramCaller, GATK
 from biocodices.helpers.language import plural
-from biocodices.components import SequencerRun
+from biocodices.helpers import Config
 
 
 class Cohort:
@@ -25,6 +26,15 @@ class Cohort:
                            plural('sample', n_samples),
                            plural('sequencer run', n_sequencer_runs))
 
+    def call_variants(self):
+        for sample in self.samples:
+            sample.call_variants()
+
+        self.joint_genotyping()
+
+        for sample in self.samples:
+            sample.apply_filters_to_vcf()
+
     def joint_genotyping(self):
         gatk = GATK()
         gvcf_list = [sample.gvcf for sample in self.samples]
@@ -33,5 +43,16 @@ class Cohort:
         # If they're samples from only one sequence run, the path will be
         # the expected one (the results directory parent to all sample
         # directories).
-        output_path = self.sequencer_runs[0].results_dir
-        self.joint_gvcf = gatk.joint_genotyping(gvcf_list, output_path)
+        output_dir = self.sequencer_runs[0].results_dir
+        self.joint_vcf = gatk.joint_genotyping(gvcf_list, output_dir)
+        self.split_joint_vcf()
+
+    def split_joint_vcf(self):
+        executable = Config('executables')['vcf-subset']
+        for sample in self.samples:
+            params = '-c {} {}'.format(sample.id, self.joint_vcf)
+            command = '{} {}'.format(executable, params)
+            log_filepath = join(sample.results_dir, 'vcf-subset.log')
+            outfile = sample._files('post-joint.vcf')
+            ProgramCaller(command).run(stdout_sink=outfile,
+                                       log_filepath=log_filepath)
