@@ -1,4 +1,5 @@
 import subprocess
+import re
 from datetime import datetime
 from biocodices.helpers.language import seconds_to_hms_string
 
@@ -46,7 +47,8 @@ class ProgramCaller:
                 stderr_sink_IO = subprocess.STDOUT  # Both outputs to the log
 
             try:
-                self.proc = subprocess.run(self.command.split(' '),
+                argument_list = self._command_to_arg_list(self.command)
+                self.proc = subprocess.run(argument_list,
                                            stdout=stdout_sink_IO,
                                            stderr=stderr_sink_IO,
                                            check=True)
@@ -66,6 +68,27 @@ class ProgramCaller:
             self.t2 = datetime.now()
             self._log_elapsed_time(log_file)
         return self.proc
+
+    @staticmethod
+    def _command_to_arg_list(command):
+        # GATK parameters include filter expressions as strings that must be
+        # passed as a single argument, so I can't just do a command.split(' ').
+        # I have to take them out first and restore them to the argument list
+        # afterwards. For instance, '--filterExpression "QD < 2.0"' should be
+        # passed as two arguments, not four.
+        string_arguments = re.findall(r'(".*?")', command)
+        dummy_keys = ['#{}#'.format(i) for i in range(len(string_arguments))]
+        string_arguments = dict(zip(dummy_keys, string_arguments))
+        for key, arg in string_arguments.items():
+            # Replace the quoted expression with a dummy key
+            command = command.replace(arg, key)
+
+        arg_list = command.split(' ')
+        for i, arg in enumerate(arg_list):
+            if arg in string_arguments:
+                arg_list[i] = string_arguments[arg]
+
+        return arg_list
 
     def _log_executed_command(self, file_handle):
         start_msg = 'Started at {}\n{}\n---\n\n'
