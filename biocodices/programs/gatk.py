@@ -97,23 +97,40 @@ class GATK:
 
     def filter_variants_vcf(self, vcf, variant_type):
         filters = self.params['VariantFiltration_filters'][variant_type]
-        outfile = vcf.replace('.vcf', '.filtered.vcf')
         params_dict = self.params['VariantFiltration']
+        input_vcf = vcf
         for filter_name, filter_expression in filters.items():
+            outfile = input_vcf.replace('.vcf', '.{}.vcf'.format(filter_name))
             params_str = params_dict_to_str(params_dict).format(**{
                 'reference_genome': self.reference_genome,
-                'input': vcf,
+                'input': input_vcf,
                 'output': outfile + '.temp',
             })
             params_str += ' --filterName {}'.format(filter_name)
             params_str += ' --filterExpression "{}"'.format(filter_expression)
             command = '{} {}'.format(self.executable, params_str)
-            log_filepath = join(dirname(vcf),
+            log_filepath = join(dirname(input_vcf),
                                 'VariantFiltration_{}_{}'.format(variant_type,
                                                                  filter_name))
             ProgramCaller(command).run(log_filepath=log_filepath)
+            rename_tempfile(outfile, 'idx')
+            input_vcf = outfile
+            # The filtered vcf will be input for the next filtering round.
 
-        rename_tempfile(outfile, 'idx')
+        return outfile  # last vcf file created, with all filters applied
+
+    def combine_variants(self, variant_vcfs, outfile):
+        params_dict = self.params['CombineVariants']
+        params_str = params_dict_to_str(params_dict).format(**{
+            'reference_genome': self.reference_genome,
+            'output': outfile + '.temp',
+        })
+        for variant_vcf in variant_vcfs:
+            params_str += ' -V {}'.format(variant_vcf)
+        command = '{} {}'.format(self.executable, params_str)
+        log_filepath = join(dirname(outfile), 'CombineVariants')
+        ProgramCaller(command).run(log_filepath=log_filepath)
+        rename_tempfile(outfile)
         return outfile
 
     def _create_recalibration_table(self):

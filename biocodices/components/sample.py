@@ -27,6 +27,8 @@ class Sample:
         self.bam = self._files('bam')
         self.vcf = self._files('vcf')
         self.gvcf = self._files('g.vcf')
+        self.joint_vcf = self._files('joint.vcf')
+        self.filtered_vcf = self._files('filtered.vcf')
 
     def __repr__(self):
         return '<Sample {} from {}>'.format(self.id, self.sequencer_run.id)
@@ -87,10 +89,20 @@ class Sample:
             self.reads_munger.create_gvcf(self.bam)
 
     def apply_filters_to_vcf(self):
-        created_files = self.vcf_munger.create_snp_and_indel_vcfs(self.vcf)
+        if isfile(self.joint_vcf):
+            input_vcf = self.joint_vcf
+        else:
+            msg = ("WARNING: I couldn't find a vcf from joint genotyping, "
+                   "so I'll use the regular one: {}".format(self.vcf))
+            self.printlog(msg)
+            input_vcf = self.vcf
+        created_files = self.vcf_munger.create_snp_and_indel_vcfs(input_vcf)
         self.snps_vcf, self.indels_vcf = created_files
-        self.vcf_munger.apply_filters(self.snps_vcf, 'snps')
-        self.vcf_munger.apply_filters(self.indels_vcf, 'indels')
+        self.snps_vcf = self.vcf_munger.apply_filters(self.snps_vcf, 'snps')
+        self.indels_vcf = self.vcf_munger.apply_filters(self.indels_vcf,
+                                                        'indels')
+        self.vcf_munger.merge_variant_vcfs([self.snps_vcf, self.indels_vcf],
+                                           outfile=self.filtered_vcf)
 
     def log(self, extension):
         return join(self.results_dir, '{}.{}.log'.format(self.id, extension))

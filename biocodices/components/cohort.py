@@ -29,9 +29,10 @@ class Cohort:
         for sample in self.samples:
             sample.call_variants()
 
-        self.joint_genotyping()
+        self.joint_vcf = self.joint_genotyping()
 
         for sample in self.samples:
+            sample.joint_vcf = self.joint_vcf
             sample.apply_filters_to_vcf()
 
     def joint_genotyping(self):

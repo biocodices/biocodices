@@ -24,6 +24,11 @@ class VcfMunger:
         filtered_vcf = self.gatk.filter_variants_vcf(vcf, variant_type)
         return filtered_vcf
 
+    def merge_variant_vcfs(self, variant_vcfs, outfile):
+        combined_vcf = self.gatk.combine_variants(variant_vcfs,
+                                                  outfile=self.sample.vcf)
+        return combined_vcf
+
     @staticmethod
     def subset(vcf, sample_ids, outfile):
         """
