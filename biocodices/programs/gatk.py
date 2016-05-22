@@ -1,4 +1,4 @@
-from os.path import dirname, join
+from os.path import dirname, join, basename
 from biocodices.helpers import Config, Resource
 from biocodices.programs import ProgramCaller
 from biocodices.helpers.general import params_dict_to_str, rename_tempfile
@@ -122,13 +122,27 @@ class GATK:
         return outfile  # last vcf file created, with all filters applied
 
     def combine_variants(self, variant_vcfs, outfile):
+        sample_ids = [basename(vcf).split('.')[0] for vcf in variant_vcfs]
+        sample_ids = list(set(sample_ids))
+        if len(sample_ids) > 1:
+            msg = 'Are you trying to merge vcfs from different samples? {}'
+            raise Exception(msg.format(variant_vcfs))
         params_dict = self.params['CombineVariants']
         params_str = params_dict_to_str(params_dict).format(**{
             'reference_genome': self.reference_genome,
             'output': outfile + '.temp',
         })
+
+        # GATK CombineVariants needs to tag the files being merged to then
+        # assign them a priority in the merging process. I just use a dummy
+        # tag since every variant will be included (I guess there will be no
+        # conflicts in the merged data?).
+        tag = 'DummyTag'
         for variant_vcf in variant_vcfs:
-            params_str += ' -V {}'.format(variant_vcf)
+            params_str += ' -V:{} {}'.format(tag, variant_vcf)
+        dummy_tags = [tag for vcf in variant_vcfs]
+        params_str += ' -priority {},{}'.format(*dummy_tags)
+
         command = '{} {}'.format(self.executable, params_str)
         log_filepath = join(dirname(outfile), 'CombineVariants')
         ProgramCaller(command).run(log_filepath=log_filepath)

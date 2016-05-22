@@ -98,8 +98,7 @@ class ProgramCaller:
 
     def _log_executed_command(self, file_handle):
         start_msg = 'Started at {}\n{}\n---\n\n'
-        file_handle.write(start_msg.format(self._timestamp(),
-                                           ' '.join(self.arglist)))
+        file_handle.write(start_msg.format(self._timestamp(), self.command))
 
     def _log_elapsed_time(self, file_handle):
         seconds = (self.t2 - self.t1).seconds
