@@ -1,0 +1,11 @@
+admixture: /home/juan/software/admixture_linux-1.3.0/admixture
+smartpca: /home/juan/software/eigensoft6/src/eigensrc/smartpca
+fastqc: /home/juan/software/FastQC/fastqc
+fastq-mcf: /home/juan/software/ea-utils.1.1.2-537/fastq-mcf
+bedtools: /home/juan/software/bedtools2/bin/bedtools
+samtools: /home/juansoftware/samtools-1.3/samtools
+GATK: java -jar /home/juan/software/GenomeAnalysisTK/GenomeAnalysisTK.jar
+vcftools: /usr/local/bin/vcftools
+vcf-subset: /usr/local/bin/vcf-subset
+picard-tools: java -jar /home/juan/software/picard-tools-2.2.4/picard.jar
+bwa: /usr/bin/bwa mem
