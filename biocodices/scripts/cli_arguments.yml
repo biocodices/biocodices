@@ -1,0 +1,15 @@
+description: 'Call variants for a cohort of samples associated to a sequencer run.'
+
+help_texts:
+    d: 'Base directory for the sequencer run (should contain a "data" subdirectory with the .fastq files).'
+    t: 'Trim adapters from the fastqs and create .trimmed.fastq R1 and R2 files for each sample.'
+    a: 'Align reads to the reference genome and create a .bam file for each sample.'
+    v: 'Create .vcf and .g.vcf files for each sample from the .bam.'
+    j: 'Do a joint genotyping for the cohort.'
+
+args:
+    d: ['seq-dir', 'store']
+    t: ['trim-reads', 'store_true']
+    a: ['align-reads', 'store_true']
+    v: ['create-vcfs', 'store_true']
+    j: ['joint-genotyping', 'store_true']

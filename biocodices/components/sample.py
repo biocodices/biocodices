@@ -33,7 +33,7 @@ class Sample:
     def __repr__(self):
         return '<Sample {} from {}>'.format(self.id, self.sequencer_run.id)
 
-    def call_variants(self):
+    def call_variants(self, trim_reads=True, align_reads=True, create_vcfs=True):
         if not isdir(self.results_dir):
             makedirs(self.results_dir, exist_ok=True)
 
@@ -42,10 +42,13 @@ class Sample:
         print('Result files and logs will be put in:')
         print(self.results_dir, '\n')
 
-        self.analyze_and_trim_reads()
-        self.align_reads()
-        self.process_alignment_files()
-        self.create_variant_files()
+        if trim_reads:
+            self.analyze_and_trim_reads()
+        if align_reads:
+            self.align_reads()
+            self.process_alignment_files()
+        if create_vcfs:
+            self.create_variant_files()
 
         t2 = datetime.now()
         self._log_total_time(t1, t2)
@@ -110,13 +113,10 @@ class Sample:
         self.vcf_munger.merge_variant_vcfs([self.snps_vcf, self.indels_vcf],
                                             outfile=self.filtered_vcf)
 
-    def analyze_vcfs(self):
-        vcfs = [self.vcf, self.joint_vcf, self.filtered_vcf]
-        labels = ['.'.join(basename(fn).split('.')[1:]) for fn in vcfs]
+    def genotyping_stats(self):
+        vcf = self.filtered_vcf
+        # TODO: keep writing this ...
 
-        for label, vcf in dict(zip(labels, vcfs)).items():
-            pass
-            # self.vcf_munger.stats(vcf)
 
     def log(self, extension):
         return join(self.results_dir, '{}.{}.log'.format(self.id, extension))

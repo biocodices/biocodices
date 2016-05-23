@@ -33,15 +33,23 @@ class Cohort:
                            plural('sample', n_samples),
                            plural('sequencer run', n_sequencer_runs))
 
-    def call_variants(self):
-        for sample in self.samples:
-            sample.call_variants()
+    def call_variants(self, trim_reads=True, align_reads=True,
+            create_vcfs=True, joint_genotyping=True, hard_filtering=True,
+            samples=None):
 
-        self.joint_vcf = self.joint_genotyping()
+        samples = samples or self.samples
+        for sample in samples:
+            sample.call_variants(trim_reads=trim_reads,
+                                 align_reads=align_reads,
+                                 create_vcfs=create_vcfs,
+                                 joint_genotyping=joint_genotyping)
 
-        for sample in self.samples:
-            sample.joint_vcf = self.joint_vcf
-            sample.apply_filters_to_vcf()
+        if joint_genotyping:
+            self.joint_vcf = self.joint_genotyping()
+
+        if hard_filtering:
+            for sample in self.samples:
+                sample.apply_filters_to_vcf()
 
     def joint_genotyping(self):
         gatk = GATK()
