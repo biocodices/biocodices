@@ -1,13 +1,13 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-#  from biocodices.plotters.association_test_plotter import AssociationTestPlotter
+from biocodices.plotters.association_test_plotter import AssociationTestPlotter
 
 
 class AssociationTest:
     def __init__(self, dataset):
         self.dataset = dataset
-        #  self.plotter = AssociationTestPlotter(self, self.dataset.dir)
+        self.plotter = AssociationTestPlotter(self, self.dataset.dir)
 
     def __repr__(self):
         return '<{} for {}>'.format(self.__class__.__name__,
@@ -45,8 +45,6 @@ class AssociationTest:
         sorted_df['IID'] = pheno_df['IID']
         rest_of_cols = list(set(pheno_df.columns) - set(['FID', 'IID']))
         sorted_df = pd.concat([sorted_df, pheno_df[rest_of_cols]], axis=1)
-        sorted_df.sort_values(by=['FID', 'IID'], inplace=True)
-        sorted_df.fillna('-9', inplace=True)
 
         sorted_df.to_csv(outfile, header=True, index=False)
         print('Written -> {}'.format(outfile))
@@ -64,4 +62,15 @@ class AssociationTest:
             #  tests_to_plot = self.available_tests
 
         #  self.plotter.draw_ax(ax, tests_to_plot)
+        #  return ax
+
+    #  def plot_models(self, ax=None):
+        #  if ax is None:
+            #  _, ax = plt.subplots(figsize=(15, 5))
+
+        #  for model in self.available_models:
+            #  df = getattr(self, model)
+            #  df.rename(columns={'P': model})
+            #  self.plotter.draw_ax(ax, tests_to_plot=[model])
+
         #  return ax
