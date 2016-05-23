@@ -45,6 +45,8 @@ class AssociationTest:
         sorted_df['IID'] = pheno_df['IID']
         rest_of_cols = list(set(pheno_df.columns) - set(['FID', 'IID']))
         sorted_df = pd.concat([sorted_df, pheno_df[rest_of_cols]], axis=1)
+        sorted_df.sort_values(by=['FID', 'IID'], inplace=True)
+        sorted_df.fillna('-9', inplace=True)
 
         sorted_df.to_csv(outfile, header=True, index=False)
         print('Written -> {}'.format(outfile))
