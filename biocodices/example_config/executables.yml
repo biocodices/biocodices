@@ -9,3 +9,5 @@ vcftools: /usr/local/bin/vcftools
 vcf-subset: /usr/local/bin/vcf-subset
 picard-tools: java -jar /home/juan/software/picard-tools-2.2.4/picard.jar
 bwa: /usr/bin/bwa mem
+plink: /usr/bin/plink
+plink1.07: /usr/bin/plink1.07
