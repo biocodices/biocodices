@@ -1,17 +1,32 @@
 import subprocess
 import re
-from os.path import dirname, join, isfile
+from os.path import dirname, join, isfile, basename
+
+from biocodices.helpers import Config
 
 
 class Plink:
+    bim_fields = ["chr", "rs_id", "morgans", "position", "A1", "A2"]
+    fam_fields = ['FID', 'IID', 'father', 'mother', 'sexcode', 'phenotype']
+
     def __init__(self, bfile_path):
-        if not isfile(bfile_path + '.bed'):
-            raise FileNotFoundError(bfile_path + '.bed')
-        self.input_bfile = bfile_path  # .replace('.bed', '')
-        self.workdir = dirname(bfile_path)
+        self.executable = Config('executables')['plink']
+
+        self.label_path = bfile_path
+        self.bed = self.label_path + '.bed'
+        self.bim = self.label_path + '.bim'
+        self.fam = self.label_path + '.fam'
+
+        for ext in ['.bed', '.bim', '.fam']:
+            fn = self.label_path + ext
+            if not isfile(fn):
+                msg = "I couldn't find the {} file: {}"
+                raise FileNotFoundError(msg.format(ext, fn))
+
+        self.workdir = dirname(self.label_path)
 
     def __repr__(self):
-        return '<Plink for "{}">'.format(self.input_bfile)
+        return '<Plink for "{}">'.format(self.label_path)
 
     def make_ped(self):
         return self.run('--recode')
@@ -27,6 +42,12 @@ class Plink:
 
     def fst(self, clusters_file, out=None):
         return self.run('--within {} --fst'.format(clusters_file), out=out)
+
+    def pre_tests_filter(self, mind=0.1, maf=0.05, geno=0.1, hwe=0.0001,
+                         out=None):
+        params = '--mind {} --maf {} --geno {} --hwe {}'
+        params = params.format(mind, maf, geno, hwe)
+        return self.run(params, out=out, make_bed=True)
 
     def assoc(self, adjust=True):
         options = '--assoc'
@@ -46,15 +67,16 @@ class Plink:
         return self.run('--test-missing')
 
     def run(self, options, out=None, make_bed=False):
-        command_template = 'plink --bfile {} {}'
-        command_template += ' --out {}'
-        out = out or self.input_bfile
-        out = join(self.workdir, out)
+        command = '{} --bed {} --bim {} --fam {} --silent '
+        # ^ WARNING: Keep the trailing space
+        command = command.format(self.executable, self.bed, self.bim, self.fam)
+        command += options
         if make_bed:
-            command_template += ' --make-bed'
-        command = command_template.format(self.input_bfile, options, out)
+            command += ' --make-bed'
+        out_path = join(self.workdir, (out or self.label_path))
+        command += ' --out {}'.format(out_path)
         self.__class__.execute(command)
-        return self._out_filepath_from_log(out)
+        return self._out_filepath_from_log(out_path)
 
     def _out_filepath_from_log(self, out_label):
         with open(out_label + '.log', 'r') as logfile:
@@ -70,16 +92,9 @@ class Plink:
         try:
             subprocess.run(command.split(' '), check=True)
         except subprocess.CalledProcessError as error:
-            print('Problems with this command:\n\n', ' '.join(error.cmd))
+            print('I had problems with this command:\n')
+            print(' '.join(error.cmd))
             raise error
-
-    @staticmethod
-    def bim_fields():
-        return ["chr", "rs_id", "morgans", "position", "A1", "A2"]
-
-    @staticmethod
-    def fam_fields():
-        return ['family', 'sample', 'father', 'mother', 'sexcode', 'phenotype']
 
     @classmethod
     def make_bed_from_ped(cls, path_label):
@@ -88,3 +103,12 @@ class Plink:
         cls.execute(command)
 
         return path_label
+
+    @classmethod
+    def make_bed_from_filtered_vcf(cls, path_label, out_label=None):
+        command = 'plink --vcf {} --vcf-filter --make-bed --silent'
+        command = command.format(path_label)
+        out_label = out_label or basename(path_label).replace('.vcf', '')
+        command += ' --out {}'.format(out_label)
+        cls.execute(command)
+        return out_label
