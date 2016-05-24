@@ -1,5 +1,6 @@
 import subprocess
 import re
+import yaml
 from os.path import dirname, join, isfile, basename
 
 from biocodices.helpers import Config
@@ -26,7 +27,7 @@ class Plink:
         self.workdir = dirname(self.label_path)
 
     def __repr__(self):
-        return '<Plink for "{}">'.format(self.label_path)
+        return '<Plink for "{}">'.format(basename(self.label_path))
 
     def make_ped(self):
         return self.run('--recode')
@@ -112,3 +113,13 @@ class Plink:
         command += ' --out {}'.format(out_label)
         cls.execute(command)
         return out_label
+
+    @staticmethod
+    def config(label=None):
+        config_file = join(dirname(__file__), 'plink.yml')
+        with open(config_file, 'r') as fh:
+            config_dict = yaml.load(fh)
+        if label is None:
+            return config_dict
+
+        return config_dict[label]
