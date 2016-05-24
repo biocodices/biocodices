@@ -1,7 +1,7 @@
 import pandas as pd
+from os.path import basename
 
-# from helpers.config import Config
-from biocodices.helpers.plink import Plink
+from biocodices.programs.plink import Plink
 
 
 class SampleGroup:
@@ -12,7 +12,7 @@ class SampleGroup:
         TODO: Gather info for each sample in a database.
         """
         self.file = fam_filepath
-        self.label = self.file.split('.')[1]
+        self.label = basename(self.file).replace('.fam', '')
         # self.name = Config('names').get(self.label, self.label)
         self.samples = self._read_fam()
 
@@ -40,8 +40,10 @@ class SampleGroup:
         return tmpl.format(self.label, len(self))
 
     def _read_fam(self):
-        return pd.read_table(self.file, names=Plink.fam_fields(),
-                             index_col="sample", sep='\s+')
+        df = pd.read_table(self.file, names=Plink.fam_fields, sep='\s+',
+                           dtype={'FID': str, 'IID': str})
+        df.set_index(['FID', 'IID'], inplace=True)
+        return df
 
     #  def _write_clusters_files(self, level='population'):
         #  """
