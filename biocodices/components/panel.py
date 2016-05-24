@@ -2,7 +2,7 @@ import pandas as pd
 
 from os.path import basename
 
-from biocodices.helpers.plink import Plink
+from biocodices.programs.plink import Plink
 from biocodices.helpers.config import Config
 
 
@@ -15,8 +15,11 @@ class Panel:
         """
         self.file = bim_filepath
         self.label = basename(self.file.split('.')[0])
-        self.name = Config('names').get(self.label, self.label)
-        self.snps = self._read_bim(self.file)
+        # self.name = Config('names').get(self.label, self.label)
+        self.name = self.label
+        self.markers = self._read_bim(self.file)
+        self.snps = self.markers  # Legacy alias, TODO: remove it
+
         # self.snps_file = self.info_path + '.snps'
 
         # info_file = self.info_path + '.csv'
@@ -37,7 +40,7 @@ class Panel:
 
     @staticmethod
     def _read_bim(filename):
-        return pd.read_table(filename, names=Plink.bim_fields(),
+        return pd.read_table(filename, names=Plink.bim_fields,
                              index_col="rs_id")
 
     #  @staticmethod

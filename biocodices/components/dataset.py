@@ -8,18 +8,20 @@ from biocodices.analyzers.association_test import AssociationTest
 from biocodices.analyzers.quality_control import QualityControl
 from .panel import Panel
 from .sample_group import SampleGroup
-from biocodices.helpers.plink import Plink
+from biocodices.programs.plink import Plink
 
 
 class Dataset:
     def __init__(self, plink_label_path):
-        self.path_label = expanduser(plink_label_path)
-        self.dir = dirname(self.path_label)
+        self.label_path = expanduser(plink_label_path)
+        self.dir = dirname(self.label_path)
         self._check_plinkfiles()
 
-        self.label = basename(self.path_label)
+        self.label = basename(self.label_path)
         self.panel = Panel(self.bimfile)
+        self.markers = self.panel.markers
         self.samplegroup = SampleGroup(self.famfile)
+        self.samples = self.samplegroup.samples
         self.genotypes = self._read_traw(self.trawfile)
 
     def __repr__(self):
@@ -37,6 +39,23 @@ class Dataset:
         quali = QualityControl(dataset=self)
         quali.run()
         return quali
+
+    def apply_pre_test_filters(self, mind=0.1, maf=0.05, geno=0.1, hwe=0.0001,
+                               out=None):
+        """
+        Apply some PLINK filters before running the association tests:
+            mind: leave out samples with a call rate below the threshold.
+            geno: leave out variants with a call rate exceding (?) the
+            threshold.
+            maf: leave out variants with a minor allele frequency below the
+            threshold.
+            hew: leave out variants which have a Hardy-Weiberg equilibrium
+            exact test p-value below the threshold.
+        Returns a new (filtered) dataset.
+        """
+        out = out or (self.label_path + '_filtered_for_tests')
+        self.plink.pre_tests_filter(mind, maf, geno, hwe, out)
+        return Dataset(out)
 
     def association_tests(self):
         """
@@ -75,7 +94,7 @@ class Dataset:
         return admixture
 
     def _filename(self, extension):
-        return '{}.{}'.format(self.path_label, extension)
+        return '{}.{}'.format(self.label_path, extension)
 
     def _check_plinkfiles(self):
         self.bedfile = self._filename('bed')
@@ -87,9 +106,9 @@ class Dataset:
         if not isfile(self.bedfile):
             if not isfile(self.pedfile):
                 raise FileNotFoundError('No befile or pedfile found there.')
-            Plink.make_bed_from_ped(self.path_label)
+            Plink.make_bed_from_ped(self.label_path)
 
-        self.plink = Plink(self.path_label)
+        self.plink = Plink(self.label_path)
         if not isfile(self.pedfile):
             self.plink.make_ped()  # Created for SmartPCA
 
@@ -98,12 +117,15 @@ class Dataset:
 
     def _read_traw(self, filepath):
         df = pd.read_table(filepath, index_col='SNP')
+        # ^ df is a genotypes matrix with values 0, 1, 2 for alt allele dosage.
         df.drop(['CHR', '(C)M', 'POS', 'COUNTED', 'ALT'], axis=1, inplace=True)
-        # fids = [iid_fid.split('_')[0] for iid_fid in df.columns]
-        iids = [iid_fid.split('_')[1] for iid_fid in df.columns]
-        df.columns = iids  # Use individual IDs as columns!
-        df.columns.name, df.index.name = 'sample', 'rs_id'
-        df = self.samplegroup.samples.join(df.transpose())
-        multi_index = ['sample']
-        df = df.reset_index().set_index(multi_index)
+        df = df.transpose()
+        df.columns.name = 'rs_id'
+        fids = [iid_fid.split('_')[0] for iid_fid in df.index]
+        iids = [iid_fid.split('_')[1] for iid_fid in df.index]
+        df['IID'], df['FID'] = iids, fids
+        df.reset_index(drop=True, inplace=True)
+        df.set_index(['FID', 'IID'], inplace=True)
+        # merge the genotype data (.bed) with the samples data (.fam)
+        df = self.samplegroup.samples.join(df)
         return df.sort_index()
