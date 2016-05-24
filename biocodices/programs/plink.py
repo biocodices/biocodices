@@ -97,6 +97,14 @@ class Plink:
             print(' '.join(error.cmd))
             raise error
 
+    @staticmethod
+    def bim_fields():
+        return ["chr", "rs_id", "morgans", "position", "A1", "A2"]
+
+    @staticmethod
+    def fam_fields():
+        return ['family', 'sample', 'father', 'mother', 'sexcode', 'phenotype']
+
     @classmethod
     def make_bed_from_ped(cls, path_label):
         command_template = 'plink --file {} --make-bed --out {}'
