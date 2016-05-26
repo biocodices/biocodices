@@ -1,46 +1,52 @@
 association_tests:
-    allelic:
-        params: '--assoc'  # Use Fisher, it's better.
-        ext: 'assoc'
-    allelic_adjusted:
-        params: '--assoc --adjust'
-        ext: 'assoc.adjusted'
-    allelic_permuted: 
-        params: '--assoc --mperm 1000'
-        ext: 'assoc.mperm'
+    allelic_chisq:
+        params: '--assoc'
+        ext: 'qassoc'
+        interesting_column: 'P'
+    # allelic_chisq_adjusted:
+        # params: '--assoc --adjust'
+        # ext: 'assoc.adjusted'
+        # interesting_column: 'P'
+    # allelic_permuted: 
+        # params: '--assoc --mperm 1000'
+        # ext: 'assoc.mperm'
 
-    fisher_exact:
-        params: '--fisher'
-        ext: 'assoc.fisher'
-    fisher_exact_adjusted:
-        params: '--fisher --adjust'
-        ext: 'assoc.fisher.adjusted'
-    fisher_exact_permuted:
-        params: '--fisher --mperm 1000'
-        ext: 'assoc.fisher.mperm'
+    # allelic_fisher:
+        # params: '--assoc fisher'
+        # ext: 'assoc.fisher'
+        # interesting_column: 'P'
+    # allelic_fisher_adjusted:
+        # params: '--assoc fisher --adjust'
+        # ext: 'assoc.fisher.adjusted'
+        # interesting_column: 'BONF'
+    # fisher_exact_permuted:
+        # params: '--assoc fisher --mperm 1000'
+        # ext: 'assoc.fisher.mperm'
+        #
 
-    model:
-        params: '--model --cell 0'
+    model_fisher:  # Will test five models: rec, dom, trend, allelic, geno
+        params: '--model fisher --cell 0'
         ext: 'model'
-    model_trend:
-        params: '--model-trend --cell 0'
-        ext: 'model.trend'
-    model_dom:
-        params: '--model-dom --cell 0'
-        ext: 'model.dom'
-    model_rec:
-        params: '--model-rec --cell 0'
-        ext: 'model.rec'
+        interesting_column: 'P'
+    # model_trend:
+        # params: '--model-trend --cell 0'
+        # ext: 'model.trend'
+    # model_dom:
+        # params: '--model-dom --cell 0'
+        # ext: 'model.dom'
+    # model_rec:
+        # params: '--model rec --cell 0'
+        # ext: 'model.rec'
 
-    model_trend_permuted:
-        params: '--mperm 1000 --model-trend --cell 0'
-        ext: 'model.trend.mperm'
-    model_dom_permuted:
-        params: '--mperm 1000 --model-dom --cell 0'
-        ext: 'model.dom.mperm'
-    model_rec_permuted:
-        params: '--mperm 1000 --model-rec --cell 0'
-        ext: 'model.rec.mperm'
-    model_gen_permuted:
-        params: '--mperm 1000 --model-gen --cell 0'
-        ext: 'model.gen.mperm'
+    # model_trend_permuted:
+        # params: '--mperm 1000 --model-trend --cell 0'
+        # ext: 'model.trend.mperm'
+    # model_dom_permuted:
+        # params: '--mperm 1000 --model-dom --cell 0'
+        # ext: 'model.dom.mperm'
+    # model_rec_permuted:
+        # params: '--mperm 1000 --model-rec --cell 0'
+        # ext: 'model.rec.mperm'
+    # model_gen_permuted:
+        # params: '--mperm 1000 --model-gen --cell 0'
+        # ext: 'model.gen.mperm'

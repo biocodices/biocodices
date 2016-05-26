@@ -101,7 +101,7 @@ class Admixture:
 
     def _call_admixture(self, K, cores):
         command = '{} --cv {} {} -j{}'
-        command = command.format(self._EXECUTABLE, self.dataset.bedfile, K,
+        command = command.format(self._EXECUTABLE, self.dataset.bed, K,
                                  cores)
         working_dir = getcwd()
         try:

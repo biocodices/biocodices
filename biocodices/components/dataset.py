@@ -1,11 +1,8 @@
 import pandas as pd
 from os.path import expanduser, isfile, basename, dirname
 
-from biocodices.analyzers.smart_pca import SmartPCA
-from biocodices.analyzers.sklearn_pca import SklearnPCA
-from biocodices.analyzers.admixture import Admixture
-from biocodices.analyzers.association_test import AssociationTest
-from biocodices.analyzers.quality_control import QualityControl
+from biocodices.analyzers import (SmartPCA, SklearnPCA, Admixture,
+                                  AssociationTester, QualityControl)
 from .panel import Panel
 from .sample_group import SampleGroup
 from biocodices.programs.plink import Plink
@@ -18,11 +15,11 @@ class Dataset:
         self._check_plinkfiles()
 
         self.label = basename(self.label_path)
-        self.panel = Panel(self.bimfile)
+        self.panel = Panel(self.bim)
         self.markers = self.panel.markers
-        self.samplegroup = SampleGroup(self.famfile)
+        self.samplegroup = SampleGroup(self.fam)
         self.samples = self.samplegroup.samples
-        self.genotypes = self._read_traw(self.trawfile)
+        self.genotypes = self._read_traw(self.traw)
 
     def __repr__(self):
         tmpl = '[ Dataset from:\n  {}\n  {} ]'
@@ -97,22 +94,22 @@ class Dataset:
         return '{}.{}'.format(self.label_path, extension)
 
     def _check_plinkfiles(self):
-        self.bedfile = self._filename('bed')
-        self.pedfile = self._filename('ped')
-        self.bimfile = self._filename('bim')
-        self.famfile = self._filename('fam')
-        self.trawfile = self._filename('traw')
+        self.bed = self._filename('bed')
+        self.ped = self._filename('ped')
+        self.bim = self._filename('bim')
+        self.fam = self._filename('fam')
+        self.traw = self._filename('traw')
 
-        if not isfile(self.bedfile):
-            if not isfile(self.pedfile):
-                raise FileNotFoundError('No befile or pedfile found there.')
+        if not isfile(self.bed):
+            if not isfile(self.ped):
+                raise FileNotFoundError('No bed or ped found there.')
             Plink.make_bed_from_ped(self.label_path)
 
         self.plink = Plink(self.label_path)
-        if not isfile(self.pedfile):
+        if not isfile(self.ped):
             self.plink.make_ped()  # Created for SmartPCA
 
-        if not isfile(self.trawfile):
+        if not isfile(self.traw):
             self.plink.make_traw()  # Created to read genotypes from
 
     def _read_traw(self, filepath):
