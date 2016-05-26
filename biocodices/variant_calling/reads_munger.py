@@ -1,7 +1,7 @@
 from os.path import join, basename
 
 from biocodices.helpers import Config, Resource
-from biocodices.programs import ProgramCaller, GATK
+from biocodices.programs import ProgramCaller, GATK, Picard
 from biocodices.helpers.general import params_dict_to_str, rename_tempfile
 
 
@@ -11,6 +11,7 @@ class ReadsMunger:
         self.results_dir = results_dir
         self.executables = Config('executables')
         self.params = Config('parameters')
+        self.picard = Picard()
         self.gatk = GATK()
 
     def __repr__(self):
@@ -67,21 +68,7 @@ class ReadsMunger:
         rename_tempfile(outfile)
 
     def add_or_replace_read_groups(self, sample):
-        outfile = sample._files('bam')
-        params_dict = self.params['AddOrReplaceReadGroups']
-        params = ['{}={}'.format(k, v) for k, v in params_dict.items()]
-        params_str = ' '.join(params).format(**{
-            'sample_id': sample.id,
-            'library_id': sample.library_id,
-            'ngs_id': sample.sequencer_run_id,
-            'input': sample._files('sam'),
-            'output': outfile + '.temp',
-        })
-        command = '{} AddOrReplaceReadGroups {}'.format(
-            self.executables['picard-tools'], params_str)
-        log_filepath = self._file('AddOrReplaceReadGroups')
-        ProgramCaller(command).run(log_filepath=log_filepath)
-        rename_tempfile(outfile, 'bai')
+        self.picard.add_or_replace_read_groups(sample)
 
     def realign_indels(self, bam_filepath):
         self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
@@ -91,13 +78,14 @@ class ReadsMunger:
         self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
         self.gatk.recalibrate_quality_scores()
 
+    def alignment_metrics(self, bam_filepath):
+        self.picard.alignment_metrics(bam_filepath)
+
     def create_vcf(self, bam_filepath):
-        self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
-        self.gatk.create_vcf()
+        self.gatk.create_vcf(bam_filepath)
 
     def create_gvcf(self, bam_filepath):
-        self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
-        self.gatk.create_gvcf()
+        self.gatk.create_gvcf(bam_filepath)
 
     def _file(self, label):
         return join(self.results_dir, label)

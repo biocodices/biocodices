@@ -20,18 +20,8 @@ class Sample:
         """
         self.id = sample_id
         self.cohort = cohort
-        self.library_id = self._get_library_id()
-        self.sequencer_run_id = self._get_seq_run_id()
         self.results_dir = join(self.cohort.results_dir, self.id)
-        self.reads_munger = ReadsMunger(self, self.results_dir)
-        self.vcf_munger = VcfMunger(self, self.results_dir)
-        self.fastqs = self._files('fastq')
-        self.trimmed_fastqs = self._files('trimmed.fastq')
-        self.bam = self._files('bam')
-        self.vcf = self._files('vcf')
-        self.gvcf = self._files('g.vcf')
-        self.joint_vcf = self._files('joint.vcf')
-        self.filtered_vcf = self._files('filtered.vcf')
+        self._set_data()
 
     def __repr__(self):
         return '<Sample {} from {}>'.format(self.id, self.sequencer_run_id)
@@ -42,15 +32,15 @@ class Sample:
             makedirs(self.results_dir, exist_ok=True)
 
         t1 = datetime.now()
-        print('Calling variants for ' + colored('{}'.format(self.id), 'yellow'))
+        print(colored('* {}'.format(self.long_name), 'yellow'))
         print('Result files and logs will be put in:')
         print(self.results_dir, '\n')
 
-        if trim_reads:
-            self.analyze_and_trim_reads()
-        if align_reads:
-            self.align_reads()
-            self.process_alignment_files()
+        #  if trim_reads:
+            #  self.analyze_and_trim_reads()
+        #  if align_reads:
+            #  self.align_reads()
+            #  self.process_alignment_files()
         if create_vcfs:
             self.create_variant_files()
 
@@ -75,22 +65,25 @@ class Sample:
         self.reads_munger.align_to_reference(self.trimmed_fastqs)
 
     def process_alignment_files(self):
-        self.printlog('Add or replace read groups')
-        self.reads_munger.add_or_replace_read_groups(self)
+        #  self.printlog('Add or replace read groups')
+        #  self.reads_munger.add_or_replace_read_groups(self)
 
-        self.printlog('Delete sam file')
-        remove(self._files('sam'))
+        #  self.printlog('Delete sam file')
+        #  remove(self._files('sam'))
 
-        self.printlog('Realign indels')
-        self.reads_munger.realign_indels(self.bam)
+        #  self.printlog('Realign indels')
+        #  self.reads_munger.realign_indels(self.bam)
 
-        self.printlog('Recalibrate read quality scores')
-        self.reads_munger.recalibrate_quality_scores(self.bam)
+        #  self.printlog('Recalibrate read quality scores')
+        #  self.reads_munger.recalibrate_quality_scores(self.bam)
+
+        self.printlog('Generate alignment metrics')
+        self.reads_munger.alignment_metrics(self.recalibrated_bam)
 
     def create_variant_files(self, vcf=True, gvcf=True):
-        if vcf:
-            self.printlog('Create vcf')
-            self.reads_munger.create_vcf(self.bam)
+        #  if vcf:
+            #  self.printlog('Create vcf')
+            #  self.reads_munger.create_vcf(self.bam)
         if gvcf:
             self.printlog('Create gvcf')
             self.reads_munger.create_gvcf(self.bam)
@@ -156,3 +149,28 @@ class Sample:
 
     def _get_seq_run_id(self):
         return Config('db')[self.id][1]
+
+    def _get_name(self):
+        return Config('db_names')[self.id][0]
+
+    def _get_clinic(self):
+        return Config('db_names')[self.id][1]
+
+    def _set_data(self):
+        self.library_id = self._get_library_id()
+        self.sequencer_run_id = self._get_seq_run_id()
+        self.name = self._get_name()
+        self.clinic = self._get_clinic()
+        self.long_name = '{} ({}) from {}'.format(
+            self.name, self.id, self.clinic)
+        self.reads_munger = ReadsMunger(self, self.results_dir)
+        self.vcf_munger = VcfMunger(self, self.results_dir)
+        self.fastqs = self._files('fastq')
+        self.trimmed_fastqs = self._files('trimmed.fastq')
+        self.sam = self._files('sam')
+        self.bam = self._files('bam')
+        self.recalibrated_bam = self._files('realigned.recalibrated.bam')
+        self.vcf = self._files('vcf')
+        self.gvcf = self._files('g.vcf')
+        self.joint_vcf = self._files('joint.vcf')
+        self.filtered_vcf = self._files('filtered.vcf')

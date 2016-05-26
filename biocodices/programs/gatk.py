@@ -8,10 +8,10 @@ class GATK:
     def __init__(self):
         self.executable = Config('executables')['GATK']
         self.params = Config('parameters')['GATK']
-
         self.reference_genome = Resource('reference_genome')
         self.known_indels = [Resource('indels:1000G'),
                              Resource('indels:mills')]
+        self.panel_amplicons = Resource('panel_amplicons')
         self.known_variants = Resource('dbsnp:GRCh37')
 
     def set_bamfile(self, bam_filepath):
@@ -23,6 +23,48 @@ class GATK:
         self.vcf = self.bam.replace('.bam', '.vcf')
         self.gvcf = self.bam.replace('.bam', '.g.vcf')
 
+    def run(self, module_name, infile, outfile, extra_params_variables={},
+            extra_output_extension=None, log_label=None, task_subtype=None,
+            extra_params_str=None):
+        params_dict = self.params[module_name]
+        if module_name == 'HaplotypeCaller':
+            params_dict = params_dict[task_subtype]
+        params = ['-{} {}'.format(k, v) for k, v in params_dict.items()]
+        params_variables = {
+            'module_name': module_name,
+            'reference_genome': self.reference_genome,
+            'known_variants': self.known_variants,
+            'limits': self.panel_amplicons,
+            'input': infile,
+            'output': outfile + '.temp',
+        }
+        params_variables.update(extra_params_variables)
+        params_str = ' '.join(params).format(**params_variables)
+        if extra_params_str:
+            params_str += extra_params_str
+        command = '{} {}'.format(self.executable, params_str)
+        log_filepath = join(dirname(infile), (log_label or module_name))
+        ProgramCaller(command).run(log_filepath=log_filepath)
+        rename_tempfile(outfile, extra_output_extension)
+
+    def create_vcf(self, infile):
+        """
+        Expects a recalibrated BAM as infile, ready for the variant calling.
+        """
+        outfile = infile.replace('.bam', '.vcf')
+        self.run('HaplotypeCaller', infile, outfile,
+                 extra_output_extension='bai', task_subtype='vcf',
+                 log_label='HaplotypeCaller_vcf')
+
+    def create_gvcf(self, infile):
+        """
+        Expects a recalibrated BAM as infile, ready for the variant calling.
+        """
+        outfile = infile.replace('.bam', '.g.vcf')
+        self.run('HaplotypeCaller', infile, outfile,
+                 extra_output_extension='bai', task_subtype='gvcf',
+                 log_label='HaplotypeCaller_gvcf')
+
     def realign_indels(self):
         targets_filepath = self._realigner_target_creator()
         self._indel_realigner(targets_filepath)
@@ -33,35 +75,15 @@ class GATK:
         self._recalibrate_bam(recalibration)
         return self.recalibrated_bam
 
-    def create_vcf(self):
-        outfile = self.vcf
-        params_dict = self.params['HaplotypeCaller']['vcf']
-        params_str = params_dict_to_str(params_dict).format(**{
-            'reference_genome': self.reference_genome,
-            'limits': Resource('panel_amplicons'),
-            'input': self.recalibrated_bam,
-            'output': outfile + '.temp',
-        })
+    def joint_genotyping(self, gvcf_list, output_dir):
+        _ = None  # dummy 'infile' argument for run()
+        outfile = join(output_dir, 'joint_genotyping.vcf')
+        params_str = ''
+        for gvcf_filename in gvcf_list:
+            params_str += ' --variant {}'.format(gvcf_filename)
 
-        command = '{} {}'.format(self.executable, params_str)
-        log_filepath = join(dirname(self.bam), 'HaplotypeCaller_vcf')
-        ProgramCaller(command).run(log_filepath=log_filepath)
-        rename_tempfile(outfile, 'idx')
-
-    def create_gvcf(self):
-        outfile = self.gvcf
-        params_dict = self.params['HaplotypeCaller']['gvcf']
-        params_str = params_dict_to_str(params_dict).format(**{
-            'reference_genome': self.reference_genome,
-            'limits': Resource('panel_amplicons'),
-            'input': self.recalibrated_bam,
-            'output': outfile + '.temp',
-        })
-
-        command = '{} {}'.format(self.executable, params_str)
-        log_filepath = join(dirname(self.bam), 'HaplotypeCaller_gvcf')
-        ProgramCaller(command).run(log_filepath=log_filepath)
-        rename_tempfile(outfile, 'idx')
+        self.run('GenotypeGVCFs', _, outfile, extra_params_str=params_str,
+                 extra_output_extension='idx')
 
     def joint_genotyping(self, gvcf_list, output_dir):
         outfile = join(output_dir, 'joint_genotyping.vcf')

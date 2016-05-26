@@ -21,3 +21,4 @@ VariantFiltration_snps_QD
 VariantFiltration_snps_RPRS
 vcf-subset
 ../GenotypeGVCFs
+CollectAlignmentSummaryMetrics
