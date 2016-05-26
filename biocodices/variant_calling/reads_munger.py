@@ -72,8 +72,8 @@ class ReadsMunger:
         params = ['{}={}'.format(k, v) for k, v in params_dict.items()]
         params_str = ' '.join(params).format(**{
             'sample_id': sample.id,
-            'library_id': sample.sequencer_run.library_id,
-            'ngs_id': sample.sequencer_run.id,
+            'library_id': sample.library_id,
+            'ngs_id': sample.sequencer_run_id,
             'input': sample._files('sam'),
             'output': outfile + '.temp',
         })

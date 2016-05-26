@@ -6,10 +6,17 @@ help_texts:
     a: 'Align reads to the reference genome and create a .bam file for each sample.'
     v: 'Create .vcf and .g.vcf files for each sample from the .bam.'
     j: 'Do a joint genotyping for the cohort.'
+    f: 'Do a hard filtering on the .vcf files. The parameters will be read from ~/.biocodices/parameters.yml'
+    y: '(Yes) Analyze the provided comma-separated sample IDs (e.g. SAMP001,SAMP002,SAMP015) and skip the rest of the samples.'
+    n: "(No) Don't analyze the provided comma-separated sample IDs, but do analyze any sample not mentioned."
 
 args:
-    d: ['seq-dir', 'store']
-    t: ['trim-reads', 'store_true']
-    a: ['align-reads', 'store_true']
-    v: ['create-vcfs', 'store_true']
-    j: ['joint-genotyping', 'store_true']
+    # short-name: [long-name, action, required, default]
+    d: ['seq-dir', 'store', yes, null]
+    t: ['trim-reads', 'store_true', no, yes]
+    a: ['align-reads', 'store_true', no, yes]
+    v: ['create-vcfs', 'store_true', no, yes]
+    j: ['joint-genotyping', 'store_true', no, yes]
+    f: ['hard-filtering', 'store_true', no, yes]
+    y: ['samples-do', 'store', no, null]
+    n: ['samples-dont', 'store', no, null]

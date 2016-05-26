@@ -1,6 +1,6 @@
 from shutil import move
 from os import makedirs
-from os.path import join, exists, dirname
+from os.path import join, exists, dirname, abspath
 from itertools import product
 
 
@@ -22,7 +22,8 @@ def touch_all_the_logs(base_dir, dir_list):
     # will be created during the process. It's a necessarily hardcoded list,
     # I guess:
     [makedirs(d, exist_ok=True) for d in dir_list]
-    with open(join(dirname(__file__), 'log_filenames.txt')) as f:
+    path = abspath(join(dirname(__file__), '../scripts/log_filenames.txt'))
+    with open(path, 'r') as f:
         log_filenames = [l.strip() for l in f.readlines()]
     log_filepaths = [join(d, fn + '.log')
                      for d, fn in product(dir_list, log_filenames)]
@@ -33,6 +34,7 @@ def touch_all_the_logs(base_dir, dir_list):
 
 
 def biocodices_logo():
-    with open(join(dirname(__file__), 'logo.txt'), 'r') as logo_file:
+    path = abspath(join(dirname(__file__), '../scripts/logo.txt'))
+    with open(path, 'r') as logo_file:
         logo_string = logo_file.read()
     return logo_string

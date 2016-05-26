@@ -1,25 +1,28 @@
 from os import makedirs, remove
-from os.path import isdir, join, isfile, basename
+from os.path import isdir, join, isfile
 from datetime import datetime
 from termcolor import colored
 
 from biocodices.variant_calling import ReadsMunger, VcfMunger
 from biocodices.helpers.language import seconds_to_hms_string
+from biocodices.helpers import Config
 
 
 class Sample:
     reads_format = 'fastq'
 
-    def __init__(self, sample_id, sequencer_run):
+    def __init__(self, sample_id, cohort):
         """
-        Expects a sample_id and a sequencer_run object.
-        It will look for its fastq files in the sequencer_run.data_dir with
+        Expects a sample_id and a Cohort object.
+        It will look for its fastq files in the cohort.data_dir with
         filenames like: <sample_id>.R1.fastq, <sample_id>.R2.fastq
         (for the forward and reverse reads, respectively).
         """
         self.id = sample_id
-        self.sequencer_run = sequencer_run
-        self.results_dir = join(self.sequencer_run.results_dir, self.id)
+        self.cohort = cohort
+        self.library_id = self._get_library_id()
+        self.sequencer_run_id = self._get_seq_run_id()
+        self.results_dir = join(self.cohort.results_dir, self.id)
         self.reads_munger = ReadsMunger(self, self.results_dir)
         self.vcf_munger = VcfMunger(self, self.results_dir)
         self.fastqs = self._files('fastq')
@@ -31,9 +34,10 @@ class Sample:
         self.filtered_vcf = self._files('filtered.vcf')
 
     def __repr__(self):
-        return '<Sample {} from {}>'.format(self.id, self.sequencer_run.id)
+        return '<Sample {} from {}>'.format(self.id, self.sequencer_run_id)
 
-    def call_variants(self, trim_reads=True, align_reads=True, create_vcfs=True):
+    def call_variants(self, trim_reads=True, align_reads=True,
+                      create_vcfs=True):
         if not isdir(self.results_dir):
             makedirs(self.results_dir, exist_ok=True)
 
@@ -113,11 +117,6 @@ class Sample:
         self.vcf_munger.merge_variant_vcfs([self.snps_vcf, self.indels_vcf],
                                             outfile=self.filtered_vcf)
 
-    def genotyping_stats(self):
-        vcf = self.filtered_vcf
-        # TODO: keep writing this ...
-
-
     def log(self, extension):
         return join(self.results_dir, '{}.{}.log'.format(self.id, extension))
 
@@ -139,7 +138,7 @@ class Sample:
         return '{}.{}'.format(join(self.results_dir, self.id), ext)
 
     def _reads_files(self, ext):
-        location = self.sequencer_run.data_dir
+        location = self.cohort.data_dir
         if ext == 'trimmed.fastq':
             location = self.results_dir
         read_filepath = join(location, '{}.{}.{}')
@@ -151,3 +150,9 @@ class Sample:
                 raise OSError(msg.format(forward_filepath, reverse_filepath))
 
         return forward_filepath, reverse_filepath
+
+    def _get_library_id(self):
+        return Config('db')[self.id][0]
+
+    def _get_seq_run_id(self):
+        return Config('db')[self.id][1]
