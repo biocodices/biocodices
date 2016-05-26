@@ -9,14 +9,16 @@ help_texts:
     f: 'Do a hard filtering on the .vcf files. The parameters will be read from ~/.biocodices/parameters.yml'
     y: '(Yes) Analyze the provided comma-separated sample IDs (e.g. SAMP001,SAMP002,SAMP015) and skip the rest of the samples.'
     n: "(No) Don't analyze the provided comma-separated sample IDs, but do analyze any sample not mentioned."
+    c: 'Go through all the steps of the pipeline. This is equivalent of passing the multi flag -tavjf'
 
 args:
     # short-name: [long-name, action, required, default]
     d: ['seq-dir', 'store', yes, null]
-    t: ['trim-reads', 'store_true', no, yes]
-    a: ['align-reads', 'store_true', no, yes]
-    v: ['create-vcfs', 'store_true', no, yes]
-    j: ['joint-genotyping', 'store_true', no, yes]
-    f: ['hard-filtering', 'store_true', no, yes]
+    t: ['trim-reads', 'store_true', no, no]
+    a: ['align-reads', 'store_true', no, no]
+    v: ['create-vcfs', 'store_true', no, no]
+    j: ['joint-genotyping', 'store_true', no, no]
+    f: ['hard-filtering', 'store_true', no, no]
     y: ['samples-do', 'store', no, null]
     n: ['samples-dont', 'store', no, null]
+    c: ['complete-pipeline', 'store_true', no, no]

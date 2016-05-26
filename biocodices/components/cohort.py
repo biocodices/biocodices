@@ -18,14 +18,12 @@ class Cohort:
         self.data_dir = join(self.dir, 'data')
         self.results_dir = join(self.dir, 'results')
         self.samples = self._search_samples()
-        self.sequencer_runs = set([sample.sequencer_run_id
-                                   for sample in self.samples])
+        self.sequencer_runs = list(set([sample.sequencer_run_id
+                                        for sample in self.samples]))
         if len(self.samples) == 0:
             msg = 'I found no sample files in {}'
             raise Exception(msg.format(self.data_dir))
-        if len(self.sequencer_runs) == 1:
-            self.joint_vcf = join(self.sequencer_runs[0].results_dir,
-                                  'joint_genotyping.vcf')
+        self.joint_vcf = join(self.results_dir, 'joint_genotyping.vcf')
 
     def __repr__(self):
         tmpl = '<{}({})>'
@@ -41,10 +39,11 @@ class Cohort:
                       create_vcfs=True, joint_genotyping=True,
                       hard_filtering=True):
 
-        for sample in self.samples:
-            sample.call_variants(trim_reads=trim_reads,
-                                 align_reads=align_reads,
-                                 create_vcfs=create_vcfs)
+        if trim_reads or align_reads or create_vcfs:
+            for sample in self.samples:
+                sample.call_variants(trim_reads=trim_reads,
+                                     align_reads=align_reads,
+                                     create_vcfs=create_vcfs)
 
         if joint_genotyping:
             self.joint_vcf = self.joint_genotyping()
@@ -56,12 +55,7 @@ class Cohort:
     def joint_genotyping(self):
         gatk = GATK()
         gvcf_list = [sample.gvcf for sample in self.samples]
-        # Since the samples might come from multiple sequencer runs, we
-        # pick on of them and put the joint vcf in its results directory.
-        # If they're samples from only one sequence run, the path will be
-        # the expected one (the results directory parent to all sample
-        # directories).
-        output_dir = self.sequencer_runs[0].results_dir
+        output_dir = self.results_dir
         print('\nJoint Genotyping for {}\n'.format(plural('sample',
                                                           len(self.samples))))
         self.joint_vcf = gatk.joint_genotyping(gvcf_list, output_dir)

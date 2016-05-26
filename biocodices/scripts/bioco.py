@@ -17,7 +17,7 @@ def call_variants_for_all_samples(args):
     print(colored(cohort, 'green'))
     print('\nYou can follow the details of the process with:')
     # other option: `tail -n0 -f {}/{{*/,}}*.log`
-    print('`tail -n0 -f {}/*/*.log`\n'.format(cohort.results_dir))
+    print('`tail -n0 -f {}/{{*/,}}*.log`\n'.format(cohort.results_dir))
 
     dir_list = [sample.results_dir for sample in cohort.samples]
     touch_all_the_logs(cohort.dir, dir_list)
@@ -44,4 +44,9 @@ if __name__ == '__main__':
                             default=default)
 
     args = parser.parse_args()
+    if args.complete_pipeline:
+        for attr in ['trim_reads', 'align_reads', 'create_vcfs',
+                     'joint_genotyping', 'hard_filtering']:
+            setattr(args, attr, True)
+
     call_variants_for_all_samples(args)

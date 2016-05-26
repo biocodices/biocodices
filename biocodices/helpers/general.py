@@ -25,7 +25,7 @@ def touch_all_the_logs(base_dir, dir_list):
     path = abspath(join(dirname(__file__), '../scripts/log_filenames.txt'))
     with open(path, 'r') as f:
         log_filenames = [l.strip() for l in f.readlines()]
-    log_filepaths = [join(d, fn + '.log')
+    log_filepaths = [abspath(join(d, fn + '.log'))
                      for d, fn in product(dir_list, log_filenames)]
     # log_filepaths += [join(base_dir, 'GenotypeGVCFs.log')]
     for log_filepath in log_filepaths:
