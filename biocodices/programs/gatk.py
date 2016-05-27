@@ -1,18 +1,12 @@
 from os.path import dirname, join, basename
-from biocodices.helpers import Config, Resource
-from biocodices.programs import ProgramCaller
-from biocodices.helpers.general import params_dict_to_str, rename_tempfile
+
+from biocodices.programs import AbstractGenomicsProgram, ProgramCaller
+from biocodices.helpers.general import rename_tempfile
 
 
-class GATK:
+class GATK(AbstractGenomicsProgram):
     def __init__(self):
-        self.executable = Config('executables')['GATK']
-        self.params = Config('parameters')['GATK']
-        self.reference_genome = Resource('reference_genome')
-        self.known_indels = [Resource('indels:1000G'),
-                             Resource('indels:mills')]
-        self.panel_amplicons = Resource('panel_amplicons')
-        self.known_variants = Resource('dbsnp:GRCh37')
+        super(self.__class__, self).__init__('GATK')
 
     def run(self, module_name, infile, outfile, extra_params_variables={},
             extra_output_extension=None, log_label=None, task_subtype=None,

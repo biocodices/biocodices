@@ -38,9 +38,9 @@ class Sample:
 
         #  if trim_reads:
             #  self.analyze_and_trim_reads()
-        #  if align_reads:
-            #  self.align_reads()
-            #  self.process_alignment_files()
+        if align_reads:
+            self.align_reads()
+            self.process_alignment_files()
         if create_vcfs:
             self.create_variant_files()
 
@@ -72,7 +72,7 @@ class Sample:
         #  remove(self._files('sam'))
 
         self.printlog('Realign indels')
-        self.reads_munger.realign_indels(self.bam)
+        self.reads_munger.realign_reads_around_indels(self.bam)
 
         self.printlog('Recalibrate read quality scores')
         self.reads_munger.recalibrate_quality_scores(self.realigned_bam)

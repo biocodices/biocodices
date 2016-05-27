@@ -1,15 +1,11 @@
 from os.path import dirname, join
-from biocodices.helpers import Config, Resource
-from biocodices.programs import ProgramCaller
+from biocodices.programs import AbstractGenomicsProgram, ProgramCaller
 from biocodices.helpers.general import rename_tempfile
 
 
-class Picard:
+class Picard(AbstractGenomicsProgram):
     def __init__(self):
-        self.executable = Config('executables')['picard-tools']
-        self.params = Config('parameters')['picard-tools']
-        self.reference_genome = Resource('reference_genome')
-        self.known_variants = Resource('dbsnp:GRCh37')
+        super(self.__class__, self).__init__('picard-tools')
 
     def run(self, module_name, infile, outfile, extra_params_variables={},
             extra_output_extension=None):

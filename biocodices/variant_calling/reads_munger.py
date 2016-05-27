@@ -1,8 +1,8 @@
 from os.path import join, basename
 
 from biocodices.helpers import Config, Resource
-from biocodices.programs import ProgramCaller, GATK, Picard
-from biocodices.helpers.general import params_dict_to_str, rename_tempfile
+from biocodices.programs import ProgramCaller, GATK, Picard, BWA
+from biocodices.helpers.general import params_dict_to_str
 
 
 class ReadsMunger:
@@ -13,6 +13,7 @@ class ReadsMunger:
         self.params = Config('parameters')
         self.picard = Picard()
         self.gatk = GATK()
+        self.bwa = BWA()
 
     def __repr__(self):
         return '<{} for {}>'.format(self.__class__.__name__, self.sample.id)
@@ -47,25 +48,11 @@ class ReadsMunger:
 
         return trimmed_fastqs
 
-    def align_to_reference(self, reads_filepaths, ref='GRCh37'):
-        """
-        Expects a list of two files: forward and reverse reads of the same
-        sample. It will search for a reference genome defined by Config.
-        """
-        outfile = join(self.results_dir, self.sample.id + '.sam')
-
-        params_str = params_dict_to_str(self.params['bwa']).format(**{
-            'reference_genome': Resource('reference_genome')
-        })
-        for reads_file in reads_filepaths:
-            params_str += ' {}'.format(reads_file)
-
-        command = '{} {}'.format(self.executables['bwa'], params_str)
-        # redirect stdout to samfile and stderr  to logfile
-        log_filepath = self._file('bwa')
-        ProgramCaller(command).run(stdout_sink=outfile + '.temp',
-                                   log_filepath=log_filepath)
-        rename_tempfile(outfile)
+    def align_to_reference(self, reads_filepaths):
+        # NOTE: the human referece genome used is defined in the config yml
+        # ~/.biocodices/resources.yml as "&reference_genome_default".
+        outfile = self.bwa.align_to_reference(reads_filepaths)
+        return outfile
 
     def add_or_replace_read_groups(self, sample):
         self.picard.add_or_replace_read_groups(sample)
