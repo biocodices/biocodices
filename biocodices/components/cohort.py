@@ -1,6 +1,3 @@
-import re
-from glob import glob
-from os.path import join, abspath, basename, expanduser
 from biocodices.programs import GATK
 from biocodices.helpers.language import plural
 from biocodices.variant_calling import VcfMunger
