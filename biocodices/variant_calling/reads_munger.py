@@ -70,22 +70,20 @@ class ReadsMunger:
     def add_or_replace_read_groups(self, sample):
         self.picard.add_or_replace_read_groups(sample)
 
-    def realign_indels(self, bam_filepath):
-        self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
-        self.gatk.realign_indels()
+    def realign_reads_around_indels(self, bam_filepath):
+        self.gatk.realign_reads_around_indels(bam_filepath)
 
-    def recalibrate_quality_scores(self, bam_filepath):
-        self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
-        self.gatk.recalibrate_quality_scores()
+    def recalibrate_quality_scores(self, realigned_bam):
+        self.gatk.recalibrate_quality_scores(realigned_bam)
 
-    def alignment_metrics(self, bam_filepath):
-        self.picard.alignment_metrics(bam_filepath)
+    def alignment_metrics(self, recalibrated_bam):
+        self.picard.alignment_metrics(recalibrated_bam)
 
-    def create_vcf(self, bam_filepath):
-        self.gatk.create_vcf(bam_filepath)
+    def create_vcf(self, recalibrated_bam):
+        self.gatk.create_vcf(recalibrated_bam)
 
-    def create_gvcf(self, bam_filepath):
-        self.gatk.create_gvcf(bam_filepath)
+    def create_gvcf(self, recalibrated_bam):
+        self.gatk.create_gvcf(recalibrated_bam)
 
     def _file(self, label):
         return join(self.results_dir, label)

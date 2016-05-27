@@ -65,28 +65,28 @@ class Sample:
         self.reads_munger.align_to_reference(self.trimmed_fastqs)
 
     def process_alignment_files(self):
-        #  self.printlog('Add or replace read groups')
-        #  self.reads_munger.add_or_replace_read_groups(self)
+        self.printlog('Add or replace read groups')
+        self.reads_munger.add_or_replace_read_groups(self)
 
         #  self.printlog('Delete sam file')
         #  remove(self._files('sam'))
 
-        #  self.printlog('Realign indels')
-        #  self.reads_munger.realign_indels(self.bam)
+        self.printlog('Realign indels')
+        self.reads_munger.realign_indels(self.bam)
 
-        #  self.printlog('Recalibrate read quality scores')
-        #  self.reads_munger.recalibrate_quality_scores(self.bam)
+        self.printlog('Recalibrate read quality scores')
+        self.reads_munger.recalibrate_quality_scores(self.realigned_bam)
 
         self.printlog('Generate alignment metrics')
         self.reads_munger.alignment_metrics(self.recalibrated_bam)
 
     def create_variant_files(self, vcf=True, gvcf=True):
-        #  if vcf:
-            #  self.printlog('Create vcf')
-            #  self.reads_munger.create_vcf(self.bam)
+        if vcf:
+            self.printlog('Create vcf')
+            self.reads_munger.create_vcf(self.recalibrated_bam)
         if gvcf:
             self.printlog('Create gvcf')
-            self.reads_munger.create_gvcf(self.bam)
+            self.reads_munger.create_gvcf(self.recalibrated_bam)
 
     def apply_filters_to_vcf(self):
         if isfile(self.joint_vcf):
@@ -169,6 +169,7 @@ class Sample:
         self.trimmed_fastqs = self._files('trimmed.fastq')
         self.sam = self._files('sam')
         self.bam = self._files('bam')
+        self.realigned_bam = self._files('realigned.bam')
         self.recalibrated_bam = self._files('realigned.recalibrated.bam')
         self.vcf = self._files('vcf')
         self.gvcf = self._files('g.vcf')
