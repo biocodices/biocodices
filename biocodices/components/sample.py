@@ -83,10 +83,10 @@ class Sample:
     def create_variant_files(self, vcf=True, gvcf=True):
         if vcf:
             self.printlog('Create vcf')
-            self.reads_munger.create_vcf(self.recalibrated_bam)
+            self.vcf = self.reads_munger.create_vcf(self.recalibrated_bam)
         if gvcf:
             self.printlog('Create gvcf')
-            self.reads_munger.create_gvcf(self.recalibrated_bam)
+            self.gvcf = self.reads_munger.create_gvcf(self.recalibrated_bam)
 
     def apply_filters_to_vcf(self):
         if isfile(self.joint_vcf):
@@ -171,7 +171,7 @@ class Sample:
         self.bam = self._files('bam')
         self.realigned_bam = self._files('realigned.bam')
         self.recalibrated_bam = self._files('realigned.recalibrated.bam')
-        self.vcf = self._files('vcf')
-        self.gvcf = self._files('g.vcf')
+        self.vcf = self._files('realigned.recalibrated.vcf')
+        self.gvcf = self._files('realigned.recalibrated.g.vcf')
         self.joint_vcf = self._files('joint.vcf')
         self.filtered_vcf = self._files('filtered.vcf')

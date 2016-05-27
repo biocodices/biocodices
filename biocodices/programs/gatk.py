@@ -28,7 +28,8 @@ class GATK(AbstractGenomicsProgram):
         if extra_params_str:
             params_str += extra_params_str
         command = '{} {}'.format(self.executable, params_str)
-        log_filepath = join(dirname(infile), (log_label or module_name))
+        log_filepath = join(dirname(infile or outfile),
+                            (log_label or module_name))
         ProgramCaller(command).run(log_filepath=log_filepath)
         rename_tempfile(outfile, extra_output_extension)
 
@@ -61,13 +62,13 @@ class GATK(AbstractGenomicsProgram):
                  log_label='HaplotypeCaller_gvcf')
 
     def joint_genotyping(self, gvcf_list, output_dir):
-        _ = None  # dummy 'infile' argument for run()
         outfile = join(output_dir, 'joint_genotyping.vcf')
         params_str = ''
         for gvcf_filename in gvcf_list:
             params_str += ' --variant {}'.format(gvcf_filename)
 
-        self.run('GenotypeGVCFs', _, outfile, extra_params_str=params_str,
+        # The None is bc joint genotyping doesn't take an I (input) parameter
+        self.run('GenotypeGVCFs', None, outfile, extra_params_str=params_str,
                  extra_output_extension='idx')
 
     def select_variants(self, vcf, variant_type):

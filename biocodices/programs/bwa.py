@@ -12,9 +12,10 @@ class BWA(AbstractGenomicsProgram):
         """
         Expects a list of two files: forward and reverse reads of the same
         sample. It will search for a reference genome defined by Config.
+        Outputs a .sam file of reads aligned to the reference genome.
         """
         outfile = trimmed_reads_filepaths[0].replace('R1.trimmed.fastq',
-                                                     '.sam')
+                                                     'sam')
         params_str = params_dict_to_str(self.params).format(**{
             'reference_genome': self.reference_genome,
         })
@@ -27,3 +28,4 @@ class BWA(AbstractGenomicsProgram):
         ProgramCaller(command).run(stdout_sink=outfile + '.temp',
                                    log_filepath=log_filepath)
         rename_tempfile(outfile)
+        return outfile

@@ -9,7 +9,7 @@ class FastQC(AbstractGenomicsProgram):
 
     def analyze_reads(self, reads_filepath, results_dir):
         command = '{} {}'.format(self.executable, reads_filepath)
-        command += ' '.join(['-{} {}'.format(k, v)
+        command += ' '.join([' -{} {}'.format(k, v)
                              for k, v in self.params.items()])
         command = command.format(**{'output_dir': results_dir})
         log_filepath = join(results_dir, 'fastqc')

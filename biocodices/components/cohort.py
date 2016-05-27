@@ -46,7 +46,8 @@ class Cohort:
                                      create_vcfs=create_vcfs)
 
         if joint_genotyping:
-            self.joint_vcf = self.joint_genotyping()
+            self.joint_genotyping()
+            self.split_joint_vcf()
 
         if hard_filtering:
             for sample in self.samples:
@@ -59,9 +60,8 @@ class Cohort:
         print('\nJoint Genotyping for {}\n'.format(plural('sample',
                                                           len(self.samples))))
         self.joint_vcf = gatk.joint_genotyping(gvcf_list, output_dir)
-        self.split_joint_vcf()
 
-    def split_joint_vcf(self):
+    def split_joint_vcf(self, joint_vcf):
         for sample in self.samples:
             outfile = sample.joint_vcf
             VcfMunger.subset(vcf=self.joint_vcf, sample_ids=[sample.id],
@@ -75,4 +75,3 @@ class Cohort:
                       if 'R1' in reads_fn]
 
         return [Sample(sample_id, self) for sample_id in sample_ids]
-
