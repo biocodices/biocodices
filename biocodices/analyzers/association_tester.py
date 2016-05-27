@@ -1,47 +1,46 @@
 import pandas as pd
-from os.path import join
-from glob import glob
+from os.path import basename
 
 from biocodices.programs import Plink
+from biocodices.plotters import AssociationTestPlotter
 
 
 class AssociationTester:
     def __init__(self, dataset):
         self.dataset = dataset
+        self.plotter = AssociationTestPlotter(self)
+        self.plink = Plink(self.dataset.label_path)
 
     def __repr__(self):
         return '<{} for dataset "{}">'.format(self.__class__.__name__,
                                               self.dataset.label)
 
+    def run(self, test_name, famfile=None):
+        result_file = self.plink.association_test(test_name, famfile=famfile)
+        result = self.read_plink_test(test_name, result_file)
+        return result
+
     def read_plink_test(self, test_name, path):
-        test_data = Plink.config('association_tests')[test_name]
+        tests = Plink.config('association_tests')
+        interesting_col = tests[test_name]['interesting_column']
         df = pd.read_table(path, sep='\s+')
         df.set_index(['CHR', 'SNP'], inplace=True)
+
         ret = pd.DataFrame({})
-        if test_name == 'model_fisher':
-            col = test_data['interesting_column']
+        if test_name in ['fisher_exact']:
             for model, df_model in df.groupby('TEST'):
-                series = df_model[test_data['interesting_column']]
-                series.name = '{}_{}_{}'.format(model, test_name, col)
+                series = df_model[interesting_col]
+                series.name = '{}_{}_{}'.format(model, test_name,
+                                                interesting_col)
                 ret = ret.append(series)
             return ret.transpose()
-        elif test_name in ['allelic_fisher', 'allelic_fisher_adjusted',
-                           'allelic_chisq']:
-            col = test_data['interesting_column']
-            series = df[col]
-            series.name = '{}_{}'.format(test_name, col)
+        elif test_name in ['allelic_regression']:
+            series = df[interesting_col]
+            series.name = '{}_{}'.format(test_name, interesting_col)
             return series.to_frame()
 
-    #  @staticmethod
-    #  def _read_plink_model_table(path_to_table):
-        #  tests = ['GENO', 'TREND', 'ALLELIC', 'DOM', 'REC']
-        #  df = pd.read_table(path_to_table, sep='\s+')
-        #  return df
-
-    #  @staticmethod
-    #  def _read_plink_assoc_fisher(path):
-        #  df = pd.read_table(path)
-        #  return df
+    #  def plot_plink_results(self, results_file):
+        #  df = self.read_plink_test(results_file)
 
     @staticmethod
     def dataframe_to_pheno_file(pheno_df, outfile):

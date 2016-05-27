@@ -12,6 +12,7 @@ class Plink:
 
     def __init__(self, bfile_path):
         self.executable = Config('executables')['plink']
+        self.tests = self.config('association_tests')
 
         self.label_path = bfile_path
         self.bed = self.label_path + '.bed'
@@ -49,6 +50,13 @@ class Plink:
         params = '--mind {} --maf {} --geno {} --hwe {}'
         params = params.format(mind, maf, geno, hwe)
         return self.run(params, out=out, make_bed=True)
+
+    def association_test(self, test_name, famfile=None, out=None):
+        test = self.tests[test_name]
+        if famfile:
+            self.fam = famfile
+            out = out or famfile.replace('.fam', '')
+        return self.run(test['params'], out=out)
 
     def assoc(self, adjust=True):
         options = '--assoc'

@@ -1,7 +1,23 @@
+# For quantitative phenotypes in the phenotype column of the .fam
+#
 association_tests:
-    allelic_chisq:
+
+    allelic_regression:
         params: '--assoc'
         ext: 'qassoc'
+        interesting_column: 'P'
+
+    # linear_regression:
+        # params: '--linear'
+        # ext: 'assoc.linear'
+        # ...
+
+    # For case/control phenotypes
+    # Will test five models: rec, dom, trend, allelic, geno
+    # With a Fisher's exact test.
+    fisher_exact:
+        params: '--model fisher --cell 0'
+        ext: 'model'
         interesting_column: 'P'
     # allelic_chisq_adjusted:
         # params: '--assoc --adjust'
@@ -24,10 +40,9 @@ association_tests:
         # ext: 'assoc.fisher.mperm'
         #
 
-    model_fisher:  # Will test five models: rec, dom, trend, allelic, geno
-        params: '--model fisher --cell 0'
-        ext: 'model'
-        interesting_column: 'P'
+    # logistic_regression:
+        # params: '--logistic'
+        # ext: ''
     # model_trend:
         # params: '--model-trend --cell 0'
         # ext: 'model.trend'
