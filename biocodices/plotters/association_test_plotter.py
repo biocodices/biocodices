@@ -11,7 +11,8 @@ class AssociationTestPlotter(BasePlotter):
         if plots_dir is None:
             self.base_dir = self.assoc.dataset.dir
 
-    def draw_p_values(self, series, ax, max_p=0.05,
+    @staticmethod
+    def draw_p_values(series, ax, max_p=0.05, color=None,
                       threshold_lines=[0.05, 0.01, 0.001]):
         """
         Takes a series of p-values indexed by chromosome and rs_ID.
@@ -20,20 +21,22 @@ class AssociationTestPlotter(BasePlotter):
         """
         p_values = series[series < max_p]
         if p_values.empty:
-            print('No p values smaller than {} found'.format(max_p))
             return
 
-        ax = p_values.plot(linestyle='', marker='o', markersize=4, logy=True,
-                           color='indigo')
+        ax = p_values.plot(linestyle='', marker='o', markersize=6, logy=True,
+                           color=(color or 'indigo'))
         ax.invert_yaxis()
         ax.set_ylabel('p-value')
-        xtick_labels = str(p_values.index.values)
+        ax.set_xlabel('')
+        xtick_labels = [', '.join([str(chrom), snp])
+                        for chrom, snp in p_values.index.values]
         ax.set_xticks(np.arange(len(xtick_labels)))
-        ax.set_xticklabels(xtick_labels, rotation=90)
+        rotation = 90 if len(xtick_labels) > 4 else 0
+        ax.set_xticklabels(xtick_labels, rotation=rotation)
 
         for threshold in threshold_lines:
             ax.text(y=threshold, x=0, s='$p = {}$'.format(threshold),
-                    color='red')
+                    color='red', fontsize=12)
             ax.axhline(threshold, linewidth=0.5, color='red')
 
         sns.despine(left=True)
