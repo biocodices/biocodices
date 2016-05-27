@@ -1,7 +1,7 @@
 from os.path import join, basename
 
 from biocodices.helpers import Config, Resource
-from biocodices.programs import ProgramCaller, GATK, Picard, BWA
+from biocodices.programs import ProgramCaller, GATK, Picard, BWA, FastQC
 from biocodices.helpers.general import params_dict_to_str
 
 
@@ -14,15 +14,13 @@ class ReadsMunger:
         self.picard = Picard()
         self.gatk = GATK()
         self.bwa = BWA()
+        self.fastqc = FastQC()
 
     def __repr__(self):
         return '<{} for {}>'.format(self.__class__.__name__, self.sample.id)
 
     def analyze_reads(self, reads_filepath):
-        command = '{} {} -o {}'.format(self.executables['fastqc'],
-                                       reads_filepath, self.results_dir)
-        log_filepath = self._file('fastqc')
-        ProgramCaller(command).run(log_filepath=log_filepath)
+        self.fastqc.analyze_reads(reads_filepath, self.results_dir)
 
     def trim_adapters(self, reads_filepaths):
         """

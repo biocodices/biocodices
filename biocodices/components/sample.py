@@ -36,8 +36,8 @@ class Sample:
         print('Result files and logs will be put in:')
         print(self.results_dir, '\n')
 
-        #  if trim_reads:
-            #  self.analyze_and_trim_reads()
+        if trim_reads:
+            self.analyze_and_trim_reads()
         if align_reads:
             self.align_reads()
             self.process_alignment_files()

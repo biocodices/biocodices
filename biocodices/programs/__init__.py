@@ -4,3 +4,4 @@ from .gatk import GATK
 from .plink import Plink
 from .picard import Picard
 from .bwa import BWA
+from .fastqc import FastQC

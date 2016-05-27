@@ -1,4 +1,5 @@
-from os.path import dirname, join, basename
+from os.path import join, dirname
+
 from biocodices.programs import AbstractGenomicsProgram, ProgramCaller
 from biocodices.helpers.general import params_dict_to_str, rename_tempfile
 
@@ -22,7 +23,7 @@ class BWA(AbstractGenomicsProgram):
 
         command = '{} {}'.format(self.executable, params_str)
         # redirect stdout to samfile and stderr to logfile
-        log_filepath = outfile.replace('.sam', '')
+        log_filepath = join(dirname(outfile), 'bwa')
         ProgramCaller(command).run(stdout_sink=outfile + '.temp',
                                    log_filepath=log_filepath)
         rename_tempfile(outfile)

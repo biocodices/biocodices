@@ -1,5 +1,8 @@
 cores: &cores 8
 
+fastqc:
+    o: '{output_dir}'
+
 fastq-mcf:
     l: 50  # Minimum remaining sequence length
     q: 20  # Quality threshold causing base removal
