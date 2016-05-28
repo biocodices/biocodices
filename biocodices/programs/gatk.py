@@ -12,7 +12,7 @@ class GATK(AbstractGenomicsProgram):
             extra_output_extension=None, log_label=None, task_subtype=None,
             extra_params_str=None):
         params_dict = self.params[module_name]
-        if module_name == 'HaplotypeCaller':
+        if task_subtype:
             params_dict = params_dict[task_subtype]
         params = ['-{} {}'.format(k, v) for k, v in params_dict.items()]
         params_variables = {
@@ -75,7 +75,7 @@ class GATK(AbstractGenomicsProgram):
         variant_vcf = vcf.replace('.vcf', '.{}.vcf'.format(variant_type))
         module_name = 'SelectVariants'
         log_label = '{}_{}'.format(module_name, variant_type)
-        self.run(module_name, vcf, variant_vcf,
+        self.run(module_name, vcf, variant_vcf, task_subtype=variant_type,
                  extra_output_extension='idx', log_label=log_label)
         return variant_vcf
 
@@ -95,7 +95,7 @@ class GATK(AbstractGenomicsProgram):
         for filter_name in filter_order:
             outfile = input_vcf.replace('.vcf', '.{}.vcf'.format(filter_name))
             filter_expression = filters[variant_type][filter_name]
-            params_str = ' --filterName {} --filterExpression {}'
+            params_str = ' --filterName {} --filterExpression "{}"'
             params_str = params_str.format(filter_name, filter_expression)
             log_label = '{}_{}_{}'.format(module_name, variant_type,
                                           filter_name)
@@ -130,7 +130,8 @@ class GATK(AbstractGenomicsProgram):
 
         # infile parameter is None because the actual inputs will be passed
         # with the -V <variant> flag, leaving the -I flag unused.
-        self.run('CombineVariants', None, outfile, extra_params_str=params_str)
+        self.run('CombineVariants', None, outfile, extra_params_str=params_str,
+                 extra_output_extension='idx')
         return outfile
 
     def _realigner_target_creator(self, bam):
