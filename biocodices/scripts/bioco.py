@@ -10,10 +10,30 @@ from biocodices.helpers.general import touch_all_the_logs, biocodices_logo
 
 
 def call_variants_for_all_samples(args):
+    print(biocodices_logo())
+    print('Welcome to {}! Anlyzing reads for...'.format(software_name))
     cohort = Cohort(expanduser(args.seq_dir))
 
-    print(biocodices_logo())
-    print('Welcome to {}! Anlyzing reads for:'.format(software_name))
+    if args.samples:
+        sample_ids = args.samples.split(',')
+        for sample_id in sample_ids:
+            if sample_id not in [sample.id for sample in cohort.samples]:
+                msg = '{} not found in this cohort.'
+                raise Exception(msg.format(sample_id))
+
+        cohort.samples = [sample for sample in cohort.samples
+                          if sample.id in sample_ids]
+
+    if args.skip_samples:
+        sample_ids = args.skip_samples.split(',')
+        cohort.samples = [sample for sample in cohort.samples
+                          if sample.id not in sample_ids]
+        for sample_id in sample_ids:
+            if sample_id not in [sample.id for sample in cohort.samples]:
+                msg = '{} not found in this cohort.'
+                raise Exception(msg.format(sample_id))
+
+
     print(colored(cohort, 'green'))
     print('\nYou can follow the details of the process with:')
     # other option: `tail -n0 -f {}/{{*/,}}*.log`

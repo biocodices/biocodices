@@ -7,9 +7,9 @@ help_texts:
     v: 'Create .vcf and .g.vcf files for each sample from the .bam.'
     j: 'Do a joint genotyping for the cohort.'
     f: 'Do a hard filtering on the .vcf files. The parameters will be read from ~/.biocodices/parameters.yml'
-    y: '(Yes) Analyze the provided comma-separated sample IDs (e.g. SAMP001,SAMP002,SAMP015) and skip the rest of the samples.'
-    n: "(No) Don't analyze the provided comma-separated sample IDs, but do analyze any sample not mentioned."
     c: 'Go through all the steps of the pipeline. This is equivalent of passing the multi flag -tavjf'
+    s: 'Analyze only these samples (separate their IDs with a comma and no spaces), skip the rest. If the joint-genotyping step is included in the analysis, it will be performed only with the chosen samples (the joint GVCF will not include them!). E.g.: -s SAMPLE001,SAMPLE002'
+    k: 'Skip these samples (separate their IDs with a comma and no spaces), analyze the rest. If the joint-genotyping step is included in the analysis, it will be performed without the chosen samples (the joint GVFC will not include them!). E.g.: -k SAMPLE001,SAMPLE002'
 
 args:
     # short-name: [long-name, action, required, default]
@@ -19,6 +19,6 @@ args:
     v: ['create-vcfs', 'store_true', no, no]
     j: ['joint-genotyping', 'store_true', no, no]
     f: ['hard-filtering', 'store_true', no, no]
-    y: ['samples-do', 'store', no, null]
-    n: ['samples-dont', 'store', no, null]
     c: ['complete-pipeline', 'store_true', no, no]
+    s: ['samples', 'store', no, null]
+    k: ['skip-samples', 'store', no, null]
