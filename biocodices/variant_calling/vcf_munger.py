@@ -1,7 +1,7 @@
 from os.path import join, dirname
 
 from biocodices.helpers import Config
-from biocodices.programs import ProgramCaller, GATK
+from biocodices.programs import ProgramCaller, GATK, Picard
 
 
 class VcfMunger:
@@ -11,6 +11,7 @@ class VcfMunger:
         self.executables = Config('executables')
         self.params = Config('parameters')
         self.gatk = GATK()
+        self.picard = Picard()
 
     def __repr__(self):
         return '<{} for {}>'.format(self.__class__.__name__, self.sample.id)
@@ -25,6 +26,9 @@ class VcfMunger:
 
     def merge_variant_vcfs(self, variant_vcfs, outfile):
         return self.gatk.combine_variants(variant_vcfs, outfile=outfile)
+
+    def variant_calling_metrics(self, vcf):
+        return self.picard.variant_calling_metrics(vcf)
 
     @staticmethod
     def subset(vcf, sample_ids, outfile):

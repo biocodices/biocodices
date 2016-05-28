@@ -1,4 +1,5 @@
-from os import makedirs, remove
+import pandas as pd
+from os import makedirs
 from os.path import isdir, join, isfile
 from datetime import datetime
 from termcolor import colored
@@ -77,7 +78,7 @@ class Sample:
         self.printlog('Recalibrate read quality scores')
         self.reads_munger.recalibrate_quality_scores(self.realigned_bam)
 
-        self.printlog('Generate alignment metrics')
+        self.printlog('Plot alignment metrics')
         self.reads_munger.alignment_metrics(self.recalibrated_bam)
 
     def create_variant_files(self, vcf=True, gvcf=True):
@@ -109,6 +110,16 @@ class Sample:
         self.printlog('Merge the filtered vcfs')
         self.vcf_munger.merge_variant_vcfs([self.snps_vcf, self.indels_vcf],
                                             outfile=self.filtered_vcf)
+
+    def variant_calling_metrics(self):
+        self.printlog('Plot variant calling metrics')
+        self.vcf_munger.variant_calling_metrics(self.filtered_vcf)
+
+    def alignment_metrics(self):
+        fn = self._files('realigned.recalibrated.alignment_metrics.tsv')
+        df = pd.read_table(fn, sep='\s+', comment='#')
+        df['sample'] = self.id
+        return df
 
     def log(self, extension):
         return join(self.results_dir, '{}.{}.log'.format(self.id, extension))
