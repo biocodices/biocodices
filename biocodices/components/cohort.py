@@ -3,10 +3,12 @@ import re
 from glob import glob
 from os.path import join, abspath, basename, expanduser
 from biocodices.programs import GATK
+from biocodices.helpers import Stopwatch
 from biocodices.helpers.language import plural
 from biocodices.variant_calling import VcfMunger
 from biocodices.components import Sample
-from biocodices.plotters import AlignmentMetricsPlotter
+from biocodices.plotters import (AlignmentMetricsPlotter,
+                                 VariantCallingMetricsPlotter)
 
 
 class Cohort:
@@ -25,7 +27,7 @@ class Cohort:
         if len(self.samples) == 0:
             msg = 'I found no sample files in {}'
             raise Exception(msg.format(self.data_dir))
-        self.joint_vcf = join(self.results_dir, 'joint_genotyping.vcf')
+        self.joint_gvcf = join(self.results_dir, 'joint_genotyping.g.vcf')
 
     def __repr__(self):
         tmpl = '<{}({})>'
@@ -41,45 +43,68 @@ class Cohort:
                       create_vcfs=True, joint_genotyping=True,
                       hard_filtering=True):
 
+        stopwatch = Stopwatch().start()
+
         if trim_reads or align_reads or create_vcfs:
             for sample in self.samples:
                 sample.call_variants(trim_reads=trim_reads,
                                      align_reads=align_reads,
                                      create_vcfs=create_vcfs)
+
+        if align_reads:
+            print('* Plot some alignment metrics for the cohort.')
             self.plot_alignment_metrics()
+            print('* Plot the median coverage of the cohort.')
+            self.plot_median_coverage()
 
         if joint_genotyping:
+            print('* Joint genotyping.')
             self.joint_genotyping()
-            self.split_joint_vcf()
+            print('* Split the joint gVCF per sample')
+            self.split_joint_gvcf()
 
         if hard_filtering:
             for sample in self.samples:
                 sample.apply_filters_to_vcf()
 
+        stopwatch.stop()
+        runtime = stopwatch.nice_total_run_time
+        print('\nThe whole process took {}.'.format(runtime))
+
+
     def joint_genotyping(self):
         gatk = GATK()
         gvcf_list = [sample.gvcf for sample in self.samples]
         output_dir = self.results_dir
-        print('\nJoint Genotyping for {}\n'.format(plural('sample',
-                                                          len(self.samples))))
-        self.joint_vcf = gatk.joint_genotyping(gvcf_list, output_dir)
+        self.joint_gvcf = gatk.joint_genotyping(gvcf_list, output_dir)
 
-    def split_joint_vcf(self):
+    def split_joint_gvcf(self):
         for sample in self.samples:
             outfile = sample.joint_vcf
-            VcfMunger.subset(vcf=self.joint_vcf, sample_ids=[sample.id],
+            VcfMunger.subset(vcf=self.joint_gvcf, sample_ids=[sample.id],
                              outfile=outfile)
 
     def plot_alignment_metrics(self):
-        frames = [sample.alignment_metrics() for sample in self.samples]
+        frames = [sample.read_alignment_metrics() for sample in self.samples]
         df = pd.concat(frames, ignore_index=True).dropna(axis=1)
         # Remove the info of both pairs, leave by first and second of pair.
         df_pairs = df[df['CATEGORY'] != 'PAIR']
         plotter = AlignmentMetricsPlotter(df_pairs)
-        plotter.plot_and_savefig(self.dir)
+        plotter.plot_and_savefig(self.results_dir)
 
-    def plot_variant_calling_metrics(self):
-        pass
+    def median_coverages(self):
+        median_coverages = {}
+        for sample in self.samples:
+            median_coverages[sample.id] = sample.get_median_coverage()
+        median_coverages = pd.Series(median_coverages)
+        return median_coverages
+
+    #  def plot_variant_calling_metrics(self):
+        #  frames = [sample.read_variant_calling_metrics()
+                  #  for sample in self.samples]
+        #  df = pd.concat(frames, ignore_index=True).dropna(axis=1)
+        #  plotter = VariantCallingMetricsPlotter(df)
+        #  plotter.plot_and_savefig(self.dir)
 
     def _search_samples(self):
         glob_expr = join(self.data_dir, '*.{}'.format(Sample.reads_format))

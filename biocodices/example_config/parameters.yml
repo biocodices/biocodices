@@ -16,6 +16,9 @@ bwa:
     # modify the &reference_genome_default in resources.yml
     t: *cores
 
+vcftools:
+    null
+
 picard-tools:
     AddOrReplaceReadGroups:
         VALIDATION_STRINGENCY: LENIENT
@@ -32,7 +35,10 @@ picard-tools:
         R: '{reference_genome}'
         I: '{input}'
         O: '{output}'
+        ADAPTER_SEQUENCE: 'null'
     CollectVariantCallingMetrics:
+        SD: '{reference_genome_dict}'
+        GVCF_INPUT: 'true'  # run on a single-sample gVCF
         DBSNP: '{known_variants}'
         I: '{input}'
         O: '{output}'
@@ -61,6 +67,10 @@ GATK:
         <<: *gatk_defaults
         BQSR: '{recalibration}'
         nct: *cores
+
+    DiagnoseTargets:
+        <<: *gatk_defaults
+        L: '{limits}'
 
     HaplotypeCaller:
         vcf:
@@ -124,14 +134,14 @@ GATK:
             MQ: 'MQ < 40.0'
             MQRS: 'MQRankSum < -12.5'
             RPRS: 'ReadPosRankSum < -8.0'
-            GQ: 'GQ < 30.0'
-            DP: 'DP < 50'
+            # GQ: 'GQ < 30.0'
+            # DP: 'DP < 50.0'
         indels:
             QD: 'QD < 2.0'
             FS: 'FS > 200.0'
             RPRS: 'ReadPosRankSum < -20.0'
-            GQ: 'GQ < 30.0'
-            DP: 'DP < 50'
+            # GQ: 'GQ < 30.0'
+            # DP: 'DP < 50.0'
 
     CombineVariants:
         T: CombineVariants

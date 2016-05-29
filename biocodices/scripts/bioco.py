@@ -26,13 +26,13 @@ def call_variants_for_all_samples(args):
 
     if args.skip_samples:
         sample_ids = args.skip_samples.split(',')
-        cohort.samples = [sample for sample in cohort.samples
-                          if sample.id not in sample_ids]
         for sample_id in sample_ids:
             if sample_id not in [sample.id for sample in cohort.samples]:
                 msg = '{} not found in this cohort.'
                 raise Exception(msg.format(sample_id))
 
+        cohort.samples = [sample for sample in cohort.samples
+                          if sample.id not in sample_ids]
 
     print(colored(cohort, 'green'))
     print('\nYou can follow the details of the process with:')
@@ -48,7 +48,7 @@ def call_variants_for_all_samples(args):
                          joint_genotyping=args.joint_genotyping,
                          hard_filtering=args.hard_filtering)
 
-    print('\nDone! Bless your heart.\n')
+    print('Done! Bless your heart.\n')
 
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@ from os.path import join, basename
 
 from biocodices.helpers import Config, Resource
 from biocodices.programs import ProgramCaller, GATK, Picard, BWA, FastQC
+from biocodices.variant_calling import VcfMunger
 from biocodices.helpers.general import params_dict_to_str
 
 
@@ -61,14 +62,20 @@ class ReadsMunger:
     def recalibrate_quality_scores(self, realigned_bam):
         self.gatk.recalibrate_quality_scores(realigned_bam)
 
-    def alignment_metrics(self, recalibrated_bam):
+    def generate_alignment_metrics(self, recalibrated_bam):
         self.picard.alignment_metrics(recalibrated_bam)
+
+    def depth_vcf(self, recalibrated_bam):
+        return self.gatk.create_depth_vcf(recalibrated_bam)
 
     def create_vcf(self, recalibrated_bam):
         self.gatk.create_vcf(recalibrated_bam)
 
     def create_gvcf(self, recalibrated_bam):
         self.gatk.create_gvcf(recalibrated_bam)
+
+    #  def generate_variant_calling_metrics(self, filtered_vcf):
+        #  self.picard.variant_calling_metrics(filtered_vcf)
 
     def _file(self, label):
         return join(self.results_dir, label)

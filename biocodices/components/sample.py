@@ -42,6 +42,7 @@ class Sample:
         if align_reads:
             self.align_reads()
             self.process_alignment_files()
+            self.alignment_metrics()
         if create_vcfs:
             self.create_variant_files()
 
@@ -78,18 +79,33 @@ class Sample:
         self.printlog('Recalibrate read quality scores')
         self.reads_munger.recalibrate_quality_scores(self.realigned_bam)
 
-        self.printlog('Plot alignment metrics')
-        self.reads_munger.alignment_metrics(self.recalibrated_bam)
+    def alignment_metrics(self):
+        self.printlog('Generate alignment metrics')
+        self.reads_munger.generate_alignment_metrics(self.recalibrated_bam)
 
-    def create_variant_files(self, vcf=True, gvcf=True):
-        if vcf:
-            self.printlog('Create vcf')
-            self.vcf = self.reads_munger.create_vcf(self.recalibrated_bam)
-        if gvcf:
-            self.printlog('Create gvcf')
-            self.gvcf = self.reads_munger.create_gvcf(self.recalibrated_bam)
+        self.printlog('Analyze coverage')
+        self.get_median_coverage()
+
+    def get_median_coverage(self):
+        self.depth_vcf = self._files('realigned.recalibrated.depth_stats.vcf')
+        if not isfile(self.depth_vcf):
+            self.depth_vcf = self.reads_munger.depth_vcf(self.recalibrated_bam)
+        depth_stats = VcfMunger.read_depth_stats_vcf(self.depth_vcf)
+        return pd.Series(depth_stats).median()
+
+    def create_variant_files(self):
+        # The creation of a VCF per sample at this point has no use and it
+        # takes several minutes.
+        #  if vcf:
+            #  self.printlog('Create vcf')
+            #  self.vcf = self.reads_munger.create_vcf(self.recalibrated_bam)
+        # if gvcf:
+        self.printlog('Create a gvcf for the joint genotyping')
+        self.gvcf = self.reads_munger.create_gvcf(self.recalibrated_bam)
 
     def apply_filters_to_vcf(self):
+        print(colored('* {}'.format(self.long_name), 'yellow'))
+
         if isfile(self.joint_vcf):
             input_vcf = self.joint_vcf
         else:
@@ -98,6 +114,7 @@ class Sample:
             self.printlog(msg)
             input_vcf = self.vcf
 
+        self.printlog('Separate SNPs and INDELs before filtering')
         variant_files = self.vcf_munger.create_snp_and_indel_vcfs(input_vcf)
         self.snps_vcf, self.indels_vcf = variant_files
 
@@ -111,15 +128,22 @@ class Sample:
         self.vcf_munger.merge_variant_vcfs([self.snps_vcf, self.indels_vcf],
                                             outfile=self.filtered_vcf)
 
-    def variant_calling_metrics(self):
-        self.printlog('Plot variant calling metrics')
-        self.vcf_munger.variant_calling_metrics(self.filtered_vcf)
+        #  self.printlog('Generate variant calling metrics')
+        #  self.vcf_munger.generate_variant_calling_metrics(self.filtered_vcf)
 
-    def alignment_metrics(self):
+    def read_alignment_metrics(self):
+        # This is called by the sample's Cohort to plot everything together.
         fn = self._files('realigned.recalibrated.alignment_metrics.tsv')
         df = pd.read_table(fn, sep='\s+', comment='#')
         df['sample'] = self.id
         return df
+
+    #  def read_variant_calling_metrics(self):
+        #  # This is called by the sample's Cohort to plot everything together.
+        #  fn = self._files('')
+        #  df = pd.read_table(fn, sep='\s+', comment='#')
+        #  df['sample'] = self.id
+        #  return df
 
     def log(self, extension):
         return join(self.results_dir, '{}.{}.log'.format(self.id, extension))

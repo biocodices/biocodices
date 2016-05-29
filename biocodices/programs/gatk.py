@@ -14,6 +14,7 @@ class GATK(AbstractGenomicsProgram):
         params_dict = self.params[module_name]
         if task_subtype:
             params_dict = params_dict[task_subtype]
+            log_label = '{}_{}'.format(module_name, task_subtype)
         params = ['-{} {}'.format(k, v) for k, v in params_dict.items()]
         params_variables = {
             'module_name': module_name,
@@ -43,14 +44,19 @@ class GATK(AbstractGenomicsProgram):
         recalibrated_bam = self._recalibrate_bam(realigned_bam, recalibration)
         return recalibrated_bam
 
+    def create_depth_vcf(self, recalibrated_bam):
+        """Expects a recalibrated BAM and outputs an depth stats VCF"""
+        outfile = recalibrated_bam.replace('.bam', '.depth_stats.vcf')
+        self.run('DiagnoseTargets', recalibrated_bam, outfile)
+        return outfile
+
     def create_vcf(self, recalibrated_bam):
         """
         Expects a recalibrated BAM as infile, ready for the variant calling.
         """
         outfile = recalibrated_bam.replace('.bam', '.vcf')
         self.run('HaplotypeCaller', recalibrated_bam, outfile,
-                 extra_output_extension='idx', task_subtype='vcf',
-                 log_label='HaplotypeCaller_vcf')
+                 extra_output_extension='idx', task_subtype='vcf')
 
     def create_gvcf(self, recalibrated_bam):
         """
@@ -58,11 +64,10 @@ class GATK(AbstractGenomicsProgram):
         """
         outfile = recalibrated_bam.replace('.bam', '.g.vcf')
         self.run('HaplotypeCaller', recalibrated_bam, outfile,
-                 extra_output_extension='idx', task_subtype='gvcf',
-                 log_label='HaplotypeCaller_gvcf')
+                 extra_output_extension='idx', task_subtype='gvcf')
 
     def joint_genotyping(self, gvcf_list, output_dir):
-        outfile = join(output_dir, 'joint_genotyping.vcf')
+        outfile = join(output_dir, 'joint_genotyping.g.vcf')
         params_str = ''
         for gvcf_filename in gvcf_list:
             params_str += ' --variant {}'.format(gvcf_filename)
@@ -70,6 +75,8 @@ class GATK(AbstractGenomicsProgram):
         # The None is bc joint genotyping doesn't take an I (input) parameter
         self.run('GenotypeGVCFs', None, outfile, extra_params_str=params_str,
                  extra_output_extension='idx')
+
+        return outfile
 
     def select_variants(self, vcf, variant_type):
         variant_vcf = vcf.replace('.vcf', '.{}.vcf'.format(variant_type))
@@ -106,7 +113,7 @@ class GATK(AbstractGenomicsProgram):
 
         return outfile  # last vcf file created, with all filters applied
 
-    def combine_variants(self, variant_vcfs, outfile):
+    def combine_variant_vcfs(self, variant_vcfs, outfile):
         """
         Written to merge INDEL and SNP vcfs from the same sample.
         """
@@ -122,7 +129,7 @@ class GATK(AbstractGenomicsProgram):
         # assign them a priority in the merging process. I just use a dummy
         # tag since every variant will be included (I guess there will be no
         # conflicts in the merged data?).
-        tag = 'DummyTag'
+        tag = sample_ids[0]
         for variant_vcf in variant_vcfs:
             params_str += ' -V:{} {}'.format(tag, variant_vcf)
         dummy_tags = [tag for vcf in variant_vcfs]
