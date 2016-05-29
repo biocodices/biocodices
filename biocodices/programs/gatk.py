@@ -5,6 +5,8 @@ from biocodices.helpers.general import rename_tempfile
 
 
 class GATK(AbstractGenomicsProgram):
+    joint_genotyping_outfile = 'raw_variants.vcf'
+
     def __init__(self):
         super(self.__class__, self).__init__('GATK')
 
@@ -67,7 +69,7 @@ class GATK(AbstractGenomicsProgram):
                  extra_output_extension='idx', task_subtype='gvcf')
 
     def joint_genotyping(self, gvcf_list, output_dir):
-        outfile = join(output_dir, 'joint_genotyping.g.vcf')
+        outfile = join(output_dir, self.joint_genotyping_outfile)
         params_str = ''
         for gvcf_filename in gvcf_list:
             params_str += ' --variant {}'.format(gvcf_filename)

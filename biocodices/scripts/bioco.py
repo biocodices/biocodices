@@ -7,6 +7,7 @@ from os.path import expanduser, join, dirname
 
 from biocodices import Cohort, software_name
 from biocodices.helpers.general import touch_all_the_logs, biocodices_logo
+from biocodices.helpers import Stopwatch
 
 
 def call_variants_for_all_samples(args):
@@ -42,12 +43,18 @@ def call_variants_for_all_samples(args):
     dir_list = [sample.results_dir for sample in cohort.samples]
     touch_all_the_logs(cohort.dir, dir_list)
 
+
+    stopwatch = Stopwatch().start()
+
     cohort.call_variants(trim_reads=args.trim_reads,
                          align_reads=args.align_reads,
                          create_vcfs=args.create_vcfs,
                          joint_genotyping=args.joint_genotyping,
                          hard_filtering=args.hard_filtering)
 
+    stopwatch.stop()
+    runtime = stopwatch.nice_total_run_time
+    print('\nThe whole process took {}.'.format(runtime))
     print('Done! Bless your heart.\n')
 
 

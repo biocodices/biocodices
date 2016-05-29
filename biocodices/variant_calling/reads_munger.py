@@ -7,18 +7,17 @@ from biocodices.helpers.general import params_dict_to_str
 
 
 class ReadsMunger:
-    def __init__(self, sample, results_dir):
-        self.sample = sample
+    def __init__(self, results_dir):
         self.results_dir = results_dir
+        # ^ This class needs a results_dir arg since it can't infer the results
+        # directory from the location of the input fastq files, which are in
+        # the **data** dir of each project.
         self.executables = Config('executables')
         self.params = Config('parameters')
         self.picard = Picard()
         self.gatk = GATK()
         self.bwa = BWA()
         self.fastqc = FastQC()
-
-    def __repr__(self):
-        return '<{} for {}>'.format(self.__class__.__name__, self.sample.id)
 
     def analyze_reads(self, reads_filepath):
         self.fastqc.analyze_reads(reads_filepath, self.results_dir)

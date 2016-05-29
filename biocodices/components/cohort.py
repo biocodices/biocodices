@@ -1,14 +1,15 @@
-import pandas as pd
+from datetime import datetime
 import re
 from glob import glob
 from os.path import join, abspath, basename, expanduser
-from biocodices.programs import GATK
-from biocodices.helpers import Stopwatch
-from biocodices.helpers.language import plural
-from biocodices.variant_calling import VcfMunger
+import pandas as pd
+from termcolor import colored
+
 from biocodices.components import Sample
-from biocodices.plotters import (AlignmentMetricsPlotter,
-                                 VariantCallingMetricsPlotter)
+from biocodices.variant_calling import VcfMunger
+from biocodices.programs import GATK
+from biocodices.helpers.language import plural
+from biocodices.plotters import AlignmentMetricsPlotter
 
 
 class Cohort:
@@ -24,10 +25,16 @@ class Cohort:
         self.samples = self._search_samples()
         self.sequencer_runs = list(set([sample.sequencer_run_id
                                         for sample in self.samples]))
+        self.vcf_munger = VcfMunger()
+
+
         if len(self.samples) == 0:
             msg = 'I found no sample files in {}'
             raise Exception(msg.format(self.data_dir))
-        self.joint_gvcf = join(self.results_dir, 'joint_genotyping.g.vcf')
+
+        self.unfiltered_vcf = join(self.results_dir,
+                                   GATK.joint_genotyping_outfile)
+        self.filtered_vcf = join(self.results_dir, 'filtered.vcf')
 
     def __repr__(self):
         tmpl = '<{}({})>'
@@ -43,8 +50,6 @@ class Cohort:
                       create_vcfs=True, joint_genotyping=True,
                       hard_filtering=True):
 
-        stopwatch = Stopwatch().start()
-
         if trim_reads or align_reads or create_vcfs:
             for sample in self.samples:
                 sample.call_variants(trim_reads=trim_reads,
@@ -52,37 +57,53 @@ class Cohort:
                                      create_vcfs=create_vcfs)
 
         if align_reads:
-            print('* Plot some alignment metrics for the cohort.')
+            self.printlog('Plot some alignment metrics for the cohort.')
             self.plot_alignment_metrics()
-            print('* Plot the median coverage of the cohort.')
+            self.printlog('Plot the median coverage of the cohort.')
             self.plot_median_coverage()
 
         if joint_genotyping:
-            print('* Joint genotyping.')
+            self.printlog('Joint genotyping.')
             self.joint_genotyping()
-            print('* Split the joint gVCF per sample')
-            self.split_joint_gvcf()
+            #  self.printlog('* Split the joint gVCF per sample')
+            #  self.split_joint_gvcf()
 
         if hard_filtering:
-            for sample in self.samples:
-                sample.apply_filters_to_vcf()
-
-        stopwatch.stop()
-        runtime = stopwatch.nice_total_run_time
-        print('\nThe whole process took {}.'.format(runtime))
-
+            self.apply_filters_to_vcf()
+            #  for sample in self.samples:
+                #  sample.apply_filters_to_vcf()
 
     def joint_genotyping(self):
         gatk = GATK()
         gvcf_list = [sample.gvcf for sample in self.samples]
         output_dir = self.results_dir
-        self.joint_gvcf = gatk.joint_genotyping(gvcf_list, output_dir)
+        gatk.joint_genotyping(gvcf_list, output_dir)
 
-    def split_joint_gvcf(self):
-        for sample in self.samples:
-            outfile = sample.joint_vcf
-            VcfMunger.subset(vcf=self.joint_gvcf, sample_ids=[sample.id],
-                             outfile=outfile)
+    def apply_filters_to_vcf(self):
+        input_vcf = self.unfiltered_vcf
+
+        self.printlog('Separate SNPs and INDELs before filtering')
+        variant_files = self.vcf_munger.create_snp_and_indel_vcfs(input_vcf)
+        self.snps_vcf, self.indels_vcf = variant_files
+
+        self.printlog('Apply SNP filters')
+        self.snps_vcf = self.vcf_munger.apply_filters(self.snps_vcf, 'snps')
+
+        self.printlog('Apply indel filters')
+        self.indels_vcf = self.vcf_munger.apply_filters(self.indels_vcf, 'indels')
+
+        self.printlog('Merge the filtered vcfs')
+        self.vcf_munger.merge_variant_vcfs([self.snps_vcf, self.indels_vcf],
+                                            outfile=self.filtered_vcf)
+
+        #  self.printlog('Generate variant calling metrics')
+        #  self.vcf_munger.generate_variant_calling_metrics(self.filtered_vcf)
+
+    #  def split_joint_gvcf(self):
+        #  for sample in self.samples:
+            #  outfile = sample.joint_vcf
+            #  VcfMunger.subset(vcf=self.joint_gvcf, sample_ids=[sample.id],
+                             #  outfile=outfile)
 
     def plot_alignment_metrics(self):
         frames = [sample.read_alignment_metrics() for sample in self.samples]
@@ -114,3 +135,8 @@ class Cohort:
                       if 'R1' in reads_fn]
 
         return [Sample(sample_id, self) for sample_id in sample_ids]
+
+    def printlog(self, msg):
+        timestamp = datetime.now().strftime('%H:%M:%S')
+        prefix = colored('[{}][{}]'.format(timestamp, self.id), 'blue')
+        print('{} {}'.format(prefix, msg))

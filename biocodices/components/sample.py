@@ -103,34 +103,6 @@ class Sample:
         self.printlog('Create a gvcf for the joint genotyping')
         self.gvcf = self.reads_munger.create_gvcf(self.recalibrated_bam)
 
-    def apply_filters_to_vcf(self):
-        print(colored('* {}'.format(self.long_name), 'yellow'))
-
-        if isfile(self.joint_vcf):
-            input_vcf = self.joint_vcf
-        else:
-            msg = ("WARNING: I couldn't find a vcf from joint genotyping, "
-                   "so I'll use the regular one: {}".format(self.vcf))
-            self.printlog(msg)
-            input_vcf = self.vcf
-
-        self.printlog('Separate SNPs and INDELs before filtering')
-        variant_files = self.vcf_munger.create_snp_and_indel_vcfs(input_vcf)
-        self.snps_vcf, self.indels_vcf = variant_files
-
-        self.printlog('Apply SNP filters')
-        self.snps_vcf = self.vcf_munger.apply_filters(self.snps_vcf, 'snps')
-
-        self.printlog('Apply indel filters')
-        self.indels_vcf = self.vcf_munger.apply_filters(self.indels_vcf,
-                                                        'indels')
-        self.printlog('Merge the filtered vcfs')
-        self.vcf_munger.merge_variant_vcfs([self.snps_vcf, self.indels_vcf],
-                                            outfile=self.filtered_vcf)
-
-        #  self.printlog('Generate variant calling metrics')
-        #  self.vcf_munger.generate_variant_calling_metrics(self.filtered_vcf)
-
     def read_alignment_metrics(self):
         # This is called by the sample's Cohort to plot everything together.
         fn = self._files('realigned.recalibrated.alignment_metrics.tsv')
@@ -198,8 +170,8 @@ class Sample:
         self.clinic = self._get_clinic()
         self.long_name = '{} ({}) from {}'.format(
             self.name, self.id, self.clinic)
-        self.reads_munger = ReadsMunger(self, self.results_dir)
-        self.vcf_munger = VcfMunger(self, self.results_dir)
+        self.reads_munger = ReadsMunger(self.results_dir)
+        self.vcf_munger = VcfMunger()
         self.fastqs = self._files('fastq')
         self.trimmed_fastqs = self._files('trimmed.fastq')
         self.sam = self._files('sam')

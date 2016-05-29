@@ -126,8 +126,8 @@ GATK:
 
     VariantFiltration_filters:
         # Order in which to apply the filters, since dict keys are unordered.
-        snps_order: ['QD', 'MQ', 'MQRS', 'RPRS', 'GQ', 'DP']
-        indels_order: ['QD', 'FS', 'RPRS', 'GQ', 'DP']
+        snps_order: ['QD', 'MQ', 'MQRS', 'RPRS'] # , 'GQ', 'DP']
+        indels_order: ['QD', 'FS', 'RPRS'] # , 'GQ', 'DP']
 
         snps:
             QD: 'QD < 2.0'

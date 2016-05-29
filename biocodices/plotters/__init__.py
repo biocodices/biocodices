@@ -1,2 +1,1 @@
 from .alignment_metrics_plotter import AlignmentMetricsPlotter
-from .variant_calling_metrics_plotter import VariantCallingMetricsPlotter
