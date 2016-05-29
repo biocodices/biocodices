@@ -11,12 +11,14 @@ from shutil import copy2
 
 def main(data_dir):
     # Pattern to extract the sample ID
-    filename_pattern = r'(SAR\d+).*-01(\d{5}|Control).*(R\d)'
+    filename_pattern = r'(SAR\d+).*-01-(\d{5}|Control).*(R\d)'
 
     gzipped_fastq_glob = join(data_dir, '*.fastq.gz')
     gzipped_fastq_filepaths = glob(gzipped_fastq_glob)
 
-    print('Copying and renaming {} files..'.format(len(gzipped_fastq_filepaths)))
+    msg = 'Backuping the {} zipped fastqs and renaming the copies...'
+    print(msg.format(len(gzipped_fastq_filepaths)))
+
     for fp in gzipped_fastq_filepaths:
         # Copy original files to archive directory
         original_files_dir = join(data_dir, 'zipped_fastqs')

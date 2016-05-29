@@ -6,6 +6,7 @@ from biocodices.helpers.general import rename_tempfile
 
 class GATK(AbstractGenomicsProgram):
     joint_genotyping_outfile = 'raw_variants.vcf'
+    hard_filtering_outfile = 'filtered.vcf'
 
     def __init__(self):
         super(self.__class__, self).__init__('GATK')

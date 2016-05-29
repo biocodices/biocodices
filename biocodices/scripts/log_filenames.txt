@@ -9,6 +9,7 @@ PrintReads
 CollectAlignmentSummaryMetrics
 DiagnoseTargets
 HaplotypeCaller_gvcf
+../GenotypeGVCFs
 ../SelectVariants_indels
 ../SelectVariants_snps
 ../VariantFiltration_indels_FS
@@ -19,4 +20,4 @@ HaplotypeCaller_gvcf
 ../VariantFiltration_snps_QD
 ../VariantFiltration_snps_RPRS
 ../CombineVariants
-../GenotypeGVCFs
+bcftools_view

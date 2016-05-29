@@ -27,14 +27,13 @@ class Cohort:
                                         for sample in self.samples]))
         self.vcf_munger = VcfMunger()
 
-
         if len(self.samples) == 0:
-            msg = 'I found no sample files in {}'
+            msg = 'I found no sample files (.fastq) in {}'
             raise Exception(msg.format(self.data_dir))
 
         self.unfiltered_vcf = join(self.results_dir,
                                    GATK.joint_genotyping_outfile)
-        self.filtered_vcf = join(self.results_dir, 'filtered.vcf')
+        self.filtered_vcf = join(self.results_dir, GATK.hard_filtering_outfile)
 
     def __repr__(self):
         tmpl = '<{}({})>'
@@ -65,13 +64,16 @@ class Cohort:
         if joint_genotyping:
             self.printlog('Joint genotyping.')
             self.joint_genotyping()
-            #  self.printlog('* Split the joint gVCF per sample')
-            #  self.split_joint_gvcf()
 
         if hard_filtering:
-            self.apply_filters_to_vcf()
-            #  for sample in self.samples:
+            self.apply_filters_to_vcf(self.unfiltered_vcf)
+            # for sample in self.samples:
                 #  sample.apply_filters_to_vcf()
+
+            self.printlog('Split the multisample VCF per sample')
+            for sample in self.samples:
+                self.vcf_munger.filter_samples(self.filtered_vcf, [sample.id],
+                                               sample.filtered_vcf)
 
     def joint_genotyping(self):
         gatk = GATK()
@@ -79,11 +81,9 @@ class Cohort:
         output_dir = self.results_dir
         gatk.joint_genotyping(gvcf_list, output_dir)
 
-    def apply_filters_to_vcf(self):
-        input_vcf = self.unfiltered_vcf
-
+    def apply_filters_to_vcf(self, vcf_path):
         self.printlog('Separate SNPs and INDELs before filtering')
-        variant_files = self.vcf_munger.create_snp_and_indel_vcfs(input_vcf)
+        variant_files = self.vcf_munger.create_snp_and_indel_vcfs(vcf_path)
         self.snps_vcf, self.indels_vcf = variant_files
 
         self.printlog('Apply SNP filters')
@@ -98,12 +98,6 @@ class Cohort:
 
         #  self.printlog('Generate variant calling metrics')
         #  self.vcf_munger.generate_variant_calling_metrics(self.filtered_vcf)
-
-    #  def split_joint_gvcf(self):
-        #  for sample in self.samples:
-            #  outfile = sample.joint_vcf
-            #  VcfMunger.subset(vcf=self.joint_gvcf, sample_ids=[sample.id],
-                             #  outfile=outfile)
 
     def plot_alignment_metrics(self):
         frames = [sample.read_alignment_metrics() for sample in self.samples]

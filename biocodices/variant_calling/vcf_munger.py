@@ -1,10 +1,10 @@
-from os.path import join, dirname
+from os.path import dirname
 from collections import OrderedDict
 import vcf
 import pandas as pd
 
 from biocodices.helpers import Config
-from biocodices.programs import ProgramCaller, GATK, Picard, VcfTools
+from biocodices.programs import GATK, Picard, BcfTools
 
 
 class VcfMunger:
@@ -13,7 +13,7 @@ class VcfMunger:
         self.params = Config('parameters')
         self.gatk = GATK()
         self.picard = Picard()
-        self.vcf_tools = VcfTools()
+        self.bcftools = BcfTools()
 
     def create_snp_and_indel_vcfs(self, vcf_file):
         snps_vcf = self.gatk.select_variants(vcf_file, 'snps')
@@ -32,16 +32,15 @@ class VcfMunger:
     #  def remove_variants_outside_limits(self, vcf):
         #  return self.vcf_tools.remove_variants_outside_limits(vcf)
 
+    def filter_samples(self, vcf_path, sample_ids, outfile):
+        self.bcftools.filter_samples(vcf_path, sample_ids, outfile)
+        return outfile
+
     @staticmethod
     def read_depth_stats_vcf(vcf_path):
         with open(vcf_path, 'r') as vcf_file:
             interval_depths = [row.INFO['IDP'] for row in vcf.Reader(vcf_file)]
         return interval_depths
-
-    @staticmethod
-    def subset(vcf_path, sample_ids, outfile):
-        VcfTools.subset(vcf_path, sample_ids, outfile)
-        return outfile
 
     @staticmethod
     def vcf_to_frames(vcf_path):
