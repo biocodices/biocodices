@@ -1,5 +1,10 @@
 # Installation
 
+```
+# Java for the pipeline applications that need it
+sudo apt-get install openjdk-8-jdk
+```
+
 ## Python and some libraries
 
 (TODO: This section needs more detail, conda, etc.)
