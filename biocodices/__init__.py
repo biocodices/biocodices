@@ -1,4 +1,4 @@
-__version__ = '0.2'
+__version__ = '0.3'
 software_name = 'biocodices {}'.format(__version__)
 
 from .components import Sample, Cohort

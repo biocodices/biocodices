@@ -11,7 +11,7 @@ from shutil import copy2
 
 def main(data_dir):
     # Pattern to extract the sample ID
-    filename_pattern = r'(SAR\d+).*-01-(\d{5}|Control).*(R\d)'
+    filename_pattern = r'(SAR\d+).*-01(\d{5}|Control).*(R\d)'
 
     gzipped_fastq_glob = join(data_dir, '*.fastq.gz')
     gzipped_fastq_filepaths = glob(gzipped_fastq_glob)
@@ -25,6 +25,9 @@ def main(data_dir):
         makedirs(original_files_dir, exist_ok=True)
         copy2(fp, original_files_dir)
 
+    # This is a separate loop so we make sure the backuping is complete
+    # before attempting the unzipping.
+    for fp in gzipped_fastq_filepaths:
         # Rename with a cleaner sample ID
         match = re.search(filename_pattern, fp)
         inta_sample_id, sample_id, read = match.groups(1)
