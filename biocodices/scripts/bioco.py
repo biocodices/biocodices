@@ -5,6 +5,13 @@ import yaml
 from termcolor import colored
 from os.path import expanduser, join, dirname
 
+
+import matplotlib
+# Force matplotlib to not use any Xwindows backend.
+matplotlib.use('Agg')
+# This prevents matplotlib raising an exception when running biocodices on a =
+# remote server with no X. This line has to be executed before importing pyplot
+
 from biocodices import Cohort, software_name
 from biocodices.helpers.general import touch_all_the_logs, biocodices_logo
 from biocodices.helpers import Stopwatch
