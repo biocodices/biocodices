@@ -57,8 +57,8 @@ class Cohort:
 
         self.printlog('Plot some alignment metrics for the cohort.')
         self.plot_alignment_metrics()
-        self.printlog('Plot the median coverage of the cohort.')
-        self.plot_median_coverage()
+        self.printlog('Compute median coverage of the cohort.')
+        self.median_coverages()
 
         if joint_genotyping:
             self.printlog('Joint genotyping.')
