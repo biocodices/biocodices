@@ -2,7 +2,8 @@
 #
 association_tests:
 
-    allelic_regression:
+    linear_regression_for_quanti_trait:
+        # params: '--assoc qt-means'
         params: '--assoc'
         ext: 'qassoc'
         interesting_column: 'P'
@@ -15,7 +16,7 @@ association_tests:
     # For case/control phenotypes
     # Will test five models: rec, dom, trend, allelic, geno
     # With a Fisher's exact test.
-    fisher_exact:
+    five_models_fisher_for_case_control:
         params: '--model fisher --cell 0'
         ext: 'model'
         interesting_column: 'P'

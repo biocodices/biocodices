@@ -13,7 +13,7 @@ class AssociationTestPlotter(BasePlotter):
 
     @staticmethod
     def draw_p_values(series, ax, max_p=0.05, color=None,
-                      threshold_lines=[0.05, 0.01, 0.001]):
+                      threshold_lines=[0.05, 0.01, 0.001], label=None):
         """
         Takes a series of p-values indexed by chromosome and rs_ID.
         Plots the p-values below the 'max_p' threshold (choose 0 to plot
@@ -24,7 +24,7 @@ class AssociationTestPlotter(BasePlotter):
             return
 
         ax = p_values.plot(linestyle='', marker='o', markersize=6, logy=True,
-                           color=(color or 'indigo'))
+                           color=color, label=label)
         ax.invert_yaxis()
         ax.set_ylabel('p-value')
         ax.set_xlabel('')

@@ -10,10 +10,15 @@ class AssociationTester:
         self.dataset = dataset
         self.plotter = AssociationTestPlotter(self)
         self.plink = Plink(self.dataset.label_path)
+        self.tests = Plink.config('association_tests')
 
     def __repr__(self):
         return '<{} for dataset "{}">'.format(self.__class__.__name__,
                                               self.dataset.label)
+
+    @staticmethod
+    def available_tests():
+        return list(Plink.config('association_tests').keys())
 
     def run(self, test_name, famfile=None):
         result_file = self.plink.association_test(test_name, famfile=famfile)
@@ -21,23 +26,35 @@ class AssociationTester:
         return result
 
     def read_plink_test(self, test_name, path):
-        tests = Plink.config('association_tests')
-        interesting_col = tests[test_name]['interesting_column']
+        interesting_col = self.tests[test_name]['interesting_column']
+
+        if test_name in ['five_models_fisher_for_case_control']:
+            return self.read_model_file(path, interesting_col)
+
+        if test_name in ['linear_regression_for_quanti_trait']:
+            return self.read_qassoc_means_file(path, interesting_col)
+
+    @staticmethod
+    def read_model_file(path, interesting_col):
         df = pd.read_table(path, sep='\s+')
         df.set_index(['CHR', 'SNP'], inplace=True)
-
         ret = pd.DataFrame({})
-        if test_name in ['fisher_exact']:
-            for model, df_model in df.groupby('TEST'):
-                series = df_model[interesting_col]
-                series.name = '{}_{}_{}'.format(model, test_name,
-                                                interesting_col)
-                ret = ret.append(series)
-            return ret.transpose()
-        elif test_name in ['allelic_regression']:
-            series = df[interesting_col]
-            series.name = '{}_{}'.format(test_name, interesting_col)
-            return series.to_frame()
+        for model, df_model in df.groupby('TEST'):
+            series = df_model[interesting_col]
+            series.name = '{}_{}'.format(model, interesting_col)
+            ret = ret.append(series)
+        return ret.transpose()
+
+    @staticmethod
+    def read_qassoc_means_file(path, interesting_col):
+        df = pd.read_table(path, sep='\s+')
+        df.set_index(['CHR', 'SNP'], inplace=True)
+        return df
+
+        #  elif test_name in ['allelic_regression']:
+            #  series = df[interesting_col]
+            #  series.name = '{}_{}'.format(test_name, interesting_col)
+            #  return series.to_frame()
 
     #  def plot_plink_results(self, results_file):
         #  df = self.read_plink_test(results_file)
