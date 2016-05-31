@@ -20,6 +20,12 @@ association_tests:
         params: '--model fisher --cell 0'
         ext: 'model'
         interesting_column: 'P'
+
+    five_models_chisq_for_case_control:
+        params: '--model --cell 0'
+        ext: 'model'
+        interesting_column: 'P'
+
     # allelic_chisq_adjusted:
         # params: '--assoc --adjust'
         # ext: 'assoc.adjusted'
