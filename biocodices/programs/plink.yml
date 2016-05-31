@@ -1,19 +1,13 @@
-# For quantitative phenotypes in the phenotype column of the .fam
-#
 association_tests:
 
+    # For quantitative phenotypes in the phenotype column of the .fam
     linear_regression_for_quanti_trait:
         # params: '--assoc qt-means'
         params: '--assoc'
         ext: 'qassoc'
         interesting_column: 'P'
 
-    # linear_regression:
-        # params: '--linear'
-        # ext: 'assoc.linear'
-        # ...
-
-    # For case/control phenotypes
+    # For case/control phenotypes (0, 1, -9) in the .fam
     # Will test five models: rec, dom, trend, allelic, geno
     # With a Fisher's exact test.
     five_models_fisher_for_case_control:
@@ -26,22 +20,69 @@ association_tests:
         ext: 'model'
         interesting_column: 'P'
 
+
+    # Adjusted for multiple testing
+ 
+    # "Although Bonferroni and Sidak corrections provide a simple way to
+    # adjust for multiple testing by assuming independence between markers,
+    # permutation testing is considered to be the 'gold standard' for accurate
+    # correction."
+    # Nature Protocols, Vol.6 No2, 2011, Basic statistical analysis in genetic
+    # case-control studies (Clarke, Anderson et al.)
+    allelic_model_with_permutations: 
+        params: '--assoc --mperm 1000'
+        ext: 'assoc.mperm'
+        interesting_column: 'EMP2'  # Corrected empirical p-value
+    trend_model_with_permutations:
+        params: '--mperm 1000 --model-trend --cell 0'
+        ext: 'model.trend.mperm'
+        interesting_column: 'EMP2'  # Corrected empirical p-value
+    dom_model_with_permutations:
+        params: '--mperm 1000 --model-dom --cell 0'
+        ext: 'model.dom.mperm'
+        interesting_column: 'EMP2'  # Corrected empirical p-value
+    rec_model_with_permutations:
+        params: '--mperm 1000 --model-rec --cell 0'
+        ext: 'model.rec.mperm'
+        interesting_column: 'EMP2'  # Corrected empirical p-value
+    gen_model_with_permutations:
+        params: '--mperm 1000 --model-gen --cell 0'
+        ext: 'model.gen.mperm'
+        interesting_column: 'EMP2'  # Corrected empirical p-value
+
+    # dom_adjusted_for_case_control:
+        # params: '--model dom --adjust'
+        # ext: 'model.dom.adjusted'
+        # interesting_column: 'BONF'
+
+    # rec_adjusted_for_case_control:
+        # params: '--model rec --adjust'
+        # ext: 'model.rec.adjusted'
+        # interesting_column: 'BONF'
+
+    # trend_adjusted_for_case_control:
+        # params: '--model trend --adjust'
+        # ext: 'model.trend.adjusted'
+        # interesting_column: 'BONF'
+
+    # allelic_fisher_adjusted:
+        # params: '--assoc fisher --adjust'
+        # ext: 'assoc.fisher.adjusted'
+        # interesting_column: 'BONF'
+    # linear_regression:
+        # params: '--linear'
+        # ext: 'assoc.linear'
+        # ...
+
     # allelic_chisq_adjusted:
         # params: '--assoc --adjust'
         # ext: 'assoc.adjusted'
         # interesting_column: 'P'
-    # allelic_permuted: 
-        # params: '--assoc --mperm 1000'
-        # ext: 'assoc.mperm'
 
     # allelic_fisher:
         # params: '--assoc fisher'
         # ext: 'assoc.fisher'
         # interesting_column: 'P'
-    # allelic_fisher_adjusted:
-        # params: '--assoc fisher --adjust'
-        # ext: 'assoc.fisher.adjusted'
-        # interesting_column: 'BONF'
     # fisher_exact_permuted:
         # params: '--assoc fisher --mperm 1000'
         # ext: 'assoc.fisher.mperm'
@@ -60,15 +101,3 @@ association_tests:
         # params: '--model rec --cell 0'
         # ext: 'model.rec'
 
-    # model_trend_permuted:
-        # params: '--mperm 1000 --model-trend --cell 0'
-        # ext: 'model.trend.mperm'
-    # model_dom_permuted:
-        # params: '--mperm 1000 --model-dom --cell 0'
-        # ext: 'model.dom.mperm'
-    # model_rec_permuted:
-        # params: '--mperm 1000 --model-rec --cell 0'
-        # ext: 'model.rec.mperm'
-    # model_gen_permuted:
-        # params: '--mperm 1000 --model-gen --cell 0'
-        # ext: 'model.gen.mperm'

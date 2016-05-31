@@ -10,13 +10,15 @@ class AssociationTester:
         self.dataset = dataset
         self.plotter = AssociationTestPlotter(self)
         self.plink = Plink(self.dataset.label_path)
-        self.tests = Plink.config('association_tests')
         self.result_files = {}
         self.results = {}
 
     def __repr__(self):
         return '<{} for dataset "{}">'.format(self.__class__.__name__,
                                               self.dataset.label)
+    @property
+    def tests(self):
+        return Plink.config('association_tests')
 
     @staticmethod
     def available_tests():
@@ -31,6 +33,19 @@ class AssociationTester:
         interesting_col = self.tests[test_name]['interesting_column']
         test_label = basename(path)
 
+        if test_name in ['linear_regression_for_quanti_trait',
+                         'trend_model_with_permutations',
+                         'dom_model_with_permutations',
+                         'rec_model_with_permutations',
+                         'gen_model_with_permutations',
+                         'allelic_model_with_permutations']:
+            p_values_df = self.read_plink_results(path, interesting_col)
+            self.result_files[test_label] = p_values_df
+            self.results[test_label] = p_values_df
+            return p_values_df
+
+        # These are special cases since for each SNP tested there will be
+        # five rows, one for each model tested.
         if test_name in ['five_models_fisher_for_case_control',
                          'five_models_chisq_for_case_control']:
             self.result_files[test_label] = path
@@ -39,22 +54,14 @@ class AssociationTester:
             self.results[test_label] = all_models
             return p_values_df
 
-        if test_name in ['linear_regression_for_quanti_trait']:
-            p_values_df = self.read_qassoc_means_file(path, interesting_col)
-            self.result_files[test_label] = p_values_df
-            self.results[test_label] = p_values_df
-            return p_values_df
+        msg = "I don't know how to read results for the test '{}'."
+        raise ValueError(msg.format(test_name))
 
     @staticmethod
-    def _calc_cc_ratio(df):
-        # I take the first row to check affected vs affected since every row
-        # will show the same sum of cases and controls. The exception would be
-        # the ALLELIC test, where the sum is 2N, but the ratio will be the
-        # same one anyway.
-        first_row = df.iloc[0]
-        n_cases = sum([int(n) for n in first_row['AFF'].split('/')])
-        n_controls = sum([int(n) for n in first_row['UNAFF'].split('/')])
-        return n_cases, n_controls, round(n_cases / n_controls, 2)
+    def read_plink_results(path, interesting_col):
+        df = pd.read_table(path, sep='\s+')
+        df.set_index(['CHR', 'SNP'], inplace=True)
+        return df
 
     @classmethod
     def read_model_file(cls, path, interesting_col):
@@ -72,18 +79,15 @@ class AssociationTester:
         return df, ret.transpose()
 
     @staticmethod
-    def read_qassoc_means_file(path, interesting_col):
-        df = pd.read_table(path, sep='\s+')
-        df.set_index(['CHR', 'SNP'], inplace=True)
-        return df
-
-        #  elif test_name in ['allelic_regression']:
-            #  series = df[interesting_col]
-            #  series.name = '{}_{}'.format(test_name, interesting_col)
-            #  return series.to_frame()
-
-    #  def plot_plink_results(self, results_file):
-        #  df = self.read_plink_test(results_file)
+    def _calc_cc_ratio(df):
+        # I take the first row to check affected vs affected since every row
+        # will show the same sum of cases and controls. The exception would be
+        # the ALLELIC test, where the sum is 2N, but the ratio will be the
+        # same one anyway.
+        first_row = df.iloc[0]
+        n_cases = sum([int(n) for n in first_row['AFF'].split('/')])
+        n_controls = sum([int(n) for n in first_row['UNAFF'].split('/')])
+        return n_cases, n_controls, round(n_cases / n_controls, 2)
 
     @staticmethod
     def dataframe_to_pheno_file(pheno_df, outfile):
@@ -107,33 +111,3 @@ class AssociationTester:
         sorted_df.to_csv(outfile, header=True, index=False)
         print('Written -> {}'.format(outfile))
         return outfile
-
-
-
-    #  def run(self):
-        #  self.result = {}
-        #  tests = {}
-        #  tests['UNADJ'] = self.dataset.plink.assoc(adjust=False)
-        #  tests['ADJUST'] = self.dataset.plink.assoc(adjust=True)
-        #  tests['model'] = self.dataset.plink.model()
-
-        #  for test_name, test_filename in tests.items():
-            #  df = pd.read_table(test_filename, sep='\s+').set_index('SNP')
-            #  self.result[test_name] = df
-
-        #  # Split the single table with all models into different tables
-        #  for model_name, df in self.result['model'].groupby('TEST'):
-            #  self.result[model_name] = df
-        #  del(self.result['model'])
-
-    # FIXME: needs rewriting
-    #  def plot(self, ax=None, tests_to_plot=None):
-
-        #  if ax is None:
-            #  _, ax = plt.subplots(figsize=(15, 5))
-
-        #  if tests_to_plot is None:
-            #  tests_to_plot = self.available_tests
-
-        #  self.plotter.draw_ax(ax, tests_to_plot)
-        #  return ax
