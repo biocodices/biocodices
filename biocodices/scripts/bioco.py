@@ -2,6 +2,7 @@
 
 import argparse
 import yaml
+import sys
 from termcolor import colored
 from os.path import expanduser, join, dirname
 
@@ -27,7 +28,8 @@ def call_variants_for_all_samples(args):
         for sample_id in sample_ids:
             if sample_id not in [sample.id for sample in cohort.samples]:
                 msg = '{} not found in this cohort.'
-                raise Exception(msg.format(sample_id))
+                print(msg.format(sample_id))
+                sys.exit()
 
         cohort.samples = [sample for sample in cohort.samples
                           if sample.id in sample_ids]
@@ -37,7 +39,8 @@ def call_variants_for_all_samples(args):
         for sample_id in sample_ids:
             if sample_id not in [sample.id for sample in cohort.samples]:
                 msg = '{} not found in this cohort.'
-                raise Exception(msg.format(sample_id))
+                print(msg.format(sample_id))
+                sys.exit()
 
         cohort.samples = [sample for sample in cohort.samples
                           if sample.id not in sample_ids]
