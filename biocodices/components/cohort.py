@@ -12,6 +12,10 @@ from biocodices.helpers.language import plural
 from biocodices.plotters import AlignmentMetricsPlotter
 
 
+class EmptyCohort(Exception):
+    pass
+
+
 class Cohort:
     def __init__(self, base_dir):
         """
@@ -29,7 +33,7 @@ class Cohort:
 
         if len(self.samples) == 0:
             msg = 'I found no sample files (.fastq) in {}'
-            raise Exception(msg.format(self.data_dir))
+            raise EmptyCohort(msg.format(self.data_dir))
 
         self.unfiltered_vcf = join(self.results_dir,
                                    GATK.joint_genotyping_outfile)

@@ -14,14 +14,20 @@ matplotlib.use('Agg')
 # remote server with no X. This line has to be executed before importing pyplot
 
 from biocodices import Cohort, software_name
+from biocodices.components.cohort import EmptyCohort
 from biocodices.helpers.general import touch_all_the_logs, biocodices_logo
 from biocodices.helpers import Stopwatch
 
 
 def call_variants_for_all_samples(args):
     print(biocodices_logo())
-    print('Welcome to {}! Anlyzing reads for...'.format(software_name))
-    cohort = Cohort(expanduser(args.seq_dir))
+    print('Welcome to {}! Reading the data directory...'.format(software_name))
+
+    try:
+        cohort = Cohort(expanduser(args.seq_dir))
+    except EmptyCohort as error:
+        print(error, '\n')
+        sys.exit()
 
     if args.samples:
         sample_ids = args.samples.split(',')
