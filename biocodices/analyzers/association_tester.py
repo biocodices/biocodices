@@ -67,10 +67,7 @@ class AssociationTester:
     def read_model_file(cls, path, interesting_col):
         df = pd.read_table(path, sep='\s+')
         df.set_index(['CHR', 'SNP'], inplace=True)
-        n_cases, n_controls, cc_ratio = cls._calc_cc_ratio(df)
-        df.loc[:, 'n_cases'] = n_cases
-        df.loc[:, 'n_controls'] = n_controls
-        df.loc[:, 'cc_ratio'] = cc_ratio
+        cls._add_cases_controls_columns(df)
         ret = pd.DataFrame({})
         for model, df_model in df.groupby('TEST'):
             series = df_model[interesting_col]
@@ -79,15 +76,14 @@ class AssociationTester:
         return df, ret.transpose()
 
     @staticmethod
-    def _calc_cc_ratio(df):
-        # I take the first row to check affected vs affected since every row
-        # will show the same sum of cases and controls. The exception would be
-        # the ALLELIC test, where the sum is 2N, but the ratio will be the
-        # same one anyway.
-        first_row = df.iloc[0]
-        n_cases = sum([int(n) for n in first_row['AFF'].split('/')])
-        n_controls = sum([int(n) for n in first_row['UNAFF'].split('/')])
-        return n_cases, n_controls, round(n_cases / n_controls, 2)
+    def _add_cases_controls_columns(df):
+        def sum_genotypes(genotype_cell):
+            # genotype_cell is a string like 6/12/8
+            return sum([int(n) for n in genotype_cell.split('/')])
+
+        df.loc[:, 'n_cases'] = df['AFF'].map(sum_genotypes)
+        df.loc[:, 'n_controls'] = df['UNAFF'].map(sum_genotypes)
+        df.loc[:, 'cc_ratio'] = df['n_cases'] / df['n_controls']
 
     @staticmethod
     def dataframe_to_pheno_file(pheno_df, outfile):
