@@ -1,4 +1,5 @@
-from os import makedirs, remove
+import pandas as pd
+from os import makedirs
 from os.path import isdir, join, isfile
 from datetime import datetime
 from termcolor import colored
@@ -20,18 +21,8 @@ class Sample:
         """
         self.id = sample_id
         self.cohort = cohort
-        self.library_id = self._get_library_id()
-        self.sequencer_run_id = self._get_seq_run_id()
         self.results_dir = join(self.cohort.results_dir, self.id)
-        self.reads_munger = ReadsMunger(self, self.results_dir)
-        self.vcf_munger = VcfMunger(self, self.results_dir)
-        self.fastqs = self._files('fastq')
-        self.trimmed_fastqs = self._files('trimmed.fastq')
-        self.bam = self._files('bam')
-        self.vcf = self._files('vcf')
-        self.gvcf = self._files('g.vcf')
-        self.joint_vcf = self._files('joint.vcf')
-        self.filtered_vcf = self._files('filtered.vcf')
+        self._set_data()
 
     def __repr__(self):
         return '<Sample {} from {}>'.format(self.id, self.sequencer_run_id)
@@ -42,7 +33,7 @@ class Sample:
             makedirs(self.results_dir, exist_ok=True)
 
         t1 = datetime.now()
-        print('Calling variants for ' + colored('{}'.format(self.id), 'yellow'))
+        print(colored('* {}'.format(self.long_name), 'yellow'))
         print('Result files and logs will be put in:')
         print(self.results_dir, '\n')
 
@@ -51,6 +42,7 @@ class Sample:
         if align_reads:
             self.align_reads()
             self.process_alignment_files()
+            self.alignment_metrics()
         if create_vcfs:
             self.create_variant_files()
 
@@ -78,44 +70,52 @@ class Sample:
         self.printlog('Add or replace read groups')
         self.reads_munger.add_or_replace_read_groups(self)
 
-        self.printlog('Delete sam file')
-        remove(self._files('sam'))
+        #  self.printlog('Delete sam file')
+        #  remove(self._files('sam'))
 
         self.printlog('Realign indels')
-        self.reads_munger.realign_indels(self.bam)
+        self.reads_munger.realign_reads_around_indels(self.bam)
 
         self.printlog('Recalibrate read quality scores')
-        self.reads_munger.recalibrate_quality_scores(self.bam)
+        self.reads_munger.recalibrate_quality_scores(self.realigned_bam)
 
-    def create_variant_files(self, vcf=True, gvcf=True):
-        if vcf:
-            self.printlog('Create vcf')
-            self.reads_munger.create_vcf(self.bam)
-        if gvcf:
-            self.printlog('Create gvcf')
-            self.reads_munger.create_gvcf(self.bam)
+    def alignment_metrics(self):
+        self.printlog('Generate alignment metrics')
+        self.reads_munger.generate_alignment_metrics(self.recalibrated_bam)
 
-    def apply_filters_to_vcf(self):
-        if isfile(self.joint_vcf):
-            input_vcf = self.joint_vcf
-        else:
-            msg = ("WARNING: I couldn't find a vcf from joint genotyping, "
-                   "so I'll use the regular one: {}".format(self.vcf))
-            self.printlog(msg)
-            input_vcf = self.vcf
+        self.printlog('Analyze coverage')
+        self.get_median_coverage()
 
-        variant_files = self.vcf_munger.create_snp_and_indel_vcfs(input_vcf)
-        self.snps_vcf, self.indels_vcf = variant_files
+    def get_median_coverage(self):
+        self.depth_vcf = self._files('realigned.recalibrated.depth_stats.vcf')
+        if not isfile(self.depth_vcf):
+            self.depth_vcf = self.reads_munger.depth_vcf(self.recalibrated_bam)
+        depth_stats = VcfMunger.read_depth_stats_vcf(self.depth_vcf)
+        return pd.Series(depth_stats).median()
 
-        self.printlog('Apply SNP filters')
-        self.snps_vcf = self.vcf_munger.apply_filters(self.snps_vcf, 'snps')
+    def create_variant_files(self):
+        # The creation of a VCF per sample at this point has no use and it
+        # takes several minutes.
+        #  if vcf:
+            #  self.printlog('Create vcf')
+            #  self.vcf = self.reads_munger.create_vcf(self.recalibrated_bam)
+        # if gvcf:
+        self.printlog('Create a gvcf for the joint genotyping')
+        self.gvcf = self.reads_munger.create_gvcf(self.recalibrated_bam)
 
-        self.printlog('Apply indel filters')
-        self.indels_vcf = self.vcf_munger.apply_filters(self.indels_vcf,
-                                                        'indels')
-        self.printlog('Merge the filtered vcfs')
-        self.vcf_munger.merge_variant_vcfs([self.snps_vcf, self.indels_vcf],
-                                            outfile=self.filtered_vcf)
+    def read_alignment_metrics(self):
+        # This is called by the sample's Cohort to plot everything together.
+        fn = self._files('realigned.recalibrated.alignment_metrics.tsv')
+        df = pd.read_table(fn, sep='\s+', comment='#')
+        df['sample'] = self.id
+        return df
+
+    #  def read_variant_calling_metrics(self):
+        #  # This is called by the sample's Cohort to plot everything together.
+        #  fn = self._files('')
+        #  df = pd.read_table(fn, sep='\s+', comment='#')
+        #  df['sample'] = self.id
+        #  return df
 
     def log(self, extension):
         return join(self.results_dir, '{}.{}.log'.format(self.id, extension))
@@ -156,3 +156,29 @@ class Sample:
 
     def _get_seq_run_id(self):
         return Config('db')[self.id][1]
+
+    def _get_name(self):
+        return Config('db_names')[self.id][0]
+
+    def _get_clinic(self):
+        return Config('db_names')[self.id][1]
+
+    def _set_data(self):
+        self.library_id = self._get_library_id()
+        self.sequencer_run_id = self._get_seq_run_id()
+        self.name = self._get_name()
+        self.clinic = self._get_clinic()
+        self.long_name = '{} ({}) from {}'.format(
+            self.name, self.id, self.clinic)
+        self.reads_munger = ReadsMunger(self.results_dir)
+        self.vcf_munger = VcfMunger()
+        self.fastqs = self._files('fastq')
+        self.trimmed_fastqs = self._files('trimmed.fastq')
+        self.sam = self._files('sam')
+        self.bam = self._files('bam')
+        self.realigned_bam = self._files('realigned.bam')
+        self.recalibrated_bam = self._files('realigned.recalibrated.bam')
+        self.vcf = self._files('realigned.recalibrated.vcf')
+        self.gvcf = self._files('realigned.recalibrated.g.vcf')
+        self.joint_vcf = self._files('joint.vcf')
+        self.filtered_vcf = self._files('filtered.vcf')

@@ -1,5 +1,10 @@
 # Installation
 
+```
+# Java for the pipeline applications that need it
+sudo apt-get install openjdk-8-jdk
+```
+
 ## Python and some libraries
 
 (TODO: This section needs more detail, conda, etc.)
@@ -22,6 +27,7 @@ Get these programs and install them:
 * [Picard Tools](https://github.com/broadinstitute/picard/releases/tag/2.3.0)
 * [Samtools](https://sourceforge.net/projects/samtools/files/)
 * [Vcftools](http://vcftools.sourceforge.net/downloads.html)
+* [bcftools](http://www.htslib.org/download/)
 * [Bedtools](https://github.com/arq5x/bedtools2/releases)
 * [SmartPCA (EIGENSOFT)](http://www.hsph.harvard.edu/alkes-price/software/)
 * [Admixture](https://www.genetics.ucla.edu/software/admixture/download.html)

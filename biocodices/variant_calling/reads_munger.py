@@ -1,26 +1,26 @@
 from os.path import join, basename
 
 from biocodices.helpers import Config, Resource
-from biocodices.programs import ProgramCaller, GATK
-from biocodices.helpers.general import params_dict_to_str, rename_tempfile
+from biocodices.programs import ProgramCaller, GATK, Picard, BWA, FastQC
+from biocodices.variant_calling import VcfMunger
+from biocodices.helpers.general import params_dict_to_str
 
 
 class ReadsMunger:
-    def __init__(self, sample, results_dir):
-        self.sample = sample
+    def __init__(self, results_dir):
         self.results_dir = results_dir
+        # ^ This class needs a results_dir arg since it can't infer the results
+        # directory from the location of the input fastq files, which are in
+        # the **data** dir of each project.
         self.executables = Config('executables')
         self.params = Config('parameters')
+        self.picard = Picard()
         self.gatk = GATK()
-
-    def __repr__(self):
-        return '<{} for {}>'.format(self.__class__.__name__, self.sample.id)
+        self.bwa = BWA()
+        self.fastqc = FastQC()
 
     def analyze_reads(self, reads_filepath):
-        command = '{} {} -o {}'.format(self.executables['fastqc'],
-                                       reads_filepath, self.results_dir)
-        log_filepath = self._file('fastqc')
-        ProgramCaller(command).run(log_filepath=log_filepath)
+        self.fastqc.analyze_reads(reads_filepath, self.results_dir)
 
     def trim_adapters(self, reads_filepaths):
         """
@@ -46,58 +46,35 @@ class ReadsMunger:
 
         return trimmed_fastqs
 
-    def align_to_reference(self, reads_filepaths, ref='GRCh37'):
-        """
-        Expects a list of two files: forward and reverse reads of the same
-        sample. It will search for a reference genome defined by Config.
-        """
-        outfile = join(self.results_dir, self.sample.id + '.sam')
-
-        params_str = params_dict_to_str(self.params['bwa']).format(**{
-            'reference_genome': Resource('reference_genome')
-        })
-        for reads_file in reads_filepaths:
-            params_str += ' {}'.format(reads_file)
-
-        command = '{} {}'.format(self.executables['bwa'], params_str)
-        # redirect stdout to samfile and stderr  to logfile
-        log_filepath = self._file('bwa')
-        ProgramCaller(command).run(stdout_sink=outfile + '.temp',
-                                   log_filepath=log_filepath)
-        rename_tempfile(outfile)
+    def align_to_reference(self, reads_filepaths):
+        # NOTE: the human referece genome used is defined in the config yml
+        # ~/.biocodices/resources.yml as "&reference_genome_default".
+        outfile = self.bwa.align_to_reference(reads_filepaths)
+        return outfile
 
     def add_or_replace_read_groups(self, sample):
-        outfile = sample._files('bam')
-        params_dict = self.params['AddOrReplaceReadGroups']
-        params = ['{}={}'.format(k, v) for k, v in params_dict.items()]
-        params_str = ' '.join(params).format(**{
-            'sample_id': sample.id,
-            'library_id': sample.library_id,
-            'ngs_id': sample.sequencer_run_id,
-            'input': sample._files('sam'),
-            'output': outfile + '.temp',
-        })
-        command = '{} AddOrReplaceReadGroups {}'.format(
-            self.executables['picard-tools'], params_str)
-        log_filepath = self._file('AddOrReplaceReadGroups')
-        ProgramCaller(command).run(log_filepath=log_filepath)
-        rename_tempfile(outfile, 'bai')
+        self.picard.add_or_replace_read_groups(sample)
 
-    def realign_indels(self, bam_filepath):
-        self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
-        self.gatk.realign_indels()
+    def realign_reads_around_indels(self, bam_filepath):
+        self.gatk.realign_reads_around_indels(bam_filepath)
 
-    def recalibrate_quality_scores(self, bam_filepath):
-        self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
-        self.gatk.recalibrate_quality_scores()
+    def recalibrate_quality_scores(self, realigned_bam):
+        self.gatk.recalibrate_quality_scores(realigned_bam)
 
-    def create_vcf(self, bam_filepath):
-        self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
-        self.gatk.create_vcf()
+    def generate_alignment_metrics(self, recalibrated_bam):
+        self.picard.alignment_metrics(recalibrated_bam)
 
-    def create_gvcf(self, bam_filepath):
-        self.gatk.set_bamfile(bam_filepath)  # TODO: improve this
-        self.gatk.create_gvcf()
+    def depth_vcf(self, recalibrated_bam):
+        return self.gatk.create_depth_vcf(recalibrated_bam)
+
+    def create_vcf(self, recalibrated_bam):
+        self.gatk.create_vcf(recalibrated_bam)
+
+    def create_gvcf(self, recalibrated_bam):
+        self.gatk.create_gvcf(recalibrated_bam)
+
+    #  def generate_variant_calling_metrics(self, filtered_vcf):
+        #  self.picard.variant_calling_metrics(filtered_vcf)
 
     def _file(self, label):
         return join(self.results_dir, label)

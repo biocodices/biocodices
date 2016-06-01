@@ -1,5 +1,8 @@
 cores: &cores 8
 
+fastqc:
+    o: '{output_dir}'
+
 fastq-mcf:
     l: 50  # Minimum remaining sequence length
     q: 20  # Quality threshold causing base removal
@@ -13,49 +16,64 @@ bwa:
     # modify the &reference_genome_default in resources.yml
     t: *cores
 
-AddOrReplaceReadGroups:
-    VALIDATION_STRINGENCY: LENIENT
-    SO: coordinate
-    CREATE_INDEX: TRUE
-    PL: ILLUMINA
-    PU: 000000000-D0M8G.1
-    ID: '{ngs_id}.{library_id}.000000000-D0M8G.1.{sample_id}'
-    SM: '{sample_id}'
-    LB: '{library_id}'
-    I: '{input}'
-    O: '{output}'
+vcftools:
+    null
+
+picard-tools:
+    AddOrReplaceReadGroups:
+        VALIDATION_STRINGENCY: LENIENT
+        SO: coordinate
+        CREATE_INDEX: TRUE
+        PL: ILLUMINA
+        PU: 000000000-D0M8G.1
+        ID: '{ngs_id}.{library_id}.000000000-D0M8G.1.{sample_id}'
+        SM: '{sample_id}'
+        LB: '{library_id}'
+        I: '{input}'
+        O: '{output}'
+    CollectAlignmentSummaryMetrics:
+        R: '{reference_genome}'
+        I: '{input}'
+        O: '{output}'
+        ADAPTER_SEQUENCE: 'null'
+    CollectVariantCallingMetrics:
+        SD: '{reference_genome_dict}'
+        GVCF_INPUT: 'true'  # run on a single-sample gVCF
+        DBSNP: '{known_variants}'
+        I: '{input}'
+        O: '{output}'
 
 GATK:
     defaults: &gatk_defaults
+        T: '{module_name}'
         R: '{reference_genome}'
         I: '{input}'
         o: '{output}'
 
     RealignerTargetCreator:
-        T: RealignerTargetCreator
         <<: *gatk_defaults
         L: '{limits}'
 
     IndelRealigner:
-        T: IndelRealigner
         <<: *gatk_defaults
         targetIntervals: '{target_intervals}'
 
     BaseRecalibrator:
-        T: BaseRecalibrator
         <<: *gatk_defaults
         L: '{limits}'
         nct: *cores
 
     PrintReads:
-        T: PrintReads
         <<: *gatk_defaults
         BQSR: '{recalibration}'
         nct: *cores
 
+    DiagnoseTargets:
+        <<: *gatk_defaults
+        L: '{limits}'
+
     HaplotypeCaller:
         vcf:
-            T: HaplotypeCaller
             <<: *gatk_defaults
             gt_mode: DISCOVERY
             L: '{limits}'
@@ -63,22 +81,20 @@ GATK:
             stand_call_conf: 30
             nct: *cores
         gvcf:
-            T: HaplotypeCaller
             <<: *gatk_defaults
             gt_mode: DISCOVERY
             L: '{limits}'
-            # out_mode: EMIT_ALL_CONFIDENT_SITES
-            ERC: BP_RESOLUTION
-            # The gVCF output from BP_RESOLUTION contains extra info about the
-            # confidence of a 0/0 call. This differs from an "all-sites" VCF
-            # produced with EMIT_ALL_CONFIDENT_SITES
             stand_emit_conf: 10
             stand_call_conf: 30
             nct: *cores
-            ## Since GATK version 3.4, these two parameters can be ommited
-            ## if the output file is *.g.vcf:
+
+            ERC: BP_RESOLUTION
             variant_index_parameter: 128000
             variant_index_type: LINEAR
+            # The gVCF output from BP_RESOLUTION contains extra info about the
+            # confidence of a 0/0 call. This differs from an "all-sites" VCF
+            # produced with EMIT_ALL_CONFIDENT_SITES
+            # out_mode: EMIT_ALL_CONFIDENT_SITES
 
     GenotypeGVCFs:
         T: GenotypeGVCFs
@@ -110,22 +126,22 @@ GATK:
 
     VariantFiltration_filters:
         # Order in which to apply the filters, since dict keys are unordered.
-        snps_order: ['QD', 'MQ', 'MQRS', 'RPRS', 'GQ', 'DP']
-        indels_order: ['QD', 'FS', 'RPRS', 'GQ', 'DP']
+        snps_order: ['QD', 'MQ', 'MQRS', 'RPRS'] # , 'GQ', 'DP']
+        indels_order: ['QD', 'FS', 'RPRS'] # , 'GQ', 'DP']
 
         snps:
             QD: 'QD < 2.0'
             MQ: 'MQ < 40.0'
             MQRS: 'MQRankSum < -12.5'
             RPRS: 'ReadPosRankSum < -8.0'
-            GQ: 'GQ < 30.0'
-            DP: 'DP < 50'
+            # GQ: 'GQ < 30.0'
+            # DP: 'DP < 50.0'
         indels:
             QD: 'QD < 2.0'
             FS: 'FS > 200.0'
             RPRS: 'ReadPosRankSum < -20.0'
-            GQ: 'GQ < 30.0'
-            DP: 'DP < 50'
+            # GQ: 'GQ < 30.0'
+            # DP: 'DP < 50.0'
 
     CombineVariants:
         T: CombineVariants

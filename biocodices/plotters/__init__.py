@@ -1,1 +1,2 @@
 from .association_test_plotter import AssociationTestPlotter
+from .alignment_metrics_plotter import AlignmentMetricsPlotter

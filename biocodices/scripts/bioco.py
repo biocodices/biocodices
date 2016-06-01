@@ -2,18 +2,55 @@
 
 import argparse
 import yaml
+import sys
 from termcolor import colored
 from os.path import expanduser, join, dirname
 
+
+import matplotlib
+# Force matplotlib to not use any Xwindows backend.
+matplotlib.use('Agg')
+# This prevents matplotlib raising an exception when running biocodices on a =
+# remote server with no X. This line has to be executed before importing pyplot
+
 from biocodices import Cohort, software_name
+from biocodices.components.cohort import EmptyCohort
 from biocodices.helpers.general import touch_all_the_logs, biocodices_logo
+from biocodices.helpers import Stopwatch
 
 
 def call_variants_for_all_samples(args):
-    cohort = Cohort(expanduser(args.seq_dir))
-
     print(biocodices_logo())
-    print('Welcome to {}! Anlyzing reads for:'.format(software_name))
+    print('Welcome to {}! Reading the data directory...'.format(software_name))
+
+    try:
+        cohort = Cohort(expanduser(args.seq_dir))
+    except EmptyCohort as error:
+        print(error, '\n')
+        sys.exit()
+
+    if args.samples:
+        sample_ids = args.samples.split(',')
+        for sample_id in sample_ids:
+            if sample_id not in [sample.id for sample in cohort.samples]:
+                msg = '{} not found in this cohort.'
+                print(msg.format(sample_id))
+                sys.exit()
+
+        cohort.samples = [sample for sample in cohort.samples
+                          if sample.id in sample_ids]
+
+    if args.skip_samples:
+        sample_ids = args.skip_samples.split(',')
+        for sample_id in sample_ids:
+            if sample_id not in [sample.id for sample in cohort.samples]:
+                msg = '{} not found in this cohort.'
+                print(msg.format(sample_id))
+                sys.exit()
+
+        cohort.samples = [sample for sample in cohort.samples
+                          if sample.id not in sample_ids]
+
     print(colored(cohort, 'green'))
     print('\nYou can follow the details of the process with:')
     # other option: `tail -n0 -f {}/{{*/,}}*.log`
@@ -22,13 +59,19 @@ def call_variants_for_all_samples(args):
     dir_list = [sample.results_dir for sample in cohort.samples]
     touch_all_the_logs(cohort.dir, dir_list)
 
+
+    stopwatch = Stopwatch().start()
+
     cohort.call_variants(trim_reads=args.trim_reads,
                          align_reads=args.align_reads,
                          create_vcfs=args.create_vcfs,
                          joint_genotyping=args.joint_genotyping,
                          hard_filtering=args.hard_filtering)
 
-    print('\nDone! Bless your heart.\n')
+    stopwatch.stop()
+    runtime = stopwatch.nice_total_run_time
+    print('\nThe whole process took {}.'.format(runtime))
+    print('Done! Bless your heart.\n')
 
 
 if __name__ == '__main__':
