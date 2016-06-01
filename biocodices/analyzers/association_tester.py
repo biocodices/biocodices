@@ -20,8 +20,18 @@ class AssociationTester:
     def tests(self):
         return Plink.config('association_tests')
 
-    @staticmethod
-    def available_tests():
+    @property
+    def _tests_with_normal_results_files(self):
+        return ['linear_regression_for_quanti_trait',
+                'trend_model_with_permutations',
+                'dom_model_with_permutations',
+                'rec_model_with_permutations',
+                'gen_model_with_permutations',
+                'allelic_model_with_permutations',
+                'linear_regression_for_quanti_trait_with_permutations']
+
+    @property
+    def available_tests(self):
         return list(Plink.config('association_tests').keys())
 
     def run(self, test_name, famfile=None):
@@ -32,48 +42,22 @@ class AssociationTester:
     def read_plink_test(self, test_name, path):
         interesting_col = self.tests[test_name]['interesting_column']
         test_label = basename(path)
+        df = self.read_plink_results(path, interesting_col)
 
-        if test_name in ['linear_regression_for_quanti_trait',
-                         'trend_model_with_permutations',
-                         'dom_model_with_permutations',
-                         'rec_model_with_permutations',
-                         'gen_model_with_permutations',
-                         'allelic_model_with_permutations']:
-            p_values_df = self.read_plink_results(path, interesting_col)
-            self.result_files[test_label] = p_values_df
-            self.results[test_label] = p_values_df
-            return p_values_df
-
-        # These are special cases since for each SNP tested there will be
-        # five rows, one for each model tested.
         if test_name in ['five_models_fisher_for_case_control',
                          'five_models_chisq_for_case_control']:
-            self.result_files[test_label] = path
-            all_models, p_values_df = self.read_model_file(path,
-                                                           interesting_col)
-            self.results[test_label] = all_models
-            return p_values_df
+            self._add_cases_controls_columns(df)
+        else:
+            df['TEST'] = test_name
 
-        msg = "I don't know how to read results for the test '{}'."
-        raise ValueError(msg.format(test_name))
+        self.result_files[test_label] = path
+        self.results[test_label] = df
+        return df
 
     @staticmethod
     def read_plink_results(path, interesting_col):
         df = pd.read_table(path, sep='\s+')
-        df.set_index(['CHR', 'SNP'], inplace=True)
         return df
-
-    @classmethod
-    def read_model_file(cls, path, interesting_col):
-        df = pd.read_table(path, sep='\s+')
-        df.set_index(['CHR', 'SNP'], inplace=True)
-        cls._add_cases_controls_columns(df)
-        ret = pd.DataFrame({})
-        for model, df_model in df.groupby('TEST'):
-            series = df_model[interesting_col]
-            series.name = '{}_{}'.format(model, interesting_col)
-            ret = ret.append(series)
-        return df, ret.transpose()
 
     @staticmethod
     def _add_cases_controls_columns(df):

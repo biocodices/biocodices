@@ -1,11 +1,17 @@
 association_tests:
 
     # For quantitative phenotypes in the phenotype column of the .fam
-    linear_regression_for_quanti_trait:
+    # linear_regression_for_quanti_trait:
+    LINEAR_REGR:
         # params: '--assoc qt-means'
         params: '--assoc'
         ext: 'qassoc'
         interesting_column: 'P'
+    # linear_regression_for_quanti_trait_with_permutations:
+    LINEAR_REGR_perm:
+        params: '--assoc --mperm 1000'
+        ext: 'qassoc.mperm'
+        interesting_column: 'EMP2'
 
     # For case/control phenotypes (0, 1, -9) in the .fam
     # Will test five models: rec, dom, trend, allelic, geno
@@ -29,26 +35,33 @@ association_tests:
     # correction."
     # Nature Protocols, Vol.6 No2, 2011, Basic statistical analysis in genetic
     # case-control studies (Clarke, Anderson et al.)
-    allelic_model_with_permutations: 
+    # allelic_model_with_permutations: 
+    ALLELIC_perm: 
         params: '--assoc --mperm 1000'
         ext: 'assoc.mperm'
         interesting_column: 'EMP2'  # Corrected empirical p-value
-    trend_model_with_permutations:
+    # trend_model_with_permutations:
+    TREND_perm:
         params: '--mperm 1000 --model-trend --cell 0'
         ext: 'model.trend.mperm'
         interesting_column: 'EMP2'  # Corrected empirical p-value
-    dom_model_with_permutations:
+    # dom_model_with_permutations:
+    DOM_perm:
         params: '--mperm 1000 --model-dom --cell 0'
         ext: 'model.dom.mperm'
         interesting_column: 'EMP2'  # Corrected empirical p-value
-    rec_model_with_permutations:
+    # rec_model_with_permutations:
+    REC_perm:
         params: '--mperm 1000 --model-rec --cell 0'
         ext: 'model.rec.mperm'
         interesting_column: 'EMP2'  # Corrected empirical p-value
-    gen_model_with_permutations:
+    # gen_model_with_permutations:
+    GENO_perm:
         params: '--mperm 1000 --model-gen --cell 0'
         ext: 'model.gen.mperm'
         interesting_column: 'EMP2'  # Corrected empirical p-value
+
+
 
     # dom_adjusted_for_case_control:
         # params: '--model dom --adjust'
