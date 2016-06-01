@@ -57,9 +57,9 @@ class MyvariantParser:
             return {}
 
         return {
-            'polyphen2': s['grasp.polyphen2'],
-            'sift': s['grasp.sift'],
-            'mapped_gene_grasp': s['grasp.in_gene'],
+            'polyphen2': s.get('grasp.polyphen2'),
+            'sift': s.get('grasp.sift'),
+            'mapped_gene_grasp': s.get('grasp.in_gene'),
         }
 
     @staticmethod
