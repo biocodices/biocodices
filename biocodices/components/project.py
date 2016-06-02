@@ -27,6 +27,5 @@ class Project:
         for directory in [self.dir, self.results_dir, self.data_dir]:
             makedirs(directory, exist_ok=True)
 
-
-        with open(join(self.results_dir, 'project_date_of_creation'), 'w'):
+        #  with open(join(self.results_dir, 'project_date_of_creation'), 'w'):
 

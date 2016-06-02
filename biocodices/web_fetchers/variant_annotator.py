@@ -6,9 +6,6 @@ from biocodices.web_fetchers import MyvariantParser, EnsembleParser
 
 
 class VariantAnnotator:
-    def __init__(self, rs_id):
-        self.rs_id = rs_id
-
     def run(self):
         self.myvariant_series = self._query_myvariant()
         self.ensemble_dict = self._query_ensemble()
