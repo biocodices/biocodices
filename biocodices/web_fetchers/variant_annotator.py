@@ -5,7 +5,7 @@ from myvariant import MyVariantInfo
 from biocodices.web_fetchers import MyvariantParser, EnsembleParser
 
 
-class VariantFetcher:
+class VariantAnnotator:
     def __init__(self, rs_id):
         self.rs_id = rs_id
 

@@ -1,7 +1,7 @@
 __version__ = '0.3'
 software_name = 'biocodices {}'.format(__version__)
 
-from .components import Sample, Cohort
+from .components import Sample, Cohort, Project
 from .analyzers import AssociationTester
 from .models.db import DB
 #  from .components.dataset import Dataset

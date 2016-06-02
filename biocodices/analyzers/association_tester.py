@@ -16,9 +16,14 @@ class AssociationTester:
     def __repr__(self):
         return '<{} for dataset "{}">'.format(self.__class__.__name__,
                                               self.dataset.label)
+
     @property
     def tests(self):
         return Plink.config('association_tests')
+
+    @property
+    def available_tests(self):
+        return list(Plink.config('association_tests').keys())
 
     @property
     def _tests_with_normal_results_files(self):
@@ -29,10 +34,6 @@ class AssociationTester:
                 'gen_model_with_permutations',
                 'allelic_model_with_permutations',
                 'linear_regression_for_quanti_trait_with_permutations']
-
-    @property
-    def available_tests(self):
-        return list(Plink.config('association_tests').keys())
 
     def run(self, test_name, famfile=None):
         result_file = self.plink.association_test(test_name, famfile=famfile)
