@@ -12,24 +12,21 @@ class MyvariantParser:
     def parse_annotations(cls, variant_df):
         gathered_info = {}
 
-        if cls.info_present_from('wellderly', variant_df):
-            score = variant_df['wellderly.adviser_score'].dropna()
+        for colname in ['wellderly.adviser_score',
+                        'wellderely.gene']:
+            if colname in variant_df:
+                gathered_info[colname] = variant_df[colname].dropna()
 
-            gathered_info.update({
-                'wellderly_gene': variant_df['wellderly.gene'].dropna(),
-                'wellderly_adviser_score': score,
-            })
+        for colname in ['cadd.gene.genename',
+                        'cadd.annotype',
+                        'cadd.consequence']:
+            if colname in variant_df:
+                gathered_info[colname] = variant_df[colname].dropna() \
+                                                            .map(cls.listify)
 
-        if cls.info_present_from('cadd', variant_df):
-            cadd_annot = variant_df['cadd.annotype'].dropna().map(cls.listify)
-            cadd_genes = variant_df['cadd.gene'].dropna().map(cls.cadd_genenames)
-            cadd_consequences = variant_df['cadd.consequence'].map(cls.listify)
-
-            gathered_info.update({
-                'cadd_gene': cadd_genes,
-                'cadd_annot': cadd_annot,
-                'cadd_consequence': cadd_consequences,
-            })
+        if 'cadd.gene' in variant_df:
+            gathered_info['cadd.gene'] = \
+                variant_df['cadd.gene'].dropna().map(cls.cadd_genenames)
 
         if cls.info_present_from('dbsnp', variant_df):
             gathered_info.update({
@@ -40,7 +37,7 @@ class MyvariantParser:
             })
 
         if 'snpeff.ann' in variant_df:
-            snpeff_annot = variant_df['snpeff.ann'].map(cls.snpeff_ann)
+            snpeff_annot = variant_df['snpeff.ann'].dropna().map(cls.snpeff_ann)
             gathered_info['snpeff_annotation'] = snpeff_annot
 
         annotations = pd.DataFrame(gathered_info)
@@ -52,7 +49,7 @@ class MyvariantParser:
             var_allele_freq = cls.dbsnp_allele_freq(annotations, variant_df)
             annotations['variant_allele_freq'] = var_allele_freq
 
-        return annotations.transpose()
+        return annotations
 
     @staticmethod
     def cadd_genenames(cell):
@@ -76,13 +73,24 @@ class MyvariantParser:
             row = df.loc[pd.IndexSlice[:, hgvs], :]
             allele = row['variant_allele'].iloc[0]
             allele_info = pd.DataFrame(row['dbsnp.alleles'].iloc[0]).set_index('allele')
-            freq = allele_info.loc[allele]['freq']
+
+            if allele == 'del':  # This is returned by #new_allele() below
+                # The shorter allele is the one with the deletion.
+                # I can't decide if this is hackish or ok.
+                shorter_allele = allele_info.index.min()
+                freq = allele_info.loc[shorter_allele]['freq']
+            else:
+                freq = allele_info.loc[allele]['freq']
+
             df.loc[pd.IndexSlice[:, hgvs], 'variant_allele_freq'] = freq
 
         return df['variant_allele_freq']
 
     @staticmethod
     def new_allele(hgvs):
+        if 'del' in hgvs:
+            return 'del'
+
         return hgvs.split('>')[-1]
 
     @staticmethod
