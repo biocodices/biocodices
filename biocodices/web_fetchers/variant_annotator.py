@@ -1,24 +1,32 @@
 import requests
 import sys
-from collections import namedtuple
 from myvariant import MyVariantInfo
 
 from biocodices.web_fetchers import MyvariantParser, EnsembleParser
+from biocodices.components import Annotation
 
 
 class VariantAnnotator:
     def run(self, rs):
-        """Query MyVariant.info and Ensemble for info about an rs ID."""
-        return self._parse_fetched_data(
-            myvariant_df=self._query_myvariant(rs),
-            ensemble_dict=self._query_ensemble(rs),
+        """
+        Query MyVariant.info and Ensemble for info about an rs ID.
+        Returns an Annotation instance that has summary and publications.
+        """
+        annotation = Annotation(rs)
+
+        annotation.myvariant_data = self._query_myvariant(rs)
+        annotation.ensemble_data = self._query_ensemble(rs)
+        variant, publications = self._parse_fetched_data(
+            myvariant_df=annotation.myvariant_data,
+            ensemble_dict=annotation.ensemble_data,
         )
+        annotation.summary = variant
+        annotation.publications = publications
+
+        return annotation
 
     @staticmethod
     def _parse_fetched_data(myvariant_df, ensemble_dict):
-        Info = namedtuple('VariantAnnotation',
-                          ['myvariant', 'ensemble', 'publications'])
-
         variant_df = MyvariantParser.parse_annotations(myvariant_df)
         # EnsembleParser.variant(self.ensemble_dict)
 
@@ -26,10 +34,13 @@ class VariantAnnotator:
         ensemble_pubs = EnsembleParser.publications(ensemble_dict)
         publications = myvariant_pubs + ensemble_pubs
 
-        return Info(variant_df, ensemble_dict, publications)
+        variant_df['publications'] = len(publications)
+        for key in ['ancestral_allele', 'most_severe_consequence']:
+            variant_df[key] = ensemble_dict[key]
+
+        return variant_df, publications
 
     def _query_myvariant(self, rs):
-        # fields = ['dbsnp', 'dbnsfp', 'grasp', 'gwassnps']
         fields = ['all']
         mv = MyVariantInfo()
         df = mv.query(rs, fields=fields, as_dataframe=True)
@@ -40,7 +51,7 @@ class VariantAnnotator:
         server = "http://rest.ensembl.org"
         ext = "/variation/human/{}?phenotypes=1".format(rs)
 
-        headers = { "Content-Type" : "application/json"}
+        headers = {"Content-Type": "application/json"}
         r = requests.get(server + ext, headers=headers)
 
         if not r.ok:
