@@ -1,3 +1,4 @@
+from os.path import join
 import pandas as pd
 import seaborn as sns
 
@@ -43,6 +44,30 @@ class PhenotypeDataset:
         ax.axvline(len(self.quanti)/2, linestyle='dashed', color='indigo')
         sns.despine(left=True)
         return ax
+
+    def write_a_fam_file_per_phenotype(self, dest_dir, original_fam_df):
+        new_famfiles = {}
+        for phenotype_name, phenotypes in self.all.iteritems():
+            new_fam_filepath = '{}.fam'.format(phenotype_name)
+            new_fam_filepath = join(dest_dir, new_fam_filepath)
+            new_fam_df = original_fam_df
+            # ^ Take the samples df from the datasets object;
+            # it has the same columns than plink's fam files.
+
+            if phenotype_name in self.binary.columns:
+                # Convert a binary phenotype (0 control, 1 case, -9 missing)
+                # to plink's fam file format (1 control, 2 case, -9 missing)
+                new_fam_df['phenotype'] = phenotypes.map({0: 1, 1: 2, -9: -9})
+            elif phenotype_name in self.quanti.columns:
+                new_fam_df['phenotype'] = phenotypes
+            else:
+                msg = 'This pheno is neither binary nor quanti? {}'
+                print(msg.format(phenotype_name))
+
+            new_fam_df.to_csv(new_fam_filepath, sep='\t', header=False)
+            new_famfiles[phenotype_name] = new_fam_filepath
+
+        return new_famfiles
 
     def _parse(self, df):
         all_phenos = df.apply(self._int_if_binary)
