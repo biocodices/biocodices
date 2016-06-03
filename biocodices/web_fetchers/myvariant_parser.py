@@ -1,26 +1,102 @@
+import pandas as pd
+
+
 class MyvariantParser:
-    @classmethod
-    def variant(cls, myvariant_series):
-        var_dict = {}
-        functions = [cls._parse_dbsnp_fields,
-                     cls._parse_dbnsfp_fields,
-                     cls._parse_grasp_fields,
-                     cls._parse_gwassnps_fields]
-
-        for function in functions:
-            var_dict.update(function(myvariant_series))
-
-        return var_dict
-
     @classmethod
     def publications(cls, myvariant_series):
         publications = []
         publications += cls._parse_grasp_publications_field(myvariant_series)
         return publications
 
+    @classmethod
+    def parse_annotations(cls, variant_df):
+        gathered_info = {}
+
+        if cls.info_present_from('wellderly', variant_df):
+            score = variant_df['wellderly.adviser_score'].dropna()
+
+            gathered_info.update({
+                'wellderly_gene': variant_df['wellderly.gene'].dropna(),
+                'wellderly_adviser_score': score,
+            })
+
+        if cls.info_present_from('cadd', variant_df):
+            cadd_annot = variant_df['cadd.annotype'].dropna().map(cls.listify)
+            cadd_genes = variant_df['cadd.gene'].dropna().map(cls.cadd_genenames)
+            cadd_consequences = variant_df['cadd.consequence'].map(cls.listify)
+
+            gathered_info.update({
+                'cadd_gene': cadd_genes,
+                'cadd_annot': cadd_annot,
+                'cadd_consequence': cadd_consequences,
+            })
+
+        if cls.info_present_from('dbsnp', variant_df):
+            gathered_info.update({
+                'hg19_start': variant_df['dbsnp.hg19.start'],
+                'chrom': variant_df['dbsnp.chrom'],
+                'ref': variant_df['dbsnp.ref'],
+                'alt': variant_df['dbsnp.alt'],
+            })
+
+        if 'snpeff.ann' in variant_df:
+            snpeff_annot = variant_df['snpeff.ann'].map(cls.snpeff_ann)
+            gathered_info['snpeff_annotation'] = snpeff_annot
+
+        annotations = pd.DataFrame(gathered_info)
+
+        if cls.info_present_from('dbsnp', variant_df):
+            var_allele = annotations.index.get_level_values('_id') \
+                                          .map(cls.new_allele)
+            annotations['variant_allele'] = var_allele
+            var_allele_freq = cls.dbsnp_allele_freq(annotations, variant_df)
+            annotations['variant_allele_freq'] = var_allele_freq
+
+        return annotations.transpose()
+
+    @staticmethod
+    def cadd_genenames(cell):
+        return [d['genename'] for d in cell
+                if 'genename' in d]
+
+    @staticmethod
+    def listify(cell):
+        if type(cell) != list:
+            return [cell]
+
+        return cell
+
+    @staticmethod
+    def dbsnp_allele_freq(annotations, variant_df):
+        variant_allele_series = annotations['variant_allele']
+        allele_freqs = variant_df['dbsnp.alleles']
+
+        df = pd.concat([variant_allele_series, allele_freqs], axis=1)
+        for hgvs in df.index.get_level_values('_id'):
+            row = df.loc[pd.IndexSlice[:, hgvs], :]
+            allele = row['variant_allele'].iloc[0]
+            allele_info = pd.DataFrame(row['dbsnp.alleles'].iloc[0]).set_index('allele')
+            freq = allele_info.loc[allele]['freq']
+            df.loc[pd.IndexSlice[:, hgvs], 'variant_allele_freq'] = freq
+
+        return df['variant_allele_freq']
+
+    @staticmethod
+    def new_allele(hgvs):
+        return hgvs.split('>')[-1]
+
+    @staticmethod
+    def snpeff_ann(cell):
+        return [(d['effect'], d['putative_impact'], d['gene_name'])
+                for d in cell]
+
+    @staticmethod
+    def info_present_from(label, df):
+        return len(df.filter(regex=label).columns) > 0
+
     @staticmethod
     def _parse_grasp_publications_field(s):
-        if len(s.filter(regex='grasp').index) == 0:
+        if 'grasp.publications' not in s:
             return []
 
         publications = []
@@ -35,59 +111,3 @@ class MyvariantParser:
 
         return publications
 
-    @staticmethod
-    def _parse_dbsnp_fields(s):
-        if len(s.filter(regex='dbsnp').index) == 0:
-            return {}
-
-        return {
-            'name': s.name,
-            'source': 'dbsnp',
-            'hg19_start': s['dbsnp.hg19.start'],
-            'hg19_end': s['dbsnp.hg19.end'],
-            'chromosome': s['dbsnp.chrom'],
-            'alleles': [d['allele'] for d in s['dbsnp.alleles']],
-            'ref': s['dbsnp.ref'],
-            'alt': s['dbsnp.alt'],
-        }
-
-    @staticmethod
-    def _parse_grasp_fields(s):
-        if len(s.filter(regex='grasp').index) == 0:
-            return {}
-
-        return {
-            'polyphen2': s.get('grasp.polyphen2'),
-            'sift': s.get('grasp.sift'),
-            'mapped_gene_grasp': s.get('grasp.in_gene'),
-        }
-
-    @staticmethod
-    def _parse_gwassnps_fields(s):
-        if len(s.filter(regex='gwassnps').index) == 0:
-            return {}
-
-        return {
-            'gwassnps_pubmed': s['gwassnps.pubmed'],
-            'gwassnps_pvalue': s['gwassnps.pvalue'],
-            'risk_allele': s['gwassnps.risk_allele'],
-            'gwassnps_title': s['gwassnps.title'],
-            'gwassnps_trait': s['gwassnps.trait'],
-        }
-
-    @staticmethod
-    def _parse_dbnsfp_fields(s):
-        if len(s.filter(regex='dbnsfp').index) == 0:
-            return {}
-
-        return {
-            'ancestral_allele': s['dbnsfp.ancestral_allele'].upper(),
-            'strand': s['dbnsfp.cds_strand'],
-            'polyphen2_hdiv_prediction': s['dbnsfp.polyphen2.hdiv.pred'],
-            'polyphen2_hdiv_score': s['dbnsfp.polyphen2.hdiv.score'],
-            'polyphen2_hdiv_rankscore': s['dbnsfp.polyphen2.hdiv.rankscore'],
-            'polyphen2_hvar_prediction': s['dbnsfp.polyphen2.hvar.pred'],
-            'polyphen2_hvar_score': s['dbnsfp.polyphen2.hvar.score'],
-            'polyphen2_hvar_rankscore': s['dbnsfp.polyphen2.hvar.rankscore'],
-            'sift_prediction': s['dbnsfp.sift.pred'],
-        }
