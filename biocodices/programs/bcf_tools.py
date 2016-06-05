@@ -30,7 +30,7 @@ class BcfTools(AbstractGenomicsProgram):
                  log_label='bcftools_view_samples')
         return outfile
 
-    def limit_samples(self, gz_vcf_path):
+    def limit_regions(self, gz_vcf_path):
         """
         Subset a VCF.gz keeping the regions contained in the BED defined as
         'panel_amplicons' in the resources.yml file. Output a VCF.

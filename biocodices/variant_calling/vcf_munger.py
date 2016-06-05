@@ -27,15 +27,12 @@ class VcfMunger:
     def variant_calling_metrics(self, vcf_path):
         return self.picard.variant_calling_metrics(vcf_path)
 
-    #  def remove_variants_outside_limits(self, vcf):
-        #  return self.vcf_tools.remove_variants_outside_limits(vcf)
-
     def filter_samples(self, vcf_path, sample_ids, outfile):
         self.bcftools.filter_samples(vcf_path, sample_ids, outfile)
         return outfile
 
-    def limit_vcf(self, vcf_path):
-        return self.bcftools.limit_vcf(vcf_path)
+    def limit_regions(self, vcf_path):
+        return self.bcftools.limit_regions(vcf_path)
 
     @staticmethod
     def read_depth_stats_vcf(vcf_path):

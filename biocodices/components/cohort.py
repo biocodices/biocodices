@@ -12,10 +12,6 @@ from biocodices.helpers.language import plural
 from biocodices.plotters import AlignmentMetricsPlotter
 
 
-class EmptyCohort(Exception):
-    pass
-
-
 class Cohort:
     def __init__(self, base_dir):
         """
@@ -33,7 +29,7 @@ class Cohort:
 
         if len(self.samples) == 0:
             msg = 'I found no sample files (.fastq) in {}'
-            raise EmptyCohort(msg.format(self.data_dir))
+            raise EmptyCohortException(msg.format(self.data_dir))
 
         self.unfiltered_vcf = join(self.results_dir,
                                    GATK.joint_genotyping_outfile)
@@ -44,35 +40,6 @@ class Cohort:
         return tmpl.format(self.__class__.__name__,
                            plural('sample', len(self.samples)),
                            ', '.join(self.sequencer_runs))
-
-    def call_variants(self, trim_reads=True, align_reads=True,
-                      create_vcfs=True, joint_genotyping=True,
-                      hard_filtering=True, plot_metrics=False):
-
-        if trim_reads or align_reads or create_vcfs:
-            for sample in self.samples:
-                sample.call_variants(trim_reads=trim_reads,
-                                     align_reads=align_reads,
-                                     create_vcfs=create_vcfs)
-
-        if plot_metrics:
-            self.printlog('Plot some alignment metrics for the cohort.')
-            self.plot_alignment_metrics()
-            self.printlog('Compute median coverage of the cohort.')
-            self.median_coverages()
-
-        if joint_genotyping:
-            self.printlog('Joint genotyping.')
-            self.joint_genotyping()
-
-        if hard_filtering:
-            self.printlog('Hard filtering the multisample VCF')
-            self.apply_filters_to_vcf(self.unfiltered_vcf)
-
-            self.printlog('Split the multisample VCF per sample')
-            for sample in self.samples:
-                self.vcf_munger.filter_samples(self.filtered_vcf, [sample.id],
-                                               sample.filtered_vcf)
 
     def joint_genotyping(self):
         gatk = GATK()
@@ -133,3 +100,7 @@ class Cohort:
         timestamp = datetime.now().strftime('%H:%M:%S')
         prefix = colored('[{}][{}]'.format(timestamp, self.id), 'blue')
         print('{} {}'.format(prefix, msg))
+
+
+class EmptyCohortException(Exception):
+    pass

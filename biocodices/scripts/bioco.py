@@ -14,7 +14,7 @@ matplotlib.use('Agg')
 # remote server with no X. This line has to be executed before importing pyplot
 
 from biocodices import Cohort, software_name
-from biocodices.components.cohort import EmptyCohort
+from biocodices.components.cohort import EmptyCohortException
 from biocodices.helpers.general import touch_all_the_logs, biocodices_logo
 from biocodices.helpers import Stopwatch
 
@@ -25,7 +25,7 @@ def main(args):
 
     try:
         cohort = Cohort(expanduser(args.seq_dir))
-    except EmptyCohort as error:
+    except EmptyCohortException as error:
         print(error, '\n')
         sys.exit()
 
@@ -36,7 +36,6 @@ def main(args):
                 msg = '{} not found in this cohort.'
                 print(msg.format(sample_id))
                 sys.exit()
-
         cohort.samples = [sample for sample in cohort.samples
                           if sample.id in sample_ids]
 

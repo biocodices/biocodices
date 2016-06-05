@@ -152,16 +152,28 @@ class Sample:
         return forward_filepath, reverse_filepath
 
     def _get_library_id(self):
-        return Config('db')[self.id][0]
+        try:
+            return Config('db')[self.id][0]
+        except KeyError:
+            return self.cohort.id
 
     def _get_seq_run_id(self):
-        return Config('db')[self.id][1]
+        try:
+            return Config('db')[self.id][1]
+        except KeyError:
+            return self.cohort.id
 
     def _get_name(self):
-        return Config('db_names')[self.id][0]
+        try:
+            return Config('db_names')[self.id][0]
+        except KeyError:
+            return self.id
 
     def _get_clinic(self):
-        return Config('db_names')[self.id][1]
+        try:
+            return Config('db_names')[self.id][1]
+        except KeyError:
+            return 'unknown clinic'
 
     def _set_data(self):
         self.library_id = self._get_library_id()
