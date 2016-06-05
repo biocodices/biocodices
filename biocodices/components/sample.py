@@ -51,39 +51,29 @@ class Sample:
         print()
 
     def analyze_and_trim_reads(self):
-        self.printlog('Analyze reads')
         for reads_filepath in self.fastqs:
             self.reads_munger.analyze_reads(reads_filepath)
 
-        self.printlog('Trim adapters')
         self.reads_munger.trim_adapters(self.fastqs)
 
-        self.printlog('Analyze trimmed reads')
         for trimmed_filepath in self.trimmed_fastqs:
             self.reads_munger.analyze_reads(trimmed_filepath)
 
     def align_reads(self):
-        self.printlog('Align reads to reference')
         self.reads_munger.align_to_reference(self.trimmed_fastqs)
 
     def process_alignment_files(self):
-        self.printlog('Add or replace read groups')
         self.reads_munger.add_or_replace_read_groups(self)
 
-        #  self.printlog('Delete sam file')
         #  remove(self._files('sam'))
 
-        self.printlog('Realign indels')
         self.reads_munger.realign_reads_around_indels(self.bam)
 
-        self.printlog('Recalibrate read quality scores')
         self.reads_munger.recalibrate_quality_scores(self.realigned_bam)
 
     def alignment_metrics(self):
-        self.printlog('Generate alignment metrics')
         self.reads_munger.generate_alignment_metrics(self.recalibrated_bam)
 
-        self.printlog('Analyze coverage')
         self.get_median_coverage()
 
     def get_median_coverage(self):
@@ -93,15 +83,16 @@ class Sample:
         depth_stats = VcfMunger.read_depth_stats_vcf(self.depth_vcf)
         return pd.Series(depth_stats).median()
 
-    def create_variant_files(self):
+    def create_gvcf(self):
         # The creation of a VCF per sample at this point has no use and it
         # takes several minutes.
         #  if vcf:
-            #  self.printlog('Create vcf')
             #  self.vcf = self.reads_munger.create_vcf(self.recalibrated_bam)
         # if gvcf:
-        self.printlog('Create a gvcf for the joint genotyping')
         self.gvcf = self.reads_munger.create_gvcf(self.recalibrated_bam)
+
+    def create_vcf(self):
+        self.gvcf = self.reads_munger.create_vcf(self.recalibrated_bam)
 
     def read_alignment_metrics(self):
         # This is called by the sample's Cohort to plot everything together.
@@ -120,10 +111,9 @@ class Sample:
     def log(self, extension):
         return join(self.results_dir, '{}.{}.log'.format(self.id, extension))
 
-    def printlog(self, msg):
-        timestamp = datetime.now().strftime('%H:%M:%S')
-        prefix = colored('[{}][{}]'.format(timestamp, self.id), 'cyan')
-        print('{} {}'.format(prefix, msg))
+    def msg(self, msg):
+        prefix = colored('[{}]'.format(self.id), 'cyan')
+        return '{} {}'.format(prefix, msg)
 
     def _log_total_time(self, t1, t2):
         elapsed = seconds_to_hms_string((t2 - t1).seconds)

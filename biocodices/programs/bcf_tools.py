@@ -18,7 +18,7 @@ class BcfTools(AbstractGenomicsProgram):
         ProgramCaller(command).run(stdout_sink=outfile,
                                    log_filepath=log_filepath)
 
-    def filter_samples(self, vcf_path, sample_ids, outfile):
+    def subset_samples(self, vcf_path, sample_ids, outfile):
         """
         Makes a new VCF keeping the columns you specify.
         - vcf_path: an absolute path to a [g]VCF file.

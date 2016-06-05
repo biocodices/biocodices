@@ -48,22 +48,26 @@ class Cohort:
         gatk.joint_genotyping(gvcf_list, output_dir)
 
     def apply_filters_to_vcf(self, vcf_path):
-        self.printlog('Separate SNPs and INDELs before filtering')
+        # self.printlog('Separate SNPs and INDELs before filtering')
         variant_files = self.vcf_munger.create_snp_and_indel_vcfs(vcf_path)
         self.snps_vcf, self.indels_vcf = variant_files
 
-        self.printlog('Apply SNP filters')
+        # self.printlog('Apply SNP filters')
         self.snps_vcf = self.vcf_munger.apply_filters(self.snps_vcf, 'snps')
 
-        self.printlog('Apply indel filters')
+        # self.printlog('Apply indel filters')
         self.indels_vcf = self.vcf_munger.apply_filters(self.indels_vcf, 'indels')
 
-        self.printlog('Merge the filtered vcfs')
+        # self.printlog('Merge the filtered vcfs')
         self.vcf_munger.merge_variant_vcfs([self.snps_vcf, self.indels_vcf],
                                             outfile=self.filtered_vcf)
 
         #  self.printlog('Generate variant calling metrics')
         #  self.vcf_munger.generate_variant_calling_metrics(self.filtered_vcf)
+
+    def subset_samples(self, multisample_vcf, sample_ids, outfile):
+        return self.vcf_munger.subset_samples(multisample_vcf, sample_ids,
+                                              outfile)
 
     def plot_alignment_metrics(self):
         frames = [sample.read_alignment_metrics() for sample in self.samples]
@@ -96,10 +100,9 @@ class Cohort:
 
         return [Sample(sample_id, self) for sample_id in sample_ids]
 
-    def printlog(self, msg):
-        timestamp = datetime.now().strftime('%H:%M:%S')
-        prefix = colored('[{}][{}]'.format(timestamp, self.id), 'blue')
-        print('{} {}'.format(prefix, msg))
+    def msg(self, msg):
+        prefix = colored('[{}]'.format(self.id), 'magenta')
+        return '{} {}'.format(prefix, msg)
 
 
 class EmptyCohortException(Exception):

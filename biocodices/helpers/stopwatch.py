@@ -49,6 +49,7 @@ class Stopwatch(object):
         assert not self.stop_time, \
             "This stopwatch is already stopped!"
         self.stop_time = time.time()
+        return self.nice_total_run_time
 
     @property
     def time_elapsed(self):

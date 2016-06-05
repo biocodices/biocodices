@@ -1,71 +1,198 @@
+import sys
+import yaml
 from functools import partial
+from os import makedirs
+from os.path import join, abspath, dirname, isfile
+from itertools import product
+from collections import OrderedDict
+from datetime import datetime
+from termcolor import colored
+
+from biocodices import software_name
+from biocodices.components.cohort import Cohort, EmptyCohortException
+from biocodices.helpers import Stopwatch
 
 
-#  class Component(object):
-    #  def __init__(self, *args, **kwargs):
-        #  raise NotImplementedError('Abstract class, do not instantiate.')
-
-    #  def run(self):
-        #  raise NotImplementedError
-
-
-#  class Task(Component):
-    #  def __init__(self, *args, **kwargs):
-        #  Component.__init__(self, *args, **kwargs)
-
-    #  def run(self):
-        #  raise NotImplementedError
-
-
-# class Pipeline(Component):
 class Pipeline:
-    def __init__(self, *args, **kwargs):
-        # Component.__init__(self, *args, **kwargs)
-        self.tasks = []
+    def __init__(self, log_filepath):
+        self.tasks = OrderedDict()
+        self.log_filepath = log_filepath
 
-    def add_task(self, task):
-        self.tasks.append(task)
+    def __repr__(self):
+        return '<{} with tasks:\n{}>'.format(self.__class__.__name__,
+                                             '\n'.join(self.tasks.keys()))
 
-    def remove_task(self, task):
-        self.tasks.remove(task)
+    def add_task(self, task, label):
+        self.tasks[label] = task
+
+    def remove_task(self, label):
+        del(self.tasks, label)
 
     def run(self):
-        #  last_output = None
-        for task in self.tasks:
-            output = task(last_output)
-            #  last_output = output
+        stopwatch = Stopwatch().start()
+        options_in_effect = {k: v for k, v in vars(self.cli_args).items()
+                             if v is not None}
+        initial_message = 'Started the pipeline. Options in effect:\n\n' + \
+            yaml.dump(options_in_effect, default_flow_style=False)
+        self.print_and_log_to_file(initial_message, create=True)
+
+        for task_label, task in self.tasks.items():
+            self.print_and_log_to_file(task_label)
+            task()
+
+        self.total_time = stopwatch.stop()
+        finish_message = 'Finished the pipeline. Total time: {}.'
+        self.print_and_log_to_file(finish_message.format(self.total_time),
+                                   print_it=False)
+
+    def print_and_log_to_file(self, msg, create=False, print_it=True):
+        open_mode = 'w' if create else 'a'
+        with open(self.log_filepath, open_mode) as log:
+            prefix = '[{}] '.format(self.timestamp())
+            log.write(prefix + msg + '\n')
+        if print_it:
+            print(prefix + msg)
+
+    @staticmethod
+    def timestamp():
+        return datetime.now().strftime('%H:%M:%S')
 
 
-class PipelinePrepare:
-    pipeline = Pipeline()
+class PipelineCreator:
+    def __init__(self, args):
+        self.args = args
 
-    def run(self, cohort,
-            trim_reads=True, align_reads=True,
-            create_vcfs=True, joint_genotyping=True,
-            hard_filtering=True, plot_metrics=False):
+    def pre_pipeline(self):
+        self._print_welcome_message()
+        self.cohort = self._create_cohort(self.args.seq_dir)
+        self._set_cohort_samples(keep=self.args.samples,
+                                 skip=self.args.skip_samples)
+        self._print_intro_information()
+        self._touch_all_the_logs()
 
-        if trim_reads or align_reads or create_vcfs:
-            for sample in cohort.samples:
-                task = partial(sample.call_variants, trim_reads=trim_reads,
-                               align_reads=align_reads, create_vcfs=create_vcfs)
-                # split this assignment in mini-sample-tasks too!!!!
-                pipeline.add_task(task)
+    def build_pipeline(self):
+        """
+        Builds a Pipeline storing the tasks to run in it. The pipeline will
+        be stored in self until it's ran. It needs to have a cohort previously
+        set.
+        """
+        pipeline = Pipeline(log_filepath=join(self.cohort.dir, 'pipeline.log'))
+        pipeline.cli_args = self.args
 
-        if plot_metrics:
-            # self.printlog('Plot some alignment metrics for the cohort.')
-            pipeline.add_task(cohort.plot_alignment_metrics)
-            # self.printlog('Compute median coverage of the cohort.')
-            pipeline.add_task(cohort.median_coverages)
+        if self.args.trim_reads:
+            for sample in self.cohort.samples:
+                pipeline.add_task(sample.analyze_and_trim_reads,
+                                  sample.msg('Analyze reads'))
+        if self.args.align_reads:
+            for sample in self.cohort.samples:
+                pipeline.add_task(sample.align_reads,
+                                  sample.msg('Align reads'))
+                pipeline.add_task(sample.process_alignment_files,
+                                  sample.msg('Process alignment files'))
+                pipeline.add_task(sample.alignment_metrics,
+                                  sample.msg('Alignment metrics'))
 
-        if joint_genotyping:
-            # self.printlog('Joint genotyping.')
-            pipeline.add_task(cohort.joint_genotyping)
+        if self.args.create_vcfs:
+            for sample in self.cohort.samples:
+                # pipeline.add_task(sample.create_vcf)
+                pipeline.add_task(sample.create_gvcf,
+                                  sample.msg('Create gVCF'))
+        if self.args.plot_metrics:
+            pipeline.add_task(self.cohort.plot_alignment_metrics,
+                              self.cohort.msg('Plot alignment metrics'))
+            pipeline.add_task(self.cohort.median_coverages,
+                              self.cohort.msg('Compute median coverages'))
 
-        if hard_filtering:
-            # self.printlog('Hard filtering the multisample VCF')
-            cohort.apply_filters_to_vcf(cohort.unfiltered_vcf)
+        if self.args.joint_genotyping:
+            pipeline.add_task(self.cohort.joint_genotyping,
+                              self.cohort.msg('Joint genotyping'))
+        if self.args.hard_filtering:
+            pipeline.add_task(partial(self.cohort.apply_filters_to_vcf,
+                                      self.cohort.unfiltered_vcf),
+                              self.cohort.msg('Hard filtering'))
+            for sample in self.cohort.samples:
+                pipeline.add_task(
+                    partial(self.cohort.subset_samples,
+                            self.cohort.filtered_vcf,
+                            [sample.id],
+                            sample.filtered_vcf),
+                    self.cohort.msg('Subset from multisample VCF'))
 
-            # self.printlog('Split the multisample VCF per sample')
-            for sample in cohort.samples:
-                self.vcf_munger.filter_samples(cohort.filtered_vcf, [sample.id],
-                                               sample.filtered_vcf)
+        self.pipeline = pipeline
+        return pipeline
+
+        # self.printlog('Plot some alignment metrics for the cohort.')
+        # self.printlog('Compute median coverage of the cohort.')
+        # self.printlog('Joint genotyping.')
+        # self.printlog('Hard filtering the multisample VCF')
+        # self.printlog('Split the multisample VCF per sample')
+
+    def post_pipeline(self):
+        self._print_exit_message(total_time=self.pipeline.total_time)
+
+    @staticmethod
+    def _create_cohort(seq_dir):
+        try:
+            return Cohort(seq_dir)
+        except EmptyCohortException as error:
+            print(error, '\n')
+            sys.exit()
+
+    def _set_cohort_samples(self, keep, skip):
+        # Keep all by default
+        keep_ids = (keep and keep.split(',')) or \
+                   [s.id for s in self.cohort.samples]
+        # Skip none by default
+        skip_ids = (skip and skip.split(',')) or []
+
+        for sample_id in keep_ids + skip_ids:
+            if sample_id not in [sample.id for sample in self.cohort.samples]:
+                msg = '{} not found in this cohort.'
+                print(msg.format(sample_id))
+                sys.exit()
+
+        self.cohort.samples = [sample for sample in self.cohort.samples
+                               if sample.id in keep_ids and
+                               sample.id not in skip_ids]
+
+    @classmethod
+    def _print_welcome_message(cls):
+        print(cls._biocodices_logo())
+        print('Welcome to {}! Reading the data directory...'.format(software_name))
+
+    @staticmethod
+    def _biocodices_logo():
+        path = abspath(join(dirname(__file__), '../scripts/logo.txt'))
+        with open(path, 'r') as logo_file:
+            logo_string = logo_file.read()
+        return logo_string
+
+    def _print_intro_information(self):
+        print(colored(self.cohort, 'green'))
+        print('\nYou can follow the details of the process with:')
+        # other option: `tail -n0 -f {}/{{*/,}}*.log`
+        print('`tail -n0 -f {}/{{*/,}}*.log`\n'.format(self.cohort.results_dir))
+
+    def _touch_all_the_logs(self):
+        # I wrote this just to be able to run a `tail -f *.log` on every log
+        # during the variant calling, even for logs that don't yet exist but
+        # that would later be created, so what I do is just creating them
+        # beforehand. It's a necessarily hardcoded list, I guess:
+        samples_dirs = [sample.results_dir for sample in self.cohort.samples]
+        for d in samples_dirs:
+            makedirs(d, exist_ok=True)
+
+        lognames_file = abspath(join(dirname(__file__),
+                                     '../scripts/log_filenames.txt'))
+        with open(lognames_file, 'r') as f:
+            log_filenames = [l.strip() for l in f.readlines()]
+        log_filepaths = [abspath(join(d, fn + '.log'))
+                         for d, fn in product(samples_dirs, log_filenames)]
+        for log_filepath in log_filepaths:
+            if not isfile(log_filepath):
+                open(log_filepath, 'a').close()
+
+    @staticmethod
+    def _print_exit_message(total_time):
+        print('\nThe whole process took {}.'.format(total_time))
+        print('Done! Bless your heart.\n')

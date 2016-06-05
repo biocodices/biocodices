@@ -27,8 +27,8 @@ class VcfMunger:
     def variant_calling_metrics(self, vcf_path):
         return self.picard.variant_calling_metrics(vcf_path)
 
-    def filter_samples(self, vcf_path, sample_ids, outfile):
-        self.bcftools.filter_samples(vcf_path, sample_ids, outfile)
+    def subset_samples(self, vcf_path, sample_ids, outfile):
+        self.bcftools.subset_samples(vcf_path, sample_ids, outfile)
         return outfile
 
     def limit_regions(self, vcf_path):
