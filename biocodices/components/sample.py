@@ -122,7 +122,7 @@ class Sample:
 
     def printlog(self, msg):
         timestamp = datetime.now().strftime('%H:%M:%S')
-        prefix = colored('[{}][{}]'.format(timestamp, self.id), 'blue')
+        prefix = colored('[{}][{}]'.format(timestamp, self.id), 'cyan')
         print('{} {}'.format(prefix, msg))
 
     def _log_total_time(self, t1, t2):

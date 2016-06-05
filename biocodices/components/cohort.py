@@ -40,10 +40,6 @@ class Cohort:
         self.filtered_vcf = join(self.results_dir, GATK.hard_filtering_outfile)
 
     def __repr__(self):
-        tmpl = '<{}({})>'
-        return tmpl.format(self.__class__.__name__, self.dir)
-
-    def __str__(self):
         tmpl = '{} with {} from {}'
         return tmpl.format(self.__class__.__name__,
                            plural('sample', len(self.samples)),
@@ -51,7 +47,7 @@ class Cohort:
 
     def call_variants(self, trim_reads=True, align_reads=True,
                       create_vcfs=True, joint_genotyping=True,
-                      hard_filtering=True):
+                      hard_filtering=True, plot_metrics=False):
 
         if trim_reads or align_reads or create_vcfs:
             for sample in self.samples:
@@ -59,19 +55,19 @@ class Cohort:
                                      align_reads=align_reads,
                                      create_vcfs=create_vcfs)
 
-        self.printlog('Plot some alignment metrics for the cohort.')
-        self.plot_alignment_metrics()
-        self.printlog('Compute median coverage of the cohort.')
-        self.median_coverages()
+        if plot_metrics:
+            self.printlog('Plot some alignment metrics for the cohort.')
+            self.plot_alignment_metrics()
+            self.printlog('Compute median coverage of the cohort.')
+            self.median_coverages()
 
         if joint_genotyping:
             self.printlog('Joint genotyping.')
             self.joint_genotyping()
 
         if hard_filtering:
+            self.printlog('Hard filtering the multisample VCF')
             self.apply_filters_to_vcf(self.unfiltered_vcf)
-            # for sample in self.samples:
-                #  sample.apply_filters_to_vcf()
 
             self.printlog('Split the multisample VCF per sample')
             for sample in self.samples:

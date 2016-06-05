@@ -53,25 +53,25 @@ class ReadsMunger:
         return outfile
 
     def add_or_replace_read_groups(self, sample):
-        self.picard.add_or_replace_read_groups(sample)
+        return self.picard.add_or_replace_read_groups(sample)
 
     def realign_reads_around_indels(self, bam_filepath):
-        self.gatk.realign_reads_around_indels(bam_filepath)
+        return self.gatk.realign_reads_around_indels(bam_filepath)
 
     def recalibrate_quality_scores(self, realigned_bam):
-        self.gatk.recalibrate_quality_scores(realigned_bam)
+        return self.gatk.recalibrate_quality_scores(realigned_bam)
 
     def generate_alignment_metrics(self, recalibrated_bam):
-        self.picard.alignment_metrics(recalibrated_bam)
+        return self.picard.alignment_metrics(recalibrated_bam)
 
     def depth_vcf(self, recalibrated_bam):
         return self.gatk.create_depth_vcf(recalibrated_bam)
 
     def create_vcf(self, recalibrated_bam):
-        self.gatk.create_vcf(recalibrated_bam)
+        return self.gatk.create_vcf(recalibrated_bam)
 
     def create_gvcf(self, recalibrated_bam):
-        self.gatk.create_gvcf(recalibrated_bam)
+        return self.gatk.create_gvcf(recalibrated_bam)
 
     #  def generate_variant_calling_metrics(self, filtered_vcf):
         #  self.picard.variant_calling_metrics(filtered_vcf)

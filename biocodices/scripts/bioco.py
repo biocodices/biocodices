@@ -10,7 +10,7 @@ from os.path import expanduser, join, dirname
 import matplotlib
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use('Agg')
-# This prevents matplotlib raising an exception when running biocodices on a =
+# This prevents matplotlib raising an exception when running biocodices on a
 # remote server with no X. This line has to be executed before importing pyplot
 
 from biocodices import Cohort, software_name
@@ -19,7 +19,7 @@ from biocodices.helpers.general import touch_all_the_logs, biocodices_logo
 from biocodices.helpers import Stopwatch
 
 
-def call_variants_for_all_samples(args):
+def main(args):
     print(biocodices_logo())
     print('Welcome to {}! Reading the data directory...'.format(software_name))
 
@@ -66,7 +66,8 @@ def call_variants_for_all_samples(args):
                          align_reads=args.align_reads,
                          create_vcfs=args.create_vcfs,
                          joint_genotyping=args.joint_genotyping,
-                         hard_filtering=args.hard_filtering)
+                         hard_filtering=args.hard_filtering,
+                         plot_metrics=args.plot_metrics)
 
     stopwatch.stop()
     runtime = stopwatch.nice_total_run_time
@@ -92,4 +93,4 @@ if __name__ == '__main__':
                      'joint_genotyping', 'hard_filtering']:
             setattr(args, attr, True)
 
-    call_variants_for_all_samples(args)
+    main(args)

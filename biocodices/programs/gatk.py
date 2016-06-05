@@ -60,6 +60,7 @@ class GATK(AbstractGenomicsProgram):
         outfile = recalibrated_bam.replace('.bam', '.vcf')
         self.run('HaplotypeCaller', recalibrated_bam, outfile,
                  extra_output_extension='idx', task_subtype='vcf')
+        return outfile
 
     def create_gvcf(self, recalibrated_bam):
         """
@@ -68,6 +69,7 @@ class GATK(AbstractGenomicsProgram):
         outfile = recalibrated_bam.replace('.bam', '.g.vcf')
         self.run('HaplotypeCaller', recalibrated_bam, outfile,
                  extra_output_extension='idx', task_subtype='gvcf')
+        return outfile
 
     def joint_genotyping(self, gvcf_list, output_dir):
         outfile = join(output_dir, self.joint_genotyping_outfile)
@@ -95,26 +97,22 @@ class GATK(AbstractGenomicsProgram):
         a vcf splitted earlier by SNP vs INDEL.
         """
         module_name = 'VariantFiltration'
-        filters = self.params['{}_filters'.format(module_name)]
-        filter_order = filters['{}_order'.format(variant_type)]
         # The filters should be specific for the kind of variant being
         # filtered. Applying them in order is important for a consisting
         # naming of the output files throughout different runs.
 
         input_vcf = vcf
-        for filter_name in filter_order:
-            outfile = input_vcf.replace('.vcf', '.{}.vcf'.format(filter_name))
-            filter_expression = filters[variant_type][filter_name]
-            params_str = ' --filterName {} --filterExpression "{}"'
-            params_str = params_str.format(filter_name, filter_expression)
-            log_label = '{}_{}_{}'.format(module_name, variant_type,
-                                          filter_name)
-            self.run(module_name, vcf, outfile, log_label=log_label,
-                     extra_params_str=params_str, extra_output_extension='idx')
-            input_vcf = outfile
-            # The filtered vcf will be input for the next filtering round.
+        outfile = input_vcf.replace('.vcf', '.filtered.vcf')
+        filters = self.params['{}_filters'.format(module_name)][variant_type]
+        filter_name = '{}_filter'.format(variant_type)
+        filter_expression = ' || '.join(filters)
+        params_str = ' --filterName {} --filterExpression "{}"'.format(
+            filter_name, filter_expression)
+        log_label = '{}_{}'.format(module_name, filter_name)
 
-        return outfile  # last vcf file created, with all filters applied
+        self.run(module_name, vcf, outfile, log_label=log_label,
+                 extra_params_str=params_str, extra_output_extension='idx')
+        return outfile
 
     def combine_variant_vcfs(self, variant_vcfs, outfile):
         """

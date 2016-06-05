@@ -43,11 +43,11 @@ class ProgramCaller:
                     '* With stderr_sink:\n{}\n'
                 ).format(
                     self.command,
-                    (stdout_sink or self.log_filepath)
+                    (stdout_sink or self.log_filepath),
                     (stderr_sink or self.log_filepath)
                 )
                 print(msg)
-                log_file.write('---\n', msg)
+                log_file.write('---\n' + msg)
                 raise
             finally:
                 # The log_file will be closed automatically because of the

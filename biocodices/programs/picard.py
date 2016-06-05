@@ -30,6 +30,7 @@ class Picard(AbstractGenomicsProgram):
     def alignment_metrics(self, recalibrated_bam):
         outfile = recalibrated_bam.replace('.bam', '.alignment_metrics.tsv')
         self.run('CollectAlignmentSummaryMetrics', recalibrated_bam, outfile)
+        return outfile
 
     #  def variant_calling_metrics(self, filtered_vcf):
         #  outfile = infile.replace('.vcf', '')
@@ -45,10 +46,12 @@ class Picard(AbstractGenomicsProgram):
             #  rename(outfile, outfile.replace('.temp', ''))
 
     def add_or_replace_read_groups(self, sample):
+        outfile = sample.bam
         extra_params_variables = {
             'sample_id': sample.id,
             'library_id': sample.library_id,
             'ngs_id': sample.sequencer_run_id,
         }
-        self.run('AddOrReplaceReadGroups', sample.sam, sample.bam,
+        self.run('AddOrReplaceReadGroups', sample.sam, outfile,
                  extra_params_variables, 'bai')
+        return outfile

@@ -1,5 +1,3 @@
-from os.path import dirname
-from collections import OrderedDict
 import vcf
 import pandas as pd
 
@@ -36,55 +34,59 @@ class VcfMunger:
         self.bcftools.filter_samples(vcf_path, sample_ids, outfile)
         return outfile
 
+    def limit_vcf(self, vcf_path):
+        return self.bcftools.limit_vcf(vcf_path)
+
     @staticmethod
     def read_depth_stats_vcf(vcf_path):
         with open(vcf_path, 'r') as vcf_file:
             interval_depths = [row.INFO['IDP'] for row in vcf.Reader(vcf_file)]
         return interval_depths
 
-    @staticmethod
-    def vcf_to_frames(vcf_path):
+    @classmethod
+    def vcf_to_frames(cls, vcf_path):
         """
         Given a VCF filepath, it will return two pandas DataFrames:
             - info_df: info per variant.
             - samples_df: genotypes and genotyping data per variant / sample.
         """
-        info_df = pd.DataFrame({})
-        samples_df = pd.DataFrame({})
-
-        with open(vcf_path, 'r') as vcf_file:
-            for record in vcf.Reader(vcf_file):
-                entry = OrderedDict()
-                entry['chrom'] = int(record.CHROM)
-                entry['pos'] = record.POS
-                entry['rs_id'] = record.ID
-                entry['ref'] = record.REF
-                entry['alt'] = record.ALT
-                entry['qual'] = record.QUAL
-                entry['filter'] = record.FILTER
-                entry['format'] = record.FORMAT
-
-                format_keys = record.FORMAT.split(':')
-
-                for key, value in record.INFO.items():
-                    entry[key] = value
-
-                info_df = info_df.append(pd.Series(entry), ignore_index=True)
-
-                samples_entry = OrderedDict()
-                for sample in record.samples:
-                    samples_entry[sample.sample] = {}
-                    for key in format_keys:
-                        samples_entry[sample.sample][key] = sample[key]
-
-                df = pd.DataFrame(samples_entry).unstack().to_frame().transpose()
-                df['rs_id'] = record.ID
-                df['chrom'] = record.CHROM
-                df['pos'] = record.POS
-                samples_df = samples_df.append(df)
-
-        info_df = info_df[info_df.columns[::-1]]
-        info_df.set_index(['chrom', 'pos', 'rs_id'], inplace=True)
-        samples_df = samples_df.fillna('').set_index(['chrom', 'pos', 'rs_id'])
-
+        header = cls._header_from_vcf(vcf_path)
+        vcf_df = pd.read_table(vcf_path, sep='\s+', comment='#', names=header,
+                               index_col=['#CHROM', 'POS', 'ID'])
+        info_df = vcf_df.iloc[:, 1:5]
+        samples_df = cls._parse_samples_part_of_vcf(vcf_df)
         return info_df, samples_df
+
+    @staticmethod
+    def _header_from_vcf(vcf_path):
+        """Auxiliary method for vcf_to_frames()"""
+        with open(vcf_path, 'r') as vcf_file:
+            for line in vcf_file:
+                if line.startswith('#CHROM'):
+                    return line.strip().split('\t')
+
+    @staticmethod
+    def _parse_samples_part_of_vcf(vcf_df):
+        """Auxiliary method for vcf_to_frames()"""
+        raw_samples_df = vcf_df.iloc[:, 5:]
+        assert raw_samples_df.columns[0] == 'FORMAT'
+        format_col = raw_samples_df['FORMAT']
+
+        frames = []
+        for sample in raw_samples_df.columns[1:]:
+            indices = list(format_col.index)[::-1]
+
+            def genotype_dict(cell):
+                ix = indices.pop()
+                return dict(zip(format_col.loc[ix].split(':'),
+                                cell.split(':')))
+
+            col_as_dict = raw_samples_df[sample].map(genotype_dict).to_dict()
+            df = pd.DataFrame(col_as_dict).reset_index()
+            df['sample'] = sample
+            df.set_index(['sample', 'index'], inplace=True)
+            df = df.transpose()
+            frames.append(df)
+
+        samples_df = pd.concat(frames, axis=1).fillna('')
+        return samples_df
