@@ -107,28 +107,39 @@ class PipelineCreator:
 
         if self.args.trim_reads:
             task_group = OrderedDict()
-            task_group_label = 'Trim and analyze reads'
             for sample in self.cohort.samples:
                 task_label = sample.msg('Trim and analyze reads')
                 task_group[task_label] = sample.analyze_and_trim_reads
-            pipeline.add_multitask(task_group, task_group_label,
+
+            pipeline.add_multitask(task_group,
+                                   self.cohort.msg('Trim and analyze reads'),
                                    n_processes=self.args.number_of_processes)
         if self.args.align_reads:
+            # I don't parallelize this step since the alignment already
+            # works in parallel. Plus it takes a humongous amount of RAM.
             for sample in self.cohort.samples:
                 pipeline.add_task(sample.align_reads,
                                   sample.msg('Align reads'))
-                pipeline.add_task(sample.process_alignment_files,
-                                  sample.msg('Process alignment files'))
-                pipeline.add_task(sample.alignment_metrics,
-                                  sample.msg('Alignment metrics'))
+
+            task_group = OrderedDict()
+            for sample in self.cohort.samples:
+                task_label = sample.msg('Process alignment files')
+                task_group[task_label] = sample.process_alignment_files
+
+                task_label = sample.msg('Alignment metrics')
+                task_group[task_label] = sample.alignment_metrics
+
+            pipeline.add_multitask(task_group,
+                                   self.cohort.msg('Alignment processing and metris'),
+                                   n_processes=self.args.number_of_processes)
 
         if self.args.create_vcfs:
             task_group = OrderedDict()
-            task_group_label = 'Haplotype Caller'
             for sample in self.cohort.samples:
                 task_label = sample.msg('Create gVCF')
                 task_group[task_label] = sample.create_gvcf
-            pipeline.add_multitask(task_group, task_group_label,
+            pipeline.add_multitask(task_group,
+                                   self.cohort.msg('Haplotype Caller'),
                                    n_processes=self.args.number_of_processes)
 
         if self.args.plot_metrics:
@@ -144,13 +155,17 @@ class PipelineCreator:
             pipeline.add_task(partial(self.cohort.apply_filters_to_vcf,
                                       self.cohort.unfiltered_vcf),
                               self.cohort.msg('Hard filtering'))
+
+            task_group = OrderedDict()
             for sample in self.cohort.samples:
-                pipeline.add_task(
-                    partial(self.cohort.subset_samples,
-                            self.cohort.filtered_vcf,
-                            [sample.id],
-                            sample.filtered_vcf),
-                    self.cohort.msg('Subset from multisample VCF'))
+                task_label = sample.msg('Subset from multisample VCF')
+                task = partial(self.cohort.subset_samples,
+                               self.cohort.filtered_vcf,
+                               [sample.id], sample.filtered_vcf),
+                task_group[task_label] = task
+            pipeline.add_multitask(task_group,
+                                   self.cohort.msg('Subset from multisample VCF'),
+                                   n_processes=self.args.number_of_processes)
 
         self.pipeline = pipeline
         return pipeline
