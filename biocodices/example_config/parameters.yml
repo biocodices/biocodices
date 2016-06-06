@@ -16,9 +16,6 @@ bwa:
     # modify the &reference_genome_default in resources.yml
     t: *cores
 
-vcftools:
-    null
-
 picard-tools:
     AddOrReplaceReadGroups:
         VALIDATION_STRINGENCY: LENIENT
@@ -126,22 +123,27 @@ GATK:
 
     VariantFiltration_filters:
         # Order in which to apply the filters, since dict keys are unordered.
-        snps_order: ['QD', 'MQ', 'MQRS', 'RPRS'] # , 'GQ', 'DP']
-        indels_order: ['QD', 'FS', 'RPRS'] # , 'GQ', 'DP']
+        # These filters will be applied after the joint genotyping and
+        # across all samples of the cohort, following the directions found
+        # here: http://gatkforums.broadinstitute.org/gatk/discussion/2806/
+        # howto-apply-hard-filters-to-a-call-set
 
         snps:
-            QD: 'QD < 2.0'
-            MQ: 'MQ < 40.0'
-            MQRS: 'MQRankSum < -12.5'
-            RPRS: 'ReadPosRankSum < -8.0'
-            # GQ: 'GQ < 30.0'
-            # DP: 'DP < 50.0'
+            - 'QD < 2.0'
+            - 'MQ < 40.0'
+            - 'MQRankSum < -12.5'
+            - 'ReadPosRankSum < -8.0'
+            # - 'FS > 60.0'
+            # - 'SOR > 4.0'
         indels:
-            QD: 'QD < 2.0'
-            FS: 'FS > 200.0'
-            RPRS: 'ReadPosRankSum < -20.0'
-            # GQ: 'GQ < 30.0'
-            # DP: 'DP < 50.0'
+            - 'QD < 2.0'
+            - 'ReadPosRankSum < 20.0'
+            # - 'FS > 200.0'
+            # - 'SOR > 10.0'
+            # - 'InbreedingCoeff < -0.8'  # Only for more than 10 samples
+        genotypes:
+            - 'GQ < 30.0'
+            - 'DP < 50.0'
 
     CombineVariants:
         T: CombineVariants
