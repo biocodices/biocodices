@@ -47,7 +47,7 @@ class Pipeline:
         """
         with Pool(processes=n_processes) as pool:
             for task_label, task in task_group.items():
-                self.print_and_log_to_file(task_label)
+                # self.print_and_log_to_file(task_label)
                 pool.apply_async(task)
 
             pool.close()  # Required call before pool.join()
@@ -130,7 +130,7 @@ class PipelineCreator:
                 task_group[task_label] = sample.alignment_metrics
 
             pipeline.add_multitask(task_group,
-                                   self.cohort.msg('Alignment processing and metris'),
+                                   self.cohort.msg('Alignment processing and metrics'),
                                    n_processes=self.args.number_of_processes)
 
         if self.args.create_vcfs:
