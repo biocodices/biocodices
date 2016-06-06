@@ -27,7 +27,7 @@ if __name__ == '__main__':
                             default=default)
 
     args = parser.parse_args()
-    args.seq_dir = abspath(expanduser(args.seq_dir))
+    args.base_dir = abspath(expanduser(args.base_dir))
     args.number_of_processes = int(args.number_of_processes)
     if args.complete_pipeline:
         for attr in ['trim_reads', 'align_reads', 'create_vcfs',
