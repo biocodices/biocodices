@@ -170,12 +170,6 @@ class PipelineCreator:
         self.pipeline = pipeline
         return pipeline
 
-        # self.printlog('Plot some alignment metrics for the cohort.')
-        # self.printlog('Compute median coverage of the cohort.')
-        # self.printlog('Joint genotyping.')
-        # self.printlog('Hard filtering the multisample VCF')
-        # self.printlog('Split the multisample VCF per sample')
-
     def post_pipeline(self):
         self._print_exit_message(total_time=self.pipeline.total_time)
 
@@ -219,14 +213,13 @@ class PipelineCreator:
     def _print_intro_information(self):
         print(colored(self.cohort, 'green'))
         print('\nYou can follow the details of the process with:')
-        # other option: `tail -n0 -f {}/{{*/,}}*.log`
         print('`tail -n0 -f {}/{{*/,}}*.log`\n'.format(self.cohort.results_dir))
 
     def _touch_all_the_logs(self):
         # I wrote this just to be able to run a `tail -f *.log` on every log
         # during the variant calling, even for logs that don't yet exist but
-        # that would later be created, so what I do is just creating them
-        # beforehand. It's a necessarily hardcoded list, I guess:
+        # that would later be created. What I do is just creating the empty
+        # logs beforehand. It's a necessarily hardcoded list, I guess:
         samples_dirs = [sample.results_dir for sample in self.cohort.samples]
         for d in samples_dirs:
             makedirs(d, exist_ok=True)
