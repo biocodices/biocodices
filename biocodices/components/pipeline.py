@@ -6,6 +6,7 @@ from os.path import join, abspath, dirname, isfile
 from itertools import product
 from collections import OrderedDict
 from datetime import datetime
+from multiprocessing import Pool
 from termcolor import colored
 
 from biocodices import software_name
@@ -23,12 +24,37 @@ class Pipeline:
                                              '\n'.join(self.tasks.keys()))
 
     def add_task(self, task, label):
+        """Add tasks that should be either a method or a partial for later
+        execution."""
         self.tasks[label] = task
 
-    def remove_task(self, label):
-        del(self.tasks, label)
+    def add_multitask(self, task_group, task_group_label, n_processes=1):
+        """task_group should be a dictionary of task_labels as keys and tasks
+        methods or partials as values. The tasks will be run in the specified
+        number of parallel processes."""
+        if n_processes > 8:
+            raise ValueError("I won't run more than 8 parallel processes.")
+
+        task_group_label += ' (parallelized x {})'.format(n_processes)
+        self.add_task(partial(self.run_task_group, task_group=task_group,
+                              n_processes=n_processes), task_group_label)
+
+    def run_task_group(self, task_group, n_processes=1):
+        """This was meant as a pseudo-task that will actually run a group of
+        tasks in parallel, so instead of queueing each task separatedly, this
+        method will be queued in the pipeline by add_multitask() and this
+        method will deal with the parallelization.
+        """
+        with Pool(processes=n_processes) as pool:
+            for task_label, task in task_group.items():
+                self.print_and_log_to_file(task_label)
+                pool.apply_async(task)
+
+            pool.close()  # Required call before pool.join()
+            pool.join()  # Wait for all processes to finish before continuing
 
     def run(self):
+        """Runs the whole pipeline, task by task, in a serial manner."""
         stopwatch = Stopwatch().start()
         options_in_effect = {k: v for k, v in vars(self.cli_args).items()
                              if v is not None}
@@ -80,9 +106,13 @@ class PipelineCreator:
         pipeline.cli_args = self.args
 
         if self.args.trim_reads:
+            task_group = OrderedDict()
+            task_group_label = 'Trim and analyze reads'
             for sample in self.cohort.samples:
-                pipeline.add_task(sample.analyze_and_trim_reads,
-                                  sample.msg('Analyze reads'))
+                task_label = sample.msg('Trim and analyze reads')
+                task_group[task_label] = sample.analyze_and_trim_reads
+            pipeline.add_multitask(task_group, task_group_label,
+                                   n_processes=self.args.number_of_processes)
         if self.args.align_reads:
             for sample in self.cohort.samples:
                 pipeline.add_task(sample.align_reads,
@@ -93,10 +123,14 @@ class PipelineCreator:
                                   sample.msg('Alignment metrics'))
 
         if self.args.create_vcfs:
+            task_group = OrderedDict()
+            task_group_label = 'Haplotype Caller'
             for sample in self.cohort.samples:
-                # pipeline.add_task(sample.create_vcf)
-                pipeline.add_task(sample.create_gvcf,
-                                  sample.msg('Create gVCF'))
+                task_label = sample.msg('Create gVCF')
+                task_group[task_label] = sample.create_gvcf
+            pipeline.add_multitask(task_group, task_group_label,
+                                   n_processes=self.args.number_of_processes)
+
         if self.args.plot_metrics:
             pipeline.add_task(self.cohort.plot_alignment_metrics,
                               self.cohort.msg('Plot alignment metrics'))

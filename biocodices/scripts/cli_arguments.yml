@@ -11,6 +11,7 @@ help_texts:
     s: 'Analyze only these samples (separate their IDs with a comma and no spaces), skip the rest. If the joint-genotyping step is included in the analysis, it will be performed only with the chosen samples (the joint GVCF will not include them!). E.g.: -s SAMPLE001,SAMPLE002'
     k: 'Skip these samples (separate their IDs with a comma and no spaces), analyze the rest. If the joint-genotyping step is included in the analysis, it will be performed without the chosen samples (the joint GVFC will not include them!). E.g.: -k SAMPLE001,SAMPLE002'
     m: 'Generate and plot alignment and coverage metrics'
+    n: 'Number of max simultaneous processes to spawn in some parts of the pipeline that have been parallelized (e.g. the HaplotypeCaller slow process).'
 
 args:
     # short-name: [long-name, action, required, default]
@@ -24,3 +25,4 @@ args:
     s: ['samples', 'store', no, null]
     k: ['skip-samples', 'store', no, null]
     m: ['plot-metrics', 'store_true', no, no]
+    n: ['number-of-processes', 'store', no, 1]

@@ -28,6 +28,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     args.seq_dir = abspath(expanduser(args.seq_dir))
+    args.number_of_processes = int(args.number_of_processes)
     if args.complete_pipeline:
         for attr in ['trim_reads', 'align_reads', 'create_vcfs',
                      'plot_metrics', 'joint_genotyping', 'hard_filtering']:
