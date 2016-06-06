@@ -47,7 +47,8 @@ class MyvariantParser:
                                           .map(cls.new_allele)
             annotations['variant_allele'] = var_allele
             var_allele_freq = cls.dbsnp_allele_freq(annotations, variant_df)
-            annotations['variant_allele_freq'] = var_allele_freq
+            if var_allele_freq is not None:
+                annotations['variant_allele_freq'] = var_allele_freq
 
         return annotations
 
@@ -70,19 +71,25 @@ class MyvariantParser:
 
         df = pd.concat([variant_allele_series, allele_freqs], axis=1)
         for hgvs in df.index.get_level_values('_id'):
-            row = df.loc[pd.IndexSlice[:, hgvs], :]
+            row = df.loc[pd.IndexSlice[:, hgvs], :].dropna(axis=1, how='all')
             allele = row['variant_allele'].iloc[0]
-            allele_info = pd.DataFrame(row['dbsnp.alleles'].iloc[0]).set_index('allele')
 
-            if allele == 'del':  # This is returned by #new_allele() below
-                # The shorter allele is the one with the deletion.
-                # I can't decide if this is hackish or ok.
-                shorter_allele = allele_info.index.min()
-                freq = allele_info.loc[shorter_allele]['freq']
-            else:
-                freq = allele_info.loc[allele]['freq']
+            if 'dbsnp.alleles' in row:
+                dbsnp_alleles = row['dbsnp.alleles'].iloc[0]
+                allele_info = pd.DataFrame(dbsnp_alleles).set_index('allele')
 
-            df.loc[pd.IndexSlice[:, hgvs], 'variant_allele_freq'] = freq
+                if allele == 'del':  # This is returned by #new_allele() below
+                    # The shorter allele is the one with the deletion.
+                    # I can't decide if this is hackish or ok.
+                    shorter_allele = allele_info.index.min()
+                    freq = allele_info.loc[shorter_allele]['freq']
+                else:
+                    freq = allele_info.loc[allele]['freq']
+
+                df.loc[pd.IndexSlice[:, hgvs], 'variant_allele_freq'] = freq
+
+        if 'variant_allele_freq' not in df:
+            return None
 
         return df['variant_allele_freq']
 

@@ -15,4 +15,4 @@ HaplotypeCaller_gvcf
 ../VariantFiltration_indels_filter
 ../VariantFiltration_snps_filter
 ../CombineVariants
-bcftools_view
+bcftools_view_samples

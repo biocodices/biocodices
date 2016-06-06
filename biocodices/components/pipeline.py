@@ -165,7 +165,7 @@ class PipelineCreator:
                 task_label = sample.msg('Subset from multisample VCF')
                 task = partial(self.cohort.subset_samples,
                                self.cohort.filtered_vcf,
-                               [sample.id], sample.filtered_vcf),
+                               [sample.id], sample.filtered_vcf)
                 task_group[task_label] = task
             pipeline.add_multitask(task_group,
                                    self.cohort.msg('Subset from multisample VCF'),
