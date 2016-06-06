@@ -125,12 +125,16 @@ class PipelineCreator:
             for sample in self.cohort.samples:
                 task_label = sample.msg('Process alignment files')
                 task_group[task_label] = sample.process_alignment_files
+            pipeline.add_multitask(task_group,
+                                   self.cohort.msg('Alignment processing'),
+                                   n_processes=self.args.number_of_processes)
 
+            task_group = OrderedDict()
+            for sample in self.cohort.samples:
                 task_label = sample.msg('Alignment metrics')
                 task_group[task_label] = sample.alignment_metrics
-
             pipeline.add_multitask(task_group,
-                                   self.cohort.msg('Alignment processing and metrics'),
+                                   self.cohort.msg('Alignment metrics'),
                                    n_processes=self.args.number_of_processes)
 
         if self.args.create_vcfs:
