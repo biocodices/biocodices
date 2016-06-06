@@ -1,7 +1,7 @@
-description: 'Call variants for a cohort of samples associated to a sequencer run.'
+description: 'Call variants for a cohort of samples. The typical command for new samples would be:\n\nbioco.py --base-dir <parent dir of data> --complete-pipeline -n <cores>'
 
 help_texts:
-    d: 'Base directory for the sequencer run (should contain a "data" subdirectory with the .fastq files).'
+    d: 'Base directory for the sequencer run (should contain a "data" subdirectory with the .fastq files). A "results" subdirectory will be created in it.'
     t: 'Trim adapters from the fastqs and create .trimmed.fastq R1 and R2 files for each sample.'
     a: 'Align reads to the reference genome and create a .bam file for each sample.'
     v: 'Create .vcf and .g.vcf files for each sample from the .bam.'
@@ -15,7 +15,7 @@ help_texts:
 
 args:
     # short-name: [long-name, action, required, default]
-    d: ['seq-dir', 'store', yes, null]
+    d: ['base-dir', 'store', yes, null]
     t: ['trim-reads', 'store_true', no, no]
     a: ['align-reads', 'store_true', no, no]
     v: ['create-vcfs', 'store_true', no, no]

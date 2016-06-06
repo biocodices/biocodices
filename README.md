@@ -6,15 +6,14 @@ sudo apt-get install openjdk-8-jdk
 ```
 
 ## Python and some libraries
-
-(TODO: This section needs more detail, conda, etc.)
-
+We're using Python 3.5 and some libraries you need to install for `biocodices` to work:
 ```
 # Ptyhon ternary for triangle plots
 conda config --add channels conda-forge
-conda install python-ternary
 
-pip install myvariant, multiqc, termcolor, inflect
+conda install python=3.5
+conda install python-ternary seaborn pandas matplotlib numpy sqlalchemy
+pip install myvariant multiqc termcolor inflect pyvcf docopt yaml
 ```
 
 ## Software and resources
