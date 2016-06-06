@@ -90,7 +90,7 @@ class PipelineCreator:
 
     def pre_pipeline(self):
         self._print_welcome_message()
-        self.cohort = self._create_cohort(self.args.seq_dir)
+        self.cohort = self._create_cohort(self.args.base_dir)
         self._set_cohort_samples(keep=self.args.samples,
                                  skip=self.args.skip_samples)
         self._print_intro_information()
@@ -174,9 +174,9 @@ class PipelineCreator:
         self._print_exit_message(total_time=self.pipeline.total_time)
 
     @staticmethod
-    def _create_cohort(seq_dir):
+    def _create_cohort(base_dir):
         try:
-            return Cohort(seq_dir)
+            return Cohort(base_dir)
         except EmptyCohortException as error:
             print(error, '\n')
             sys.exit()
