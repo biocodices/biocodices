@@ -30,6 +30,8 @@ Get these programs and install them:
 * [Bedtools](https://github.com/arq5x/bedtools2/releases)
 * [SmartPCA (EIGENSOFT)](http://www.hsph.harvard.edu/alkes-price/software/)
 * [Admixture](https://www.genetics.ucla.edu/software/admixture/download.html)
+* Variant Effect Predictor
+* SnpEff
 
 You also need to download some resources from the web:
 

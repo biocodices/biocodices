@@ -2,7 +2,7 @@ import vcf
 import pandas as pd
 from os.path import dirname, join
 
-from biocodices.helpers import Config
+from biocodices.helpers import Config, DB
 from biocodices.programs import ProgramCaller, GATK, Picard, BcfTools
 
 
@@ -68,6 +68,31 @@ class VcfMunger:
         ProgramCaller(command).run(log_filepath=log_filepath)
         return outfile
 
+    def annotate_pubmed_with_DB(self, vcf_path, database, citations_table,
+                                rs_column, pubmed_column):
+        """Pass a database name and the name of the table with the PUBMED IDs
+        per SNP. A new VCF will be written with the PUBMED IDs in a new INFO
+        field."""
+        citations = DB(database=database).table(citations_table)
+        cited_variations = citations[rs_column]
+        outfile = vcf_path.replace('.vcf', '.db.vcf')
+
+        with open(vcf_path, 'r') as in_vcf, open(outfile, 'w') as out_vcf:
+            reader = vcf.Reader(in_vcf)
+            writer = vcf.Writer(out_vcf, template=reader)
+
+            for record in reader:
+                if record.ID and record.ID in cited_variations.values:
+                    these_citations = citations[cited_variations == record.ID]
+                    pubmed_IDs = these_citations[pubmed_column].values
+                    record.INFO['PUBMED_IDs'] = ','.join(pubmed_IDs)
+
+                writer.write_record(record)
+
+            writer.close()
+
+        return outfile
+
     @staticmethod
     def read_depth_stats_vcf(vcf_path):
         with open(vcf_path, 'r') as vcf_file:
@@ -76,8 +101,7 @@ class VcfMunger:
 
     @classmethod
     def vcf_to_frames(cls, vcf_path):
-        """
-        Given a VCF filepath, it will return two pandas DataFrames:
+        """ Given a VCF filepath, it will return two pandas DataFrames:
             - info_df: info per variant.
             - samples_df: genotypes and genotyping data per variant / sample.
         """
