@@ -30,7 +30,7 @@ class GATK(AbstractGenomicsProgram):
         params_variables.update(extra_params_variables)
         params_str = ' '.join(params).format(**params_variables)
         if extra_params_str:
-            params_str += extra_params_str
+            params_str += (' ' + extra_params_str)
         command = '{} {}'.format(self.executable, params_str)
         log_filepath = join(dirname(infile or outfile),
                             (log_label or module_name))
@@ -106,8 +106,22 @@ class GATK(AbstractGenomicsProgram):
         filters = self.params['{}_filters'.format(module_name)][variant_type]
         filter_name = '{}_filter'.format(variant_type)
         filter_expression = ' || '.join(filters)
-        params_str = ' --filterName {} --filterExpression "{}"'.format(
+        params_str = '--filterName {} --filterExpression "{}"'.format(
             filter_name, filter_expression)
+        log_label = '{}_{}'.format(module_name, filter_name)
+
+        self.run(module_name, vcf, outfile, log_label=log_label,
+                 extra_params_str=params_str, extra_output_extension='idx')
+        return outfile
+
+    def filter_genotypes(self, vcf):
+        module_name = 'VariantFiltration'
+        filter_name = 'genotype'
+        outfile = vcf.replace('.vcf', '.geno-filtered.vcf')
+        filters = self.params['{}_filters'.format(module_name)][filter_name]
+        filter_expression = ' || '.join(filters)
+        params_str = '--genotypeFilterName {} '.format(filter_name)
+        params_str += '--genotypeFilterExpression "{}"'.format(filter_expression)
         log_label = '{}_{}'.format(module_name, filter_name)
 
         self.run(module_name, vcf, outfile, log_label=log_label,

@@ -1,8 +1,9 @@
 import vcf
 import pandas as pd
+from os.path import dirname, join
 
 from biocodices.helpers import Config
-from biocodices.programs import GATK, Picard, BcfTools
+from biocodices.programs import ProgramCaller, GATK, Picard, BcfTools
 
 
 class VcfMunger:
@@ -32,7 +33,40 @@ class VcfMunger:
         return outfile
 
     def limit_regions(self, vcf_path):
-        return self.bcftools.limit_regions(vcf_path)
+        indexed_gzipped_vcf = self.bcftools.compress_and_index_vcf(vcf_path)
+        return self.bcftools.limit_regions(indexed_gzipped_vcf)
+
+    def apply_genotype_filters(self, vcf_path):
+        return self.gatk.filter_genotypes(vcf_path)
+
+    def annotate_with_snpeff(self, vcf_path):
+        app_name = 'SnpEff'
+        outfile = vcf_path.replace('.vcf', '.{}.vcf'.format(app_name))
+        command = '{executable} {reference_genome} {in}'.format(**{
+            'executable': self.executables[app_name],
+            'reference_genome': self.params[app_name]['reference_genome'],
+            'in': vcf_path,
+        })
+        log_filepath = join(dirname(vcf_path), app_name)
+        ProgramCaller(command).run(stdout_sink=outfile,
+                                   log_filepath=log_filepath)
+        return outfile
+
+    def annotate_with_VEP(self, vcf_path):
+        app_name = 'VEP'
+        outfile = vcf_path.replace('.vcf', '.{}.vcf'.format(app_name))
+        options = ['--{} {}'.format(k, v)
+                   for k, v in self.params[app_name].items()]
+        options_str = ' '.join(options)
+        command = '{executable} {options} -i {in} -o {out}'.format(**{
+            'executable': self.executables[app_name],
+            'options': options_str,
+            'in': vcf_path,
+            'out': outfile,
+        })
+        log_filepath = join(dirname(vcf_path), app_name)
+        ProgramCaller(command).run(log_filepath=log_filepath)
+        return outfile
 
     @staticmethod
     def read_depth_stats_vcf(vcf_path):

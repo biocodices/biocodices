@@ -13,7 +13,7 @@ conda config --add channels conda-forge
 
 conda install python=3.5
 conda install python-ternary seaborn pandas matplotlib numpy sqlalchemy
-pip install myvariant multiqc termcolor inflect pyvcf docopt yaml
+pip install myvariant multiqc termcolor inflect pyvcf docopt yaml pymysql
 ```
 
 ## Software and resources

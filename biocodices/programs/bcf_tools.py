@@ -30,25 +30,34 @@ class BcfTools(AbstractGenomicsProgram):
                  log_label='bcftools_view_samples')
         return outfile
 
-    def limit_regions(self, gz_vcf_path):
+    def limit_regions(self, gzipped_vcf_path):
         """
         Subset a VCF.gz keeping the regions contained in the BED defined as
         'panel_amplicons' in the resources.yml file. Output a VCF.
         """
-        outfile = gz_vcf_path.replace('.vcf.gz', '.lim.vcf')
+        outfile = gzipped_vcf_path.replace('.vcf.gz', '.lim.vcf')
         params_str = '--regions-file {}'.format(Resource('panel_amplicons'))
-        self.run('view', gz_vcf_path, outfile, params_str=params_str,
+        self.run('view', gzipped_vcf_path, outfile, params_str=params_str,
                  log_label='bcftools_view_regions')
         return outfile
 
+    @classmethod
+    def compress_and_index_vcf(cls, vcf_path):
+        """Just a shortcut that calls bgzip and tabix on a VCF file. The output
+        is a gzipped vcf with an index file alongside, so that BcfTools can
+        use it."""
+        gzipped_vcf_path = cls.bgzip(vcf_path)
+        cls.tabix(gzipped_vcf_path)
+        return gzipped_vcf_path
+
     @staticmethod
-    def tabix(gz_vcf_path):
+    def tabix(gzipped_vcf_path):
         """Index a bgzip-zipped VCF.gz to let some bcftools modules use it."""
         executable = Config('executables')['tabix']
-        command = '{} {}'.format(executable, gz_vcf_path)
-        log_filepath = join(dirname(gz_vcf_path), 'tabix')
+        command = '{} {}'.format(executable, gzipped_vcf_path)
+        log_filepath = join(dirname(gzipped_vcf_path), 'tabix')
         ProgramCaller(command).run(log_filepath=log_filepath)
-        return gz_vcf_path
+        return gzipped_vcf_path
 
     @staticmethod
     def bgzip(vcf_path):
