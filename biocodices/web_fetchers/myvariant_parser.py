@@ -102,8 +102,8 @@ class MyvariantParser:
 
     @staticmethod
     def snpeff_ann(cell):
-        return [(d['effect'], d['putative_impact'], d['gene_name'])
-                for d in cell]
+        return list({(d['effect'], d['putative_impact'], d['gene_name'])
+                     for d in cell})
 
     @staticmethod
     def info_present_from(label, df):
