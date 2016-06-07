@@ -3,7 +3,6 @@ import sys
 from myvariant import MyVariantInfo
 
 from biocodices.web_fetchers import MyvariantParser, EnsembleParser
-from biocodices.components import Annotation
 
 
 class VariantAnnotator:
@@ -12,16 +11,16 @@ class VariantAnnotator:
         Query MyVariant.info and Ensemble for info about an rs ID.
         Returns an Annotation instance that has summary and publications.
         """
-        annotation = Annotation(rs)
+        annotation = {}
 
-        annotation.myvariant_data = self._query_myvariant(rs)
-        annotation.ensemble_data = self._query_ensemble(rs)
+        annotation['myvariant_data'] = self._query_myvariant(rs)
+        annotation['ensemble_data'] = self._query_ensemble(rs)
         variant, publications = self._parse_fetched_data(
             myvariant_df=annotation.myvariant_data,
             ensemble_dict=annotation.ensemble_data,
         )
-        annotation.summary = variant
-        annotation.publications = publications
+        annotation['summary'] = variant
+        annotation['publications'] = publications
 
         return annotation
 
