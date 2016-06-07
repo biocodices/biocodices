@@ -1,7 +1,6 @@
 from shutil import move
-from os import makedirs
-from os.path import join, exists, dirname, abspath
-from itertools import product
+import requests
+import sys
 
 
 def params_dict_to_str(params_dict):
@@ -14,3 +13,14 @@ def rename_tempfile(outfile, extra_file_extension=None):
     if extra_file_extension:
         extra_file = outfile + '.temp.{}'.format(extra_file_extension)
         move(extra_file, extra_file.replace('.temp', ''))
+
+
+def restful_api_query(url):
+    headers = {"Content-Type": "application/json"}
+    response = requests.get(url, headers=headers)
+
+    if not response.ok:
+        response.raise_for_status()
+        sys.exit()
+
+    return response.json()

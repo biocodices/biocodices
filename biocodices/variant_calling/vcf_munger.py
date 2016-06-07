@@ -58,11 +58,12 @@ class VcfMunger:
         options = ['--{} {}'.format(k, v)
                    for k, v in self.params[app_name].items()]
         options_str = ' '.join(options)
-        command = '{executable} {options} -i {in} -o {out}'.format(**{
+        command = '{executable} {options} -i {in} -o {out} --stats'.format(**{
             'executable': self.executables[app_name],
             'options': options_str,
             'in': vcf_path,
             'out': outfile,
+            'stats_file': vcf_path.replace('.vcf', '.VEPstats'),
         })
         log_filepath = join(dirname(vcf_path), app_name)
         ProgramCaller(command).run(log_filepath=log_filepath)
@@ -92,6 +93,25 @@ class VcfMunger:
             writer.close()
 
         return outfile
+
+    def annotate_with_cellbase(self, vcf_path):
+        """Creates a new VCF after the passed one, adding cellbase and COSMIC
+        data per variant in the INFO field."""
+        outfile = vcf_path.replace('.vcf', '.db.vcf')
+
+        with open(vcf_path, 'r') as in_vcf, open(outfile, 'w') as out_vcf:
+            reader = vcf.Reader(in_vcf)
+            writer = vcf.Writer(out_vcf, template=reader)
+
+            for record in reader:
+                # Annotate both the reference allele and the alt allele
+                alleles = {'REF': record.REF, 'ALT': record.ALT}
+                for which, allele in alleles.items():
+                    kwargs = {'chromosome': record.CHROM,
+                              'position': record.POS,
+                              'allele': allele}
+                    allele_info = VariantAnnotator.query_cellbase(**kwargs)
+                    # record.INFO[which] = allele_info
 
     @staticmethod
     def read_depth_stats_vcf(vcf_path):

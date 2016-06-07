@@ -1,8 +1,7 @@
-import requests
-import sys
 from myvariant import MyVariantInfo
 
 from biocodices.web_fetchers import MyvariantParser, EnsembleParser
+from biocodices.helpers.general import restful_api_query
 
 
 class VariantAnnotator:
@@ -13,8 +12,8 @@ class VariantAnnotator:
         """
         annotation = {}
 
-        annotation['myvariant_data'] = self._query_myvariant(rs)
-        annotation['ensemble_data'] = self._query_ensemble(rs)
+        annotation['myvariant_data'] = self.query_myvariant(rs)
+        annotation['ensemble_data'] = self.query_ensemble(rs)
         variant, publications = self._parse_fetched_data(
             myvariant_df=annotation['myvariant_data'],
             ensemble_dict=annotation['ensemble_data'],
@@ -39,22 +38,28 @@ class VariantAnnotator:
 
         return variant_df, publications
 
-    def _query_myvariant(self, rs):
+    @staticmethod
+    def query_myvariant(rs):
         fields = ['all']
         mv = MyVariantInfo()
         df = mv.query(rs, fields=fields, as_dataframe=True)
         df.set_index(['dbsnp.rsid', '_id'], inplace=True)
         return df
 
-    def _query_ensemble(self, rs):
+    @staticmethod
+    def query_ensemble(rs):
         server = "http://rest.ensembl.org"
         ext = "/variation/human/{}?phenotypes=1".format(rs)
+        return restful_api_query(server + ext)
 
-        headers = {"Content-Type": "application/json"}
-        r = requests.get(server + ext, headers=headers)
+    @staticmethod
+    def query_cellbase(chromosome, position, allele, key='snp_phenotype'):
+        """Queries CellBase restful API. Default key 'snp_phenotype' will fetch
+        info about the pheno effect of a SNP. Other options are
+        'mutation_phenotype' for COSMIC database and 'consequence_type'."""
+        url = 'http://ws.bioinfo.cipf.es/cellbase/rest/latest/hsa/genomic/variant/'
+        url += '{chromosome}:{position}:{allele}'
+        url += '/{key}?of=json'
 
-        if not r.ok:
-            r.raise_for_status()
-            sys.exit()
-
-        return r.json()
+        print(url)
+        return restful_api_query(url)
