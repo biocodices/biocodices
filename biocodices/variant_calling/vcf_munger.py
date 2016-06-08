@@ -29,20 +29,26 @@ class VcfMunger:
         return self.picard.variant_calling_metrics(vcf_path)
 
     def subset_samples(self, vcf_path, sample_ids, outfile):
+        """Extract a list of samples from a multisample VCF to a new VCF."""
         self.bcftools.subset_samples(vcf_path, sample_ids, outfile)
         return outfile
 
     def limit_regions(self, vcf_path):
+        """Limit the variants in a VCF within the regions defined in a .bed
+        file set in the parameters config file. Generates a new VCF."""
         indexed_gzipped_vcf = self.bcftools.compress_and_index_vcf(vcf_path)
         return self.bcftools.limit_regions(indexed_gzipped_vcf)
 
     def apply_genotype_filters(self, vcf_path):
+        """Apply filters to each sample's genotype with the thresholds defined
+        in the parameters file. Generates a new VCF."""
         return self.gatk.filter_genotypes(vcf_path)
 
     def annotate_with_snpeff(self, vcf_path):
+        """Add SnpEff annotations in the ANN INFO field. Generates a new VCF."""
         app_name = 'SnpEff'
         outfile = vcf_path.replace('.vcf', '.{}.vcf'.format(app_name))
-        command = '{executable} {reference_genome} {in}'.format(**{
+        command = '{executable} -v {reference_genome} {in}'.format(**{
             'executable': self.executables[app_name],
             'reference_genome': self.params[app_name]['reference_genome'],
             'in': vcf_path,
@@ -53,6 +59,8 @@ class VcfMunger:
         return outfile
 
     def annotate_with_VEP(self, vcf_path):
+        """Add Variant Effect Predictor's annotations in the CSQ INFO field.
+        Generates a new VCF."""
         app_name = 'VEP'
         outfile = vcf_path.replace('.vcf', '.{}.vcf'.format(app_name))
         options = ['--{} {}'.format(k, v)

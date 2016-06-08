@@ -30,8 +30,10 @@ Get these programs and install them:
 * [Bedtools](https://github.com/arq5x/bedtools2/releases)
 * [SmartPCA (EIGENSOFT)](http://www.hsph.harvard.edu/alkes-price/software/)
 * [Admixture](https://www.genetics.ucla.edu/software/admixture/download.html)
-* Variant Effect Predictor
-* SnpEff
+* [Variant Effect Predictor](http://www.ensembl.org/info/docs/tools/vep/script/vep_download.html)
+    - Install with the INSTALL.pl script and download the cache for homo
+      sapiens GRCh37.
+* [SnpEff](http://snpeff.sourceforge.net/)
 
 You also need to download some resources from the web:
 

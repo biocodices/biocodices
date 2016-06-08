@@ -16,3 +16,6 @@ HaplotypeCaller_gvcf
 ../VariantFiltration_snps_filter
 ../CombineVariants
 bcftools_view_samples
+../VariantFiltration_genotype_filter
+../SnpEff
+../VEP
