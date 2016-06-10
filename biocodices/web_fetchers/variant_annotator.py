@@ -1,3 +1,4 @@
+import pandas as pd
 from myvariant import MyVariantInfo
 
 from biocodices.web_fetchers import MyvariantParser, EnsembleParser
@@ -5,10 +6,22 @@ from biocodices.helpers.general import restful_api_query
 
 
 class VariantAnnotator:
-    def run(self, rs):
+    def __init__(self):
+        self.full_annotations = {}
+        self.annotations = pd.DataFrame({})
+
+    #  def annotate_batch(self, rs)
+
+    def annotate(self, rs):
         """
         Query MyVariant.info and Ensemble for info about an rs ID.
-        Returns an Annotation instance that has summary and publications.
+        Returns a dict with the following data:
+            'myvariant_data': a pandas DataFrame with info from MyVariant.info
+            'ensemble_data': a dict with the json response from Ensemble
+            'summary': a handy summary of the info from the above sources
+            'publications': a list of publications that mention this rs
+        Stores all the summaries (from different markers) in self.annotations.
+        Stores the full data in a dict: self.full_anotations.
         """
         annotation = {}
 
@@ -20,6 +33,10 @@ class VariantAnnotator:
         )
         annotation['summary'] = variant
         annotation['publications'] = publications
+
+        self.full_annotations[rs] = annotation
+        self.annotations = self.annotations.append(annotation['summary'])
+        # print('fetch', rs)  ###
 
         return annotation
 
@@ -43,6 +60,11 @@ class VariantAnnotator:
         fields = ['all']
         mv = MyVariantInfo()
         df = mv.query(rs, fields=fields, as_dataframe=True)
+        rs_ids_found = df['dbsnp.rsid'].dropna().unique()
+        if len(rs_ids_found) != 1:
+            msg = 'I expected only one rs ID from MyVariant, received: {}'
+            raise ValueError(msg.format(rs_ids_found))
+        df['dbsnp.rsid'] = rs_ids_found[0]
         df.set_index(['dbsnp.rsid', '_id'], inplace=True)
         return df
 
