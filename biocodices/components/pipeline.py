@@ -2,14 +2,14 @@ import sys
 import yaml
 from functools import partial
 from os import makedirs
-from os.path import join, abspath, dirname, isfile
-from itertools import product
+from os.path import join, isfile
 from collections import OrderedDict
 from datetime import datetime
 from multiprocessing import Pool
 from termcolor import colored
 
 from biocodices import software_name
+from biocodices.helpers.general import all_log_filepaths, logo
 from biocodices.components.cohort import Cohort, EmptyCohortException
 from biocodices.helpers import Stopwatch
 
@@ -204,15 +204,8 @@ class PipelineCreator:
 
     @classmethod
     def _print_welcome_message(cls):
-        print(cls._biocodices_logo())
+        print(logo())
         print('Welcome to {}! Reading the data directory...'.format(software_name))
-
-    @staticmethod
-    def _biocodices_logo():
-        path = abspath(join(dirname(__file__), '../scripts/logo.txt'))
-        with open(path, 'r') as logo_file:
-            logo_string = logo_file.read()
-        return logo_string
 
     def _print_intro_information(self):
         print(colored(self.cohort, 'green'))
@@ -228,13 +221,8 @@ class PipelineCreator:
         for d in samples_dirs:
             makedirs(d, exist_ok=True)
 
-        lognames_file = abspath(join(dirname(__file__),
-                                     '../scripts/log_filenames.txt'))
-        with open(lognames_file, 'r') as f:
-            log_filenames = [l.strip() for l in f.readlines()]
-        log_filepaths = [abspath(join(d, fn + '.log'))
-                         for d, fn in product(samples_dirs, log_filenames)]
-        for log_filepath in log_filepaths:
+        for log_filepath in all_log_filepaths(base_dir=self.cohort.dir,
+                                              samples_dirs=samples_dirs):
             if not isfile(log_filepath):
                 open(log_filepath, 'a').close()
 

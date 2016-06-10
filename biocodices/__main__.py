@@ -3,19 +3,13 @@
 import argparse
 import yaml
 from os.path import join, dirname, expanduser, abspath
-import matplotlib
-
-# Force matplotlib to not use any Xwindows backend.
-matplotlib.use('Agg')
-# This prevents matplotlib raising an exception when running biocodices on a
-# remote server with no X. This line has to be executed before importing
-# pyplot, so we have to run it before any biocodices code is imported.
 
 from biocodices.components import PipelineCreator
 
 
-if __name__ == '__main__':
-    cli_info_path = join(dirname(__file__), 'cli_arguments.yml')
+def cli():
+    """Runs the pipeline according to the passed CLI arguments."""
+    cli_info_path = join(dirname(__file__), 'helpers/cli_arguments.yml')
     with open(cli_info_path, 'r') as cli_info_file:
         cli = yaml.load(cli_info_file)
 
@@ -39,3 +33,6 @@ if __name__ == '__main__':
     pipeline = pipeline_creator.build_pipeline()
     pipeline.run()
     pipeline_creator.post_pipeline()
+
+if __name__ == '__main__':
+    cli()

@@ -1,4 +1,4 @@
-description: 'Call variants for a cohort of samples. The typical command for new samples would be:\n\nbioco.py --base-dir <parent dir of data> --complete-pipeline -n <cores>'
+description: 'Call variants for a cohort of samples. The typical command for new samples would be: bioco.py --base-dir <parent dir of data> --complete-pipeline -n <cores>'
 
 help_texts:
     d: 'Base directory for the sequencer run (should contain a "data" subdirectory with the .fastq files). A "results" subdirectory will be created in it.'
