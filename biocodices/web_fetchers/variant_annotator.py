@@ -1,3 +1,5 @@
+import requests
+from multiprocessing import Pool
 import pandas as pd
 from myvariant import MyVariantInfo
 
@@ -10,7 +12,21 @@ class VariantAnnotator:
         self.full_annotations = {}
         self.annotations = pd.DataFrame({})
 
-    #  def annotate_batch(self, rs)
+    @staticmethod
+    def summary_annotation(rs):
+        return VariantAnnotator().annotate(rs)['summary']
+
+    def annotate_in_batch(self, rs_list, processes=10, timeout=10):
+        """Query MyVariant.info and Ensemble for a list of rs IDs. Runs in
+        parallel. Returns a merged pandas DataFrame with the SNPs as
+        indices."""
+        with Pool(processes) as pool:
+            results = [pool.apply_async(self.summary_annotation, (rs, ))
+                       for rs in rs_list]
+            annotations = [result.get(timeout=timeout)
+                           for result in results]
+
+        return pd.concat(annotations)
 
     def annotate(self, rs):
         """
@@ -36,22 +52,22 @@ class VariantAnnotator:
 
         self.full_annotations[rs] = annotation
         self.annotations = self.annotations.append(annotation['summary'])
-        # print('fetch', rs)  ###
 
         return annotation
 
     @staticmethod
     def _parse_fetched_data(myvariant_df, ensemble_dict):
         variant_df = MyvariantParser.parse_annotations(myvariant_df)
-        # EnsembleParser.variant(self.ensemble_dict)
+
+        if ensemble_dict:
+            for key in ['ancestral_allele', 'most_severe_consequence']:
+                variant_df[key] = ensemble_dict[key]
 
         myvariant_pubs = MyvariantParser.publications(myvariant_df)
         ensemble_pubs = EnsembleParser.publications(ensemble_dict)
         publications = myvariant_pubs + ensemble_pubs
 
         variant_df['publications'] = len(publications)
-        for key in ['ancestral_allele', 'most_severe_consequence']:
-            variant_df[key] = ensemble_dict[key]
 
         return variant_df, publications
 
@@ -59,20 +75,38 @@ class VariantAnnotator:
     def query_myvariant(rs):
         fields = ['all']
         mv = MyVariantInfo()
-        df = mv.query(rs, fields=fields, as_dataframe=True)
-        rs_ids_found = df['dbsnp.rsid'].dropna().unique()
-        if len(rs_ids_found) != 1:
-            msg = 'I expected only one rs ID from MyVariant, received: {}'
-            raise ValueError(msg.format(rs_ids_found))
-        df['dbsnp.rsid'] = rs_ids_found[0]
+        try:
+            df = mv.query(rs, fields=fields, as_dataframe=True)
+        except IndexError:
+            # This error is raised from MyVariantInfo when there are no results
+            return pd.DataFrame({})
+
+        # Assign the same rs to all results returned (some rows have NaN there)
+        if 'dbsnp.rsid' in df:
+            rs_ids_found = df['dbsnp.rsid'].dropna().unique()
+
+            if len(rs_ids_found) != 1:
+                msg = 'I expected only one rs ID from MyVariant, received: {}'
+                raise ValueError(msg.format(rs_ids_found))
+
+            df['dbsnp.rsid'] = rs_ids_found[0]
+        else:
+            # Pretend we have that field if it wasn't provided, since we
+            # already know this datum.
+            df['dbsnp.rsid'] = rs
+
         df.set_index(['dbsnp.rsid', '_id'], inplace=True)
         return df
 
     @staticmethod
     def query_ensemble(rs):
-        server = "http://rest.ensembl.org"
-        ext = "/variation/human/{}?phenotypes=1".format(rs)
-        return restful_api_query(server + ext)
+        url = "http://rest.ensembl.org"
+        url += "/variation/human/{}?phenotypes=1".format(rs)
+        try:
+            return restful_api_query(url)
+        except requests.exceptions.HTTPError as error:
+            print(error)
+            return {}
 
     @staticmethod
     def query_cellbase(chromosome, position, allele, key='snp_phenotype'):
@@ -83,5 +117,4 @@ class VariantAnnotator:
         url += '{chromosome}:{position}:{allele}'
         url += '/{key}?of=json'
 
-        print(url)
         return restful_api_query(url)
