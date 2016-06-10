@@ -56,8 +56,7 @@ class Pipeline:
     def run(self):
         """Runs the whole pipeline, task by task, in a serial manner."""
         stopwatch = Stopwatch().start()
-        options_in_effect = {k: v for k, v in vars(self.cli_args).items()
-                             if v is not None}
+        options_in_effect = {k: v for k, v in self.cli_args.items() if v}
         initial_message = 'Started the pipeline. Options in effect:\n\n' + \
             yaml.dump(options_in_effect, default_flow_style=False)
         self.print_and_log_to_file(initial_message, create=True)
@@ -68,8 +67,7 @@ class Pipeline:
 
         self.total_time = stopwatch.stop()
         finish_message = 'Finished the pipeline. Total time: {}.'
-        self.print_and_log_to_file(finish_message.format(self.total_time),
-                                   print_it=False)
+        self.print_and_log_to_file(finish_message.format(self.total_time))
 
     def print_and_log_to_file(self, msg, create=False, print_it=True):
         open_mode = 'w' if create else 'a'
@@ -85,14 +83,14 @@ class Pipeline:
 
 
 class PipelineCreator:
-    def __init__(self, args):
-        self.args = args
+    def __init__(self, arguments):
+        self.args = arguments
 
     def pre_pipeline(self):
         self._print_welcome_message()
-        self.cohort = self._create_cohort(self.args.base_dir)
-        self._set_cohort_samples(keep=self.args.samples,
-                                 skip=self.args.skip_samples)
+        self.cohort = self._create_cohort(self.args['--base-dir'])
+        self._set_cohort_samples(keep=self.args['--samples'],
+                                 skip=self.args['--skip-samples'])
         self._print_intro_information()
         self._touch_all_the_logs()
 
@@ -104,8 +102,9 @@ class PipelineCreator:
         """
         pipeline = Pipeline(log_filepath=join(self.cohort.dir, 'pipeline.log'))
         pipeline.cli_args = self.args
+        n_processes = self.args['--processes']
 
-        if self.args.trim_reads:
+        if self.args['--trim-reads']:
             task_group = OrderedDict()
             for sample in self.cohort.samples:
                 task_label = sample.msg('Trim and analyze reads')
@@ -113,8 +112,8 @@ class PipelineCreator:
 
             pipeline.add_multitask(task_group,
                                    self.cohort.msg('Trim and analyze reads'),
-                                   n_processes=self.args.number_of_processes)
-        if self.args.align_reads:
+                                   n_processes=n_processes)
+        if self.args['--align-reads']:
             # I don't parallelize this step since the alignment already
             # works in parallel. Plus it takes a humongous amount of RAM.
             for sample in self.cohort.samples:
@@ -127,7 +126,7 @@ class PipelineCreator:
                 task_group[task_label] = sample.process_alignment_files
             pipeline.add_multitask(task_group,
                                    self.cohort.msg('Alignment processing'),
-                                   n_processes=self.args.number_of_processes)
+                                   n_processes=n_processes)
 
             task_group = OrderedDict()
             for sample in self.cohort.samples:
@@ -135,27 +134,27 @@ class PipelineCreator:
                 task_group[task_label] = sample.alignment_metrics
             pipeline.add_multitask(task_group,
                                    self.cohort.msg('Alignment metrics'),
-                                   n_processes=self.args.number_of_processes)
+                                   n_processes=n_processes)
 
-        if self.args.create_vcfs:
+        if self.args['--create-vcf']:
             task_group = OrderedDict()
             for sample in self.cohort.samples:
                 task_label = sample.msg('Create gVCF')
                 task_group[task_label] = sample.create_gvcf
             pipeline.add_multitask(task_group,
                                    self.cohort.msg('Haplotype Caller'),
-                                   n_processes=self.args.number_of_processes)
+                                   n_processes=n_processes)
 
-        if self.args.plot_metrics:
+        if self.args['--metrics']:
             pipeline.add_task(self.cohort.plot_alignment_metrics,
                               self.cohort.msg('Plot alignment metrics'))
             pipeline.add_task(self.cohort.median_coverages,
                               self.cohort.msg('Compute median coverages'))
 
-        if self.args.joint_genotyping:
+        if self.args['--joint-genotyping']:
             pipeline.add_task(self.cohort.joint_genotyping,
                               self.cohort.msg('Joint genotyping'))
-        if self.args.hard_filtering:
+        if self.args['--hard-filtering']:
             pipeline.add_task(partial(self.cohort.apply_filters_to_vcf,
                                       self.cohort.unfiltered_vcf),
                               self.cohort.msg('Hard filtering'))
@@ -169,7 +168,7 @@ class PipelineCreator:
                 task_group[task_label] = task
             pipeline.add_multitask(task_group,
                                    self.cohort.msg('Subset from multisample VCF'),
-                                   n_processes=self.args.number_of_processes)
+                                   n_processes=n_processes)
 
         self.pipeline = pipeline
         return pipeline

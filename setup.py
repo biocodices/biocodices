@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-from biocodices import __version__
+from biocodices import software_name, __program_name__, __version__
 
 
 dependencies = [
@@ -17,7 +17,7 @@ dependencies = [
     'pyvcf',
 ]
 
-setup(name='biocodices',
+setup(name=__program_name__,
       version=__version__,
       description='Nac & Pop Next-Generation Sequencing',
       url='http://github.com/biocodices/biocodices',

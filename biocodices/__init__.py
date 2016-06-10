@@ -7,7 +7,8 @@ matplotlib.use('Agg')
 # pyplot, so we have to run it before any biocodices code is imported.
 
 __version__ = '0.3'
-software_name = 'biocodices {}'.format(__version__)
+__program_name__ = 'biocodices'
+software_name = '{} {}'.format(__program_name__, __version__)
 
 from .components import Sample, Cohort, Project
 from .analyzers import AssociationTester
