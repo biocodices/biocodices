@@ -112,11 +112,12 @@ class MyvariantParser:
         if not snpeff_dict:
             return summary
 
-        summary['snpeff_genes'] = []
+        unique_genes = set()
         summary['snpeff_ann'] = []
+
         for annotation in cls.listify(snpeff_dict['ann']):
             gene_name = annotation.get('gene_name')
-            summary['snpeff_genes'].append(gene_name)
+            unique_genes.add(gene_name)
 
             summary_annotation = (
                 annotation.get('effect'),
@@ -124,6 +125,8 @@ class MyvariantParser:
                 annotation.get('putative_impact'),
             )  # Tuple with some selected fields
             summary['snpeff_ann'].append(summary_annotation)
+
+        summary['snpeff_genes'] = list(unique_genes)
 
         return summary
 
