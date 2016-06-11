@@ -3,8 +3,6 @@ set :repo_url, 'git@github.com:biocodices/biocodices.git'
 set :deploy_to, '~/biocodices/app'
 set :keep_releases, 3
 
-server 'arrakis.local', user: 'juan', roles: [:app]
-
 namespace :deploy do
   task :install_app do
     on roles(:app) do
