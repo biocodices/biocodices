@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
 """
- _     _                     _ _
-| |__ (_) ___   ___ ___   __| (_) ___ ___  ___
-| '_ \| |/ _ \ / __/ _ \ / _` | |/ __/ _ \/ __|
-| |_) | | (_) | (_| (_) | (_| | | (_|  __/\__ \\
-|_.__/|_|\___/ \___\___/ \__,_|_|\___\___||___/
+
+     _     _                     _ _
+    | |__ (_) ___   ___ ___   __| (_) ___ ___  ___
+    | '_ \| |/ _ \ / __/ _ \ / _` | |/ __/ _ \/ __|
+    | |_) | | (_) | (_| (_) | (_| | | (_|  __/\__ \\
+    |_.__/|_|\___/ \___\___/ \__,_|_|\___\___||___/
+
 
 Usage:
     bioco -d BASE_DIR [options]
@@ -18,20 +20,21 @@ Options:
                                         after each sample.
     -c --complete-pipeline              Do the whole pipeline.
                                         Equivalent to options: -tavjfm.
-    -n --processes <N>                  Number of max simultaneous processes
-                                        to spawn in some parts of the pipeline
-                                        that have been parallelized.
+    -n --processes <N>                  Number of max processes to spawn in
+                                        some parts of the pipeline that
+                                        have are parallelized.
     -t --trim-reads                     Trim adapters from the fastqs.
     -a --align-reads                    Align reads to the reference genome.
     -v --create-vcf                     Call variants for each sample (from
                                         the .bam to a .g.vcf).
-    -j --joint-genotyping               Do a joint genotyping for the cohort.
-                                        From samples gVCFs to a single VCF.
-    -f --hard-filtering                 Do a hard filtering on the cohort VCF.
-                                        Parameters will be read from:
+    -j --joint-genotyping               Do a joint genotyping for the
+                                        cohort. Uses all the samples' gVCFs
+                                        to create a single multisample VCF.
+    -f --hard-filtering                 Do a hard filtering on the cohort
+                                        VCF. Parameters will be read from:
                                         ~/.biocodices/parameters.yml
-    -s --samples SAMPLE SAMPLE...       Do the steps *only* on these samples.
-    -k --skip-samples SAMPLE SAMPLE...  Skip these samples.
+    -s --samples SAMPLE SAMPLE...       Do the steps only on these samples.
+    -k --skip-samples SAMPLE SAMPLE...  Skip these samples, do the rest.
     -m --metrics                        Generate and plot alignment and
                                         coverage metrics.
     -h --help                           Show this screen.

@@ -13,3 +13,4 @@ bwa: /usr/bin/bwa mem
 plink: /home/juan/bin/plink
 tabix: /home/juan/bin/tabix
 bgzip: /usr/local/bin/bgzip
+SnpEff: java -jar /home/juan/software/snpEff/snpEff.jar

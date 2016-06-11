@@ -141,8 +141,8 @@ GATK:
             # - 'FS > 200.0'
             # - 'SOR > 10.0'
             # - 'InbreedingCoeff < -0.8'  # Only for more than 10 samples
-        genotypes:
-            - 'GQ < 30.0'
+        genotype:
+            - 'GQ < 30.0 && RGQ < 30.0'
             - 'DP < 50.0'
 
     CombineVariants:
@@ -150,3 +150,15 @@ GATK:
         R: '{reference_genome}'
         genotypeMergeOptions: PRIORITIZE
         o: '{output}'
+
+SnpEff:
+    reference_genome: hg19
+    v: ''
+
+VEP:
+    everything: ''  # Boolean flags with no value.
+    offline: ''
+    merged: ''  # Because I'm using the merged VEP+RefSeq cached genome
+    stats_file: '{stats_file}'
+
+
