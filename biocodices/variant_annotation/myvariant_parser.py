@@ -22,6 +22,16 @@ class MyvariantParser:
         return pd.DataFrame(entries)
 
     @classmethod
+    def parse_publications(cls, results):
+        publications = []
+
+        if results['total'] > 0:
+            for hit in results['hits']:
+                publications += cls.grasp_publications(hit.get('grasp'))
+
+        return publications
+
+    @classmethod
     def parse_grasp(cls, grasp_dict):
         """Return a flat dictionary with some GRASP fields."""
         summary = {}
@@ -33,7 +43,7 @@ class MyvariantParser:
 
         summary['grasp_genes'] = []
         summary['grasp_pubmed_ids'] = [pub['pubmed_id'] for pub in
-                                       cls.parse_grasp_publications(grasp_dict)
+                                       cls.grasp_publications(grasp_dict)
                                        if pub['pubmed_id']]
 
         gene_names_str = grasp_dict.get('in_gene')
@@ -56,7 +66,7 @@ class MyvariantParser:
         return [element]
 
     @classmethod
-    def parse_grasp_publications(cls, grasp_dict):
+    def grasp_publications(cls, grasp_dict):
         publications_summary = []
 
         if not grasp_dict or 'publication' not in grasp_dict:
