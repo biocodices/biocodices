@@ -4,6 +4,7 @@ import yaml
 from os.path import dirname, join, isfile, basename
 
 from biocodices.helpers import Config
+from biocodices.programs import ProgramCaller
 
 
 class Plink:
@@ -84,7 +85,7 @@ class Plink:
             command += ' --make-bed'
         out_path = join(self.workdir, (out or self.label_path))
         command += ' --out {}'.format(out_path)
-        self.__class__.execute(command)
+        ProgramCaller(command).run()
         return self._out_filepath_from_log(out_path)
 
     def _out_filepath_from_log(self, out_label):
@@ -96,30 +97,24 @@ class Plink:
         # Assuming a single match for the filepath in the last lines of the log
         return [match for match in matches if match][0].group(0).strip()
 
-    @staticmethod
-    def execute(command):
-        try:
-            subprocess.run(command.split(' '), check=True)
-        except subprocess.CalledProcessError as error:
-            print('I had problems with this command:\n')
-            print(' '.join(error.cmd))
-            raise error
-
     @classmethod
     def make_bed_from_ped(cls, path_label):
+        """Make a plink bed file from a plink ped file."""
         command_template = 'plink --file {} --make-bed --out {}'
         command = command_template.format(path_label, path_label)
-        cls.execute(command)
+        ProgramCaller(command).run()
 
         return path_label
 
     @classmethod
     def make_bed_from_filtered_vcf(cls, path_label, out_label=None):
+        """Makes a bed file from a vcf, leaving out the markers that didn't
+        pass previous filteres (i.e. don't have PASS in the filter column)."""
         command = 'plink --vcf {} --vcf-filter --make-bed --silent'
         command = command.format(path_label)
         out_label = out_label or basename(path_label).replace('.vcf', '')
         command += ' --out {}'.format(out_label)
-        cls.execute(command)
+        ProgramCaller(command).run()
         return out_label
 
     @staticmethod
