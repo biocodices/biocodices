@@ -25,10 +25,18 @@ namespace :run do
     end
   end
 
-  task :tail_log, [:base_dir] do |t, args|
+  task :tail_main_log, [:base_dir] do |t, args|
     on roles(:app) do
-      glob = File.join(args[:base_dir], "**/*.log")
-      execute "tail -n0 -f #{glob}"
+      filepath = File.join(args[:base_dir], "pipeline.log")
+      execute "tail -n0 -f #{filepath}"
+    end
+  end
+
+  task :tail_log, [:base_dir, :pattern] do |t, args|
+    on roles(:app) do
+      pattern1 = File.join(args[:base_dir], "**/*#{args[:pattern]}*.log")
+      pattern2 = File.join(args[:base_dir], "*#{args[:pattern]}*.log")
+      execute "tail -n0 -f #{pattern1} #{pattern2}"
     end
   end
 end
