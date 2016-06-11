@@ -21,7 +21,14 @@ end
 namespace :run do
   task :pipeline, [:base_dir, :options] do |t, args|
     on roles(:app) do
-      execute "#{fetch(:export_path)} bioco -d #{args[:base_dir]} #{args[:options]}"
+      execute "#{fetch(:export_path)} bioco -d #{args[:base_dir]} #{args[:options]} &"
+    end
+  end
+
+  task :tail_log, [:base_dir] do |t, args|
+    on roles(:app) do
+      glob = File.join(args[:base_dir], "**/*.log")
+      execute "tail -n0 -f #{glob}"
     end
   end
 end
