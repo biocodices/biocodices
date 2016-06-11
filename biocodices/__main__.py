@@ -42,14 +42,17 @@ Examples:
 """
 
 from docopt import docopt
-
 from biocodices import software_name
-from biocodices.components import PipelineCreator
 
 
 def cli():
     """Runs the pipeline according to the passed CLI arguments."""
     arguments = docopt(__doc__, version=software_name)
+
+    # This import is here because it takes some time, which is fine if we're
+    # actually going to use the PipelineCreator, but not if the command ran
+    # was just bioco -h.
+    from biocodices.components import PipelineCreator
 
     if arguments['--processes']:
         arguments['--processes'] = int(arguments['--processes'])
