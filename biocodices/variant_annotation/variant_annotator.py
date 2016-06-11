@@ -3,7 +3,7 @@ from multiprocessing import Pool
 import pandas as pd
 from myvariant import MyVariantInfo
 
-from biocodices.web_fetchers import MyvariantParser, EnsembleParser
+from biocodices.variant_annotation import MyvariantParser, EnsembleParser
 from biocodices.helpers.general import restful_api_query
 
 
@@ -28,30 +28,30 @@ class VariantAnnotator:
 
         return pd.concat(annotations)
 
-    def annotate(self, rs):
+    @classmethod
+    def annotate(cls, rs):
         """
         Query MyVariant.info and Ensemble for info about an rs ID.
         Returns a dict with the following data:
-            'myvariant_data': a pandas DataFrame with info from MyVariant.info
-            'ensemble_data': a dict with the json response from Ensemble
+            'myvariant': a dict with selected info from MyVariant.info
+            'ensemble': a dict with the json response from Ensemble
             'summary': a handy summary of the info from the above sources
             'publications': a list of publications that mention this rs
-        Stores all the summaries (from different markers) in self.annotations.
-        Stores the full data in a dict: self.full_anotations.
         """
         annotation = {}
 
-        annotation['myvariant_data'] = self.query_myvariant(rs)
-        annotation['ensemble_data'] = self.query_ensemble(rs)
-        variant, publications = self._parse_fetched_data(
-            myvariant_df=annotation['myvariant_data'],
-            ensemble_dict=annotation['ensemble_data'],
-        )
-        annotation['summary'] = variant
-        annotation['publications'] = publications
+        annotation['myvariant'] = cls.query_myvariant(rs)
 
-        self.full_annotations[rs] = annotation
-        self.annotations = self.annotations.append(annotation['summary'])
+        #  annotation['ensemble'] = cls.query_ensemble(rs)
+        #  variant, publications = self._parse_fetched_data(
+            #  myvariant_df=annotation['myvariant'],
+            #  ensemble_dict=annotation['ensemble'],
+        #  )
+        #  annotation['summary'] = variant
+        #  annotation['publications'] = publications
+
+        #  self.full_annotations[rs] = annotation
+        #  self.annotations = self.annotations.append(annotation['summary'])
 
         return annotation
 
@@ -73,29 +73,9 @@ class VariantAnnotator:
 
     @staticmethod
     def query_myvariant(rs):
-        fields = ['all']
-        mv = MyVariantInfo()
-        try:
-            df = mv.query(rs, fields=fields, as_dataframe=True)
-        except IndexError:
-            # This error is raised from MyVariantInfo when there are no results
-            return pd.DataFrame({})
-
-        # Assign the same rs to all results returned (some rows have NaN there)
-        if 'dbsnp.rsid' in df:
-            rs_ids_found = df['dbsnp.rsid'].dropna().unique()
-
-            if len(rs_ids_found) != 1:
-                msg = 'I expected only one rs ID from MyVariant, received: {}'
-                raise ValueError(msg.format(rs_ids_found))
-
-            df['dbsnp.rsid'] = rs_ids_found[0]
-        else:
-            # Pretend we have that field if it wasn't provided, since we
-            # already know this datum.
-            df['dbsnp.rsid'] = rs
-
-        df.set_index(['dbsnp.rsid', '_id'], inplace=True)
+        results = MyVariantInfo().query(rs, fields=['all'])
+        df = MyvariantParser.parse_query_results(results)
+        df['rs_id'] = rs
         return df
 
     @staticmethod
