@@ -1,4 +1,3 @@
-import subprocess
 import re
 import yaml
 from os.path import dirname, join, isfile, basename
@@ -37,10 +36,14 @@ class Plink:
     def make_traw(self):
         return self.run('--recode A-transpose')
 
-    def extract(self, snps_filename, out, make_bed_True):
+    def extract(self, snps_filename, out):
+        """Keeps the variants with IDs listed in the 'snps_filename' passed.
+        Creates a new set of plink bed/bim/fam files the chosen 'out' label."""
         return self.run('--extract {}'.format(snps_filename), out=out)
 
-    def keep_fam(self, famfile, out, make_bed=True):
+    def keep_fam(self, famfile, out):
+        """Keeps samples with the family IDs listed in the passed famfile.
+        Generates a new set of plink bed/bim/fam files."""
         return self.run('--keep-fam {}'.format(famfile), out=out)
 
     def fst(self, clusters_file, out=None):
@@ -48,6 +51,8 @@ class Plink:
 
     def pre_tests_filter(self, mind=0.1, maf=0.05, geno=0.1, hwe=0.0001,
                          out=None):
+        """Run a conventional set of filters previous to tests. Produces a new
+        set of plink bed/bim/fam files on which the tests should be ran."""
         params = '--mind {} --maf {} --geno {} --hwe {}'
         params = params.format(mind, maf, geno, hwe)
         return self.run(params, out=out, make_bed=True)
@@ -77,6 +82,8 @@ class Plink:
         return self.run('--test-missing')
 
     def run(self, options, out=None, make_bed=False):
+        """Run raw CLI options on the bed/bim/fam set in self. Optionally, make
+        a new bed file with 'out' label."""
         command = '{} --bed {} --bim {} --fam {} --silent '
         # ^ WARNING: Keep the trailing space
         command = command.format(self.executable, self.bed, self.bim, self.fam)
