@@ -19,7 +19,13 @@ class MyvariantParser:
                 entry.update(cls.parse_grasp(hit.get('grasp')))
                 entries.append(entry)
 
-        return pd.DataFrame(entries)
+        df = pd.DataFrame(entries)
+
+        # Generate a list of unique genes mentioned across fields
+        uniq_genes = df.filter(regex='gene').sum(axis=1).map(lambda l: set(l))
+        df['genes'] = uniq_genes.map(list)
+
+        return df
 
     @classmethod
     def parse_publications(cls, results):
@@ -34,9 +40,8 @@ class MyvariantParser:
     @classmethod
     def parse_grasp(cls, grasp_dict):
         """Return a flat dictionary with some GRASP fields."""
+        grasp_dict = grasp_dict or {}
         summary = {}
-        if not grasp_dict:
-            return summary
 
         summary['grasp_ancestries'] = \
             grasp_dict.get('gwas_ancestry_description')
@@ -90,9 +95,8 @@ class MyvariantParser:
     @staticmethod
     def parse_dbsnp(dbsnp_dict):
         """Return a flat dictionary with some dbSNP fields."""
+        dbsnp_dict = dbsnp_dict or {}
         summary = {}
-        if not dbsnp_dict:
-            return summary
 
         simple_fields = ['alt', 'ref', 'chrom', 'class']
         for field in simple_fields:
@@ -108,14 +112,13 @@ class MyvariantParser:
     @classmethod
     def parse_snpeff(cls, snpeff_dict):
         """Return a flat dictionary with some SnpEff fields."""
+        snpeff_dict = snpeff_dict or {}
         summary = {}
-        if not snpeff_dict:
-            return summary
 
         unique_genes = set()
         summary['snpeff_ann'] = []
 
-        for annotation in cls.listify(snpeff_dict['ann']):
+        for annotation in cls.listify(snpeff_dict.get('ann')):
             gene_name = annotation.get('gene_name')
             unique_genes.add(gene_name)
 
@@ -133,9 +136,8 @@ class MyvariantParser:
     @classmethod
     def parse_wellderly(cls, wellderly_dict):
         """Return a flat dictionary with some Wellderly fields."""
+        wellderly_dict = wellderly_dict or {}
         summary = {}
-        if not wellderly_dict:
-            return summary
 
         summary['wellderly_genes'] = cls.listify(wellderly_dict.get('gene'))
 
@@ -144,9 +146,8 @@ class MyvariantParser:
     @classmethod
     def parse_cadd(cls, cadd_dict):
         """Return a flat dictionary with some CADD fields."""
+        cadd_dict = cadd_dict or {}
         summary = {}
-        if not cadd_dict:
-            return summary
 
         simple_fields = ['annotype', 'consequence']
         for field in simple_fields:

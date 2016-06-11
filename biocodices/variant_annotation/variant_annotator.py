@@ -23,6 +23,8 @@ class VariantAnnotator:
 
         annotations = pd.concat([ann['annotation'] for ann in results],
                                 ignore_index=True)
+        index = ['dbsnp_chrom', 'dbsnp_hg19_start', 'rs_id', 'hgvs_id']
+        annotations.set_index(index, inplace=True)
         publications = {ann['rs']: ann['publications'] for ann in results}
         return {'annotations': annotations, 'publications': publications}
 
@@ -40,6 +42,7 @@ class VariantAnnotator:
         ensembl_df, ensembl_publications = cls.query_ensembl(rs)
 
         annotation = myvariant_df.join(ensembl_df)
+        annotation['rs_id'] = rs
         publications = myvariant_publications + ensembl_publications
         return {
             'rs': rs,
