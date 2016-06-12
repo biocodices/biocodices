@@ -151,7 +151,7 @@ class MyvariantParser:
 
         simple_fields = ['annotype', 'consequence']
         for field in simple_fields:
-            summary['cadd_' + field] = cadd_dict.get(field)
+            summary['cadd_' + field] = cls.listify(cadd_dict.get(field))
 
         summary['cadd_genes'] = []
         for feature in cls.listify(cadd_dict.get('gene')):
