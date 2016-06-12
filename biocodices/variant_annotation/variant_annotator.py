@@ -26,7 +26,8 @@ class VariantAnnotator:
         return {'detail': annotations, 'publications': publications}
 
     @classmethod
-    def annotate(cls, rs):
+    def annotate(cls, rs, myvariant=True, ensembl=True,
+                 myvariant_fields=['all']):
         """
         Query MyVariant.info and Ensembl for info about an rs ID.
         Returns a dict with the following keys:
@@ -35,12 +36,22 @@ class VariantAnnotator:
         'publications': a list of publications that mention this rs
                         taken both from GRASP via Myvariant and Ensembl.
         """
-        myvariant_df, myvariant_publications = cls.query_myvariant(rs)
-        ensembl_df, ensembl_publications = cls.query_ensembl(rs)
+        if myvariant:
+            myvariant_df, myvariant_publications = cls.query_myvariant(rs)
+        if ensembl:
+            ensembl_df, ensembl_publications = cls.query_ensembl(rs)
 
-        annotation = myvariant_df.join(ensembl_df)
+        if myvariant and ensembl:
+            annotation = myvariant_df.join(ensembl_df)
+            publications = myvariant_publications + ensembl_publications
+        elif myvariant:
+            annotation = myvariant_df
+            publications = myvariant_publications
+        elif ensembl:
+            annotation = ensembl_df
+            publications = ensembl_publications
+
         annotation['rs_id'] = rs
-        publications = myvariant_publications + ensembl_publications
         return {
             'rs': rs,
             'detail': annotation,
@@ -48,8 +59,8 @@ class VariantAnnotator:
         }
 
     @staticmethod
-    def query_myvariant(rs):
-        results = MyVariantInfo().query(rs, fields=['all'])
+    def query_myvariant(rs, fields=['all']):
+        results = MyVariantInfo().query(rs, fields=fields)
         summary = MyvariantParser.parse_query_results(results)
         publications = MyvariantParser.parse_publications(results)
         return summary, publications

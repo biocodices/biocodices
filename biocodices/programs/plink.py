@@ -9,9 +9,9 @@ from biocodices.programs import ProgramCaller
 class Plink:
     bim_fields = ["chr", "rs_id", "morgans", "position", "A1", "A2"]
     fam_fields = ['FID', 'IID', 'father', 'mother', 'sexcode', 'phenotype']
+    executable = Config('executables')['plink']
 
     def __init__(self, bfile_path):
-        self.executable = Config('executables')['plink']
         self.tests = self.config('association_tests')
 
         self.label_path = bfile_path
@@ -28,7 +28,8 @@ class Plink:
         self.workdir = dirname(self.label_path)
 
     def __repr__(self):
-        return '<Plink for "{}">'.format(basename(self.label_path))
+        return '<{} for "{}">'.format(self.__class__.__name__,
+                                      basename(self.label_path))
 
     def make_ped(self):
         return self.run('--recode')
@@ -117,9 +118,21 @@ class Plink:
     def make_bed_from_filtered_vcf(cls, path_label, out_label=None):
         """Makes a bed file from a vcf, leaving out the markers that didn't
         pass previous filteres (i.e. don't have PASS in the filter column)."""
-        command = 'plink --vcf {} --vcf-filter --make-bed --silent'
-        command = command.format(path_label)
+        command = '{} --vcf {} --vcf-filter --make-bed --silent'
+        command = command.format(cls.executable, path_label)
         out_label = out_label or basename(path_label).replace('.vcf', '')
+        command += ' --out {}'.format(out_label)
+        ProgramCaller(command).run()
+        return out_label
+
+    @classmethod
+    def extract_snps_from_vcf(cls, snps_file, vcf_path, out_label):
+        """Extract the SNPs listed in a file from a source VCF. Keeps all the
+        samples. Writes the bed/bim/fam files to out_label."""
+        command = '{} --vcf {} --extract {} --make-bed --out {} --silent'
+        command = command.format(cls.executable, vcf_path, snps_file,
+                                 out_label)
+        # out_label = out_label or basename(vcf_path).replace('.vcf', '')
         command += ' --out {}'.format(out_label)
         ProgramCaller(command).run()
         return out_label
