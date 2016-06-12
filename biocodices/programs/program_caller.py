@@ -6,8 +6,8 @@ from biocodices.helpers.language import seconds_to_hms_string
 
 class ProgramCaller:
     def __init__(self, command):
-        self.command = command.replace('  ', ' ')
-        # Trim double spaces, so they don't create a 'phantom' empty argument.
+        self.command = re.sub(' +', ' ', command)
+        # Trim multiple spaces, so they don't create a 'phantom' empty argument.
 
     def run(self, stdout_sink=None, stderr_sink=None, log_filepath=None):
         """
@@ -22,7 +22,7 @@ class ProgramCaller:
             self.log_filepath += '.log'
 
         with open(self.log_filepath, 'w') as log_file:
-            # This file write neeeds to be separated from the following one.
+            # This file write needs to be separated from the following one.
             # Otherwise, the written lines will appear at the bottom of the file.
             self._log_executed_command(log_file)
 

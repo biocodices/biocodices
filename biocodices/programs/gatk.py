@@ -72,6 +72,8 @@ class GATK(AbstractGenomicsProgram):
         return outfile
 
     def joint_genotyping(self, gvcf_list, output_dir):
+        """Do a joint genotyping using the provided list of gVCFs. Writes
+        a multisample VCF and returns its filepath."""
         outfile = join(output_dir, self.joint_genotyping_outfile)
         params_str = ''
         for gvcf_filename in gvcf_list:

@@ -14,12 +14,28 @@ class VcfMunger:
         self.picard = Picard()
         self.bcftools = BcfTools()
 
+    def hard_filtering(self, vcf_path):
+        """Do a hard filtering on the passed VCF. It will split it in subsets
+        of INDELS and SNPS, apply different filters to each sub-VCF, and then
+        merge the filtered VCFs in a new one. It returns the filepath of the
+        last VCF generated."""
+        snps_vcf, indels_vcf = self.create_snp_and_indel_vcfs(vcf_path)
+        filtered_snps_vcf = self.apply_variant_filters(snps_vcf, 'snps')
+        filtered_indels_vcf = self.apply_variant_filters(indels_vcf, 'indels')
+        merged_vcf_filepath = join(dirname(vcf_path),
+                                   GATK.hard_filtering_outfile)
+        merged_vcf = self.merge_variant_vcfs([filtered_snps_vcf,
+                                              filtered_indels_vcf],
+                                             outfile=merged_vcf_filepath)
+
+        return merged_vcf
+
     def create_snp_and_indel_vcfs(self, vcf_file):
         snps_vcf = self.gatk.select_variants(vcf_file, 'snps')
         indels_vcf = self.gatk.select_variants(vcf_file, 'indels')
         return snps_vcf, indels_vcf
 
-    def apply_filters(self, vcf_path, variant_type):
+    def apply_variant_filters(self, vcf_path, variant_type):
         return self.gatk.filter_variants_vcf(vcf_path, variant_type)
 
     def merge_variant_vcfs(self, variant_vcfs, outfile):
@@ -41,7 +57,7 @@ class VcfMunger:
 
     def apply_genotype_filters(self, vcf_path):
         """Apply filters to each sample's genotype with the thresholds defined
-        in the parameters file. Generates a new VCF."""
+        in the parameters file. Generates a new VCF, returns its filepath."""
         return self.gatk.filter_genotypes(vcf_path)
 
     def annotate_with_snpeff(self, vcf_path):
@@ -102,24 +118,25 @@ class VcfMunger:
 
         return outfile
 
-    def annotate_with_cellbase(self, vcf_path):
-        """Creates a new VCF after the passed one, adding cellbase and COSMIC
-        data per variant in the INFO field."""
-        outfile = vcf_path.replace('.vcf', '.db.vcf')
+    # WIP:
+    #  def annotate_with_cellbase(self, vcf_path):
+        #  """Creates a new VCF after the passed one, adding cellbase and COSMIC
+        #  data per variant in the INFO field."""
+        #  outfile = vcf_path.replace('.vcf', '.db.vcf')
 
-        with open(vcf_path, 'r') as in_vcf, open(outfile, 'w') as out_vcf:
-            reader = vcf.Reader(in_vcf)
-            writer = vcf.Writer(out_vcf, template=reader)
+        #  with open(vcf_path, 'r') as in_vcf, open(outfile, 'w') as out_vcf:
+            #  reader = vcf.Reader(in_vcf)
+            #  writer = vcf.Writer(out_vcf, template=reader)
 
-            for record in reader:
-                # Annotate both the reference allele and the alt allele
-                alleles = {'REF': record.REF, 'ALT': record.ALT}
-                for which, allele in alleles.items():
-                    kwargs = {'chromosome': record.CHROM,
-                              'position': record.POS,
-                              'allele': allele}
-                    allele_info = VariantAnnotator.query_cellbase(**kwargs)
-                    # record.INFO[which] = allele_info
+            #  for record in reader:
+                #  # Annotate both the reference allele and the alt allele
+                #  alleles = {'REF': record.REF, 'ALT': record.ALT}
+                #  for which, allele in alleles.items():
+                    #  kwargs = {'chromosome': record.CHROM,
+                              #  'position': record.POS,
+                              #  'allele': allele}
+                    #  allele_info = VariantAnnotator.query_cellbase(**kwargs)
+                    #  # record.INFO[which] = allele_info
 
     @staticmethod
     def read_depth_stats_vcf(vcf_path):

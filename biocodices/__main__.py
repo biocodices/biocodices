@@ -20,7 +20,7 @@ Options:
                                         after each sample.
     -c --complete-pipeline              Do the whole pipeline.
                                         Equivalent to options: -tavjfm.
-    -n --processes <N>                  Number of max processes to spawn in
+    -n --parallel <N>                   Number of max processes to spawn in
                                         some parts of the pipeline that
                                         have are parallelized.
     -t --trim-reads                     Trim adapters from the fastqs.

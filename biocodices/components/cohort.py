@@ -1,4 +1,3 @@
-from datetime import datetime
 import re
 from glob import glob
 from os.path import join, abspath, basename, expanduser
@@ -10,6 +9,7 @@ from biocodices.variant_calling import VcfMunger
 from biocodices.programs import GATK
 from biocodices.helpers.language import plural
 from biocodices.plotters import AlignmentMetricsPlotter
+from biocodices.analyzers import plot_vcf_stats
 
 
 class Cohort:
@@ -34,12 +34,27 @@ class Cohort:
         self.unfiltered_vcf = join(self.results_dir,
                                    GATK.joint_genotyping_outfile)
         self.filtered_vcf = join(self.results_dir, GATK.hard_filtering_outfile)
+        self.__vcf_stats = None
 
     def __repr__(self):
         tmpl = '{} with {} from {}'
         return tmpl.format(self.__class__.__name__,
                            plural('sample', len(self.samples)),
                            ', '.join(self.sequencer_runs))
+
+    def vcf_stats(self, vcf_FORMAT_field=None):
+        """Create a pandas DataFrame with the values from one FORMAT field of
+        the passed VCF file: 'DP' for depth, 'GQ' for genotype quality.
+        The df is memoized after the first call."""
+        if self.__vcf_stats is None:
+            _, samples_df = VcfMunger.vcf_to_frames(self.filtered_vcf)
+            self.__vcf_stats = samples_df
+
+        if vcf_FORMAT_field:
+            col_index = pd.IndexSlice[:, vcf_FORMAT_field]
+            return self.__vcf_stats.loc[:, col_index]
+
+        return self.__vcf_stats
 
     def joint_genotyping(self):
         gatk = GATK()
@@ -48,22 +63,7 @@ class Cohort:
         gatk.joint_genotyping(gvcf_list, output_dir)
 
     def apply_filters_to_vcf(self, vcf_path):
-        # self.printlog('Separate SNPs and INDELs before filtering')
-        variant_files = self.vcf_munger.create_snp_and_indel_vcfs(vcf_path)
-        self.snps_vcf, self.indels_vcf = variant_files
-
-        # self.printlog('Apply SNP filters')
-        self.snps_vcf = self.vcf_munger.apply_filters(self.snps_vcf, 'snps')
-
-        # self.printlog('Apply indel filters')
-        self.indels_vcf = self.vcf_munger.apply_filters(self.indels_vcf, 'indels')
-
-        # self.printlog('Merge the filtered vcfs')
-        self.vcf_munger.merge_variant_vcfs([self.snps_vcf, self.indels_vcf],
-                                            outfile=self.filtered_vcf)
-
-        #  self.printlog('Generate variant calling metrics')
-        #  self.vcf_munger.generate_variant_calling_metrics(self.filtered_vcf)
+        return self.vcf_munger.hard_filtering(vcf_path)
 
     def subset_samples(self, multisample_vcf, sample_ids, outfile):
         return self.vcf_munger.subset_samples(multisample_vcf, sample_ids,
