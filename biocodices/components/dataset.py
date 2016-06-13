@@ -2,7 +2,7 @@ import pandas as pd
 from os.path import expanduser, isfile, basename, dirname
 
 from biocodices.analyzers import (SmartPCA, SklearnPCA, Admixture,
-                                  AssociationTester, QualityControl)
+                                  QualityControl)
 from .panel import Panel
 from .sample_group import SampleGroup
 from biocodices.programs.plink import Plink
@@ -19,14 +19,22 @@ class Dataset:
         self.markers = self.panel.markers
         self.samplegroup = SampleGroup(self.fam)
         self.samples = self.samplegroup.samples
-        self.genotypes = self._read_traw(self.traw)
 
     def __repr__(self):
         tmpl = '[ Dataset from:\n  {}\n  {} ]'
         return tmpl.format(self.panel, self.samplegroup)
 
+    @property
     def genotypes(self):
-        raise Exception('Not yet implemented')
+        # if not isfile(self.traw):
+        # ^ I re-create the .traw on demand now because i ran into situations
+        # where the dataset got 'stuck' with an old traw file that was result
+        # of old runs of the code in the same directory, so while the
+        # .genotypes property showed something, the .bed actually had
+        # something else.
+
+        self.plink.make_traw()  # Create just to read genotypes from
+        return self._read_traw(self.traw)
 
     def quality_control(self):
         """
@@ -53,15 +61,6 @@ class Dataset:
         out = out or (self.label_path + '_filtered_for_tests')
         self.plink.pre_tests_filter(mind, maf, geno, hwe, out)
         return Dataset(out)
-
-    def association_tests(self):
-        """
-        Run a battery of association tests per SNP and store the output in
-        an AssociationTest object that responds to #result and #plot().
-        """
-        assoc = AssociationTest(dataset=self)
-        assoc.run()
-        return assoc
 
     def pca(self, implementation='smartpca', overwrite=False,
             normalize=True, args={}):
@@ -108,9 +107,6 @@ class Dataset:
         self.plink = Plink(self.label_path)
         if not isfile(self.ped):
             self.plink.make_ped()  # Created for SmartPCA
-
-        if not isfile(self.traw):
-            self.plink.make_traw()  # Created to read genotypes from
 
     def _read_traw(self, filepath):
         df = pd.read_table(filepath, index_col='SNP')

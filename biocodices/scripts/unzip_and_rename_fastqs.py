@@ -11,7 +11,7 @@ from shutil import copy2
 
 def main(data_dir):
     # Pattern to extract the sample ID
-    filename_pattern = r'(SAR\d+).*01-(\d{5}|Control).*(R\d)'
+    filename_pattern = r'(SAR\d+).*01(\d{5}|Control).*(R\d)'
 
     gzipped_fastq_glob = join(data_dir, '*.fastq.gz')
     gzipped_fastq_filepaths = glob(gzipped_fastq_glob)

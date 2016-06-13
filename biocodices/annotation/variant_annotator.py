@@ -3,7 +3,7 @@ from multiprocessing import Pool
 import pandas as pd
 from myvariant import MyVariantInfo
 
-from biocodices.variant_annotation import MyvariantParser, EnsemblParser
+from biocodices.annotation import MyvariantParser, EnsemblParser
 from biocodices.helpers.general import restful_api_query
 
 

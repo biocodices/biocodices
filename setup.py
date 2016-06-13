@@ -10,6 +10,7 @@ dependencies = [
     'seaborn',
     'sqlalchemy',
     'myvariant',
+    'mygene',
     'inflect',
     'docopt',
     'pymysql',

@@ -85,10 +85,10 @@ class Plink:
     def run(self, options, out=None, make_bed=False):
         """Run raw CLI options on the bed/bim/fam set in self. Optionally, make
         a new bed file with 'out' label."""
-        command = '{} --bed {} --bim {} --fam {} --silent '
+        command = '{} --bed {} --bim {} --fam {}'
         # ^ WARNING: Keep the trailing space
         command = command.format(self.executable, self.bed, self.bim, self.fam)
-        command += options
+        command += ' {}'.format(options)
         if make_bed:
             command += ' --make-bed'
         out_path = join(self.workdir, (out or self.label_path))
@@ -118,7 +118,7 @@ class Plink:
     def make_bed_from_filtered_vcf(cls, path_label, out_label=None):
         """Makes a bed file from a vcf, leaving out the markers that didn't
         pass previous filteres (i.e. don't have PASS in the filter column)."""
-        command = '{} --vcf {} --vcf-filter --make-bed --silent'
+        command = '{} --vcf {} --vcf-filter --make-bed'
         command = command.format(cls.executable, path_label)
         out_label = out_label or basename(path_label).replace('.vcf', '')
         command += ' --out {}'.format(out_label)
@@ -129,7 +129,7 @@ class Plink:
     def extract_snps_from_vcf(cls, snps_file, vcf_path, out_label):
         """Extract the SNPs listed in a file from a source VCF. Keeps all the
         samples. Writes the bed/bim/fam files to out_label."""
-        command = '{} --vcf {} --extract {} --make-bed --out {} --silent'
+        command = '{} --vcf {} --extract {} --make-bed --out {}'
         command = command.format(cls.executable, vcf_path, snps_file,
                                  out_label)
         # out_label = out_label or basename(vcf_path).replace('.vcf', '')

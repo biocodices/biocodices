@@ -42,5 +42,6 @@ class DB:
         """Retrieve a database table as a pandas DataFrame."""
         return pd.read_sql_table(table_name, self.conn)
 
+    @property
     def table_names(self):
         return [t[0] for t in self.query('show tables;', as_list=True)]
