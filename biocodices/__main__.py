@@ -62,7 +62,7 @@ def cli():
     else:
         arguments['--processes'] = 1
 
-    if '--complete-pipeline' in arguments:
+    if arguments['--complete-pipeline']:
         arguments['--trim-reads'] = True
         arguments['--align-reads'] = True
         arguments['--create-vcf'] = True
