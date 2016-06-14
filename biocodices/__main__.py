@@ -57,12 +57,12 @@ def cli():
     # was just bioco -h.
     from biocodices.components import PipelineCreator
 
-    if arguments['--processes']:
+    if '--processes' in arguments:
         arguments['--processes'] = int(arguments['--processes'])
     else:
         arguments['--processes'] = 1
 
-    if arguments['--complete-pipeline']:
+    if '--complete-pipeline' in arguments:
         arguments['--trim-reads'] = True
         arguments['--align-reads'] = True
         arguments['--create-vcf'] = True
