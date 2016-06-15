@@ -179,9 +179,13 @@ class VcfMunger:
             def genotype_dict(cell):
                 ix = indices.pop()
                 # FIXME: This is a nasty hack, has to be rethought
-                a = format_col.loc[ix].iloc[0].split(':')
-                b = cell.split(':')
-                return dict(zip(a, b))
+                format_at_this_row = format_col.loc[ix]
+                if type(format_at_this_row) == pd.Series:
+                    format_cell = format_at_this_row.iloc[0].split(':')
+                else:
+                    format_cell = format_at_this_row.split(':')
+                sample_genotype_cell = cell.split(':')
+                return dict(zip(format_cell, sample_genotype_cell))
 
             col_as_dict = raw_samples_df[sample].map(genotype_dict).to_dict()
             df = pd.DataFrame(col_as_dict).reset_index()
