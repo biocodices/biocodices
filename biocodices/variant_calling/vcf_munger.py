@@ -178,8 +178,10 @@ class VcfMunger:
 
             def genotype_dict(cell):
                 ix = indices.pop()
-                return dict(zip(format_col.loc[ix].split(':'),
-                                cell.split(':')))
+                # FIXME: This is a nasty hack, has to be rethought
+                a = format_col.loc[ix].iloc[0].split(':')
+                b = cell.split(':')
+                return dict(zip(a, b))
 
             col_as_dict = raw_samples_df[sample].map(genotype_dict).to_dict()
             df = pd.DataFrame(col_as_dict).reset_index()
