@@ -4,9 +4,9 @@ from glob import glob
 
 
 class Project:
-    def __init__(self, base_dir, label):
-        self.label = label
-        self.dir = join(abspath(expanduser(base_dir)), self.label)
+    def __init__(self, base_dir):
+        self.dir = join(abspath(expanduser(base_dir)))
+        self.label = basename(self.dir)
         self._prepare_dirs()
 
     def __repr__(self):
