@@ -17,18 +17,6 @@ class DB:
         url = 'mysql+pymysql://{user}:{pass}@{host}/{database}'.format(**creds)
         engine = create_engine(url)
 
-        # reflect the existing tables
-        Base.prepare(engine, reflect=True)
-
-        # Hardcoded from our DB. This should go in a settings file.
-        if database == 'parkinsonDB':
-            self.variation = Base.classes.variations
-            self.variation_citation = Base.classes.variationscitations
-            self.gene = Base.classes.gene
-        if database == 'biocodices':
-            self.sample = Base.classes.MUESTRA
-            self.ngs_sample = Base.classes.NGS_MUESTRAS
-
         self.session = Session(engine)
         self.conn = engine.connect()
 
