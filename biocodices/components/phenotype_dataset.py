@@ -88,7 +88,7 @@ class PhenotypeDataset:
         # Transform to integers and -9 (missing) if the phenotype is binary
         # Leave floats and 'NA' (missing) if the phenotytpe is continuous
 
-        if cls._is_this_series_binary(series):
+        if cls.is_this_series_binary(series):
             return series.fillna(cls.BINARY_MISSING).map(int)
         else:
             return series.map(float).fillna(cls.MISSING)
