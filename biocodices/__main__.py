@@ -57,7 +57,7 @@ def cli():
     # was just bioco -h.
     from biocodices.components import PipelineCreator
 
-    if arguments['--processes']:
+    if '--processes' in arguments:
         arguments['--processes'] = int(arguments['--processes'])
     else:
         arguments['--processes'] = 1
