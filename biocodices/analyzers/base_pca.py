@@ -10,8 +10,10 @@ class BasePCA:
     Don't instantiate this class; use instead SmartPCA or SklearnPCA.
     """
     def plot(self, ax=None, components_to_plot=['PC1', 'PC2'], rotate=False,
-             show_ticks=False):
-        self.plotter = PCAPlotter(self, self.dataset.dir)
+             show_ticks=False, palette=None, **kwargs):
+        """Plots the results stored from a previous run(). You can pass
+        **kwargs and they will be taken to pandas plot() function."""
+        self.plotter = PCAPlotter(self, self.dataset.dir, palette=palette)
         self.inverted_x = self.inverted_y = False
         # self.invert_axes(components_to_plot)
         self.rotated = rotate
@@ -20,7 +22,8 @@ class BasePCA:
 
         if ax is None:
             _, ax = plt.subplots(figsize=(5, 5))
-        self.plotter.draw_ax(ax, components_to_plot, show_ticks=show_ticks)
+        self.plotter.draw_ax(ax, components_to_plot, show_ticks=show_ticks,
+                             **kwargs)
         return ax
 
     def __repr__(self):
@@ -37,7 +40,7 @@ class BasePCA:
         self.explained_variance.to_csv(self._output_filepath('eigenvals') + '.csv')
 
     def _output_filepath(self, ext):
-        return self.dataset.path_label + '.' + ext
+        return self.dataset.label_path + '.' + ext
 
     #  def invert_axes(self, components):
         #  if len(components) != 2:
