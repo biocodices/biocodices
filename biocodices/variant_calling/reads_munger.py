@@ -2,7 +2,6 @@ from os.path import join, basename
 
 from biocodices.helpers import Config, Resource
 from biocodices.programs import ProgramCaller, GATK, Picard, BWA, FastQC
-from biocodices.variant_calling import VcfMunger
 from biocodices.helpers.general import params_dict_to_str
 
 
@@ -13,7 +12,6 @@ class ReadsMunger:
         # directory from the location of the input fastq files, which are in
         # the **data** dir of each project.
         self.executables = Config('executables')
-        self.params = Config('parameters')
         self.picard = Picard()
         self.gatk = GATK()
         self.bwa = BWA()
@@ -33,7 +31,7 @@ class ReadsMunger:
             new_filepath = join(self.results_dir, new_fn)
             trimmed_fastqs.append(new_filepath)
 
-        params_str = params_dict_to_str(self.params['fastq-mcf'])
+        params_str = params_dict_to_str(Config.params['fastq-mcf'])
         for trimmed_fastq in trimmed_fastqs:
             params_str += ' -o {}'.format(trimmed_fastq)
 

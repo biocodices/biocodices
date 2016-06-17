@@ -7,9 +7,8 @@ from termcolor import colored
 from biocodices.components import Sample
 from biocodices.variant_calling import VcfMunger
 from biocodices.programs import GATK
-from biocodices.helpers.language import plural
+from biocodices.helpers import Config, plural
 from biocodices.plotters import AlignmentMetricsPlotter
-from biocodices.analyzers import plot_vcf_stats
 
 
 class Cohort:
@@ -32,8 +31,9 @@ class Cohort:
             raise EmptyCohortException(msg.format(self.data_dir))
 
         self.unfiltered_vcf = join(self.results_dir,
-                                   GATK.joint_genotyping_outfile)
-        self.filtered_vcf = join(self.results_dir, GATK.hard_filtering_outfile)
+                                   Config.filenames['cohort_raw_vcf'])
+        self.filtered_vcf = join(self.results_dir,
+                                 Config.filenames['cohort_filtered_vcf'])
         self.__vcf_stats = None
 
     def __repr__(self):
@@ -58,7 +58,7 @@ class Cohort:
 
     def joint_genotyping(self):
         gatk = GATK()
-        gvcf_list = [sample.gvcf for sample in self.samples]
+        gvcf_list = [sample.raw_gvcf for sample in self.samples]
         output_dir = self.results_dir
         gatk.joint_genotyping(gvcf_list, output_dir)
 

@@ -8,8 +8,6 @@ from biocodices.programs import ProgramCaller, GATK, Picard, BcfTools
 
 class VcfMunger:
     def __init__(self):
-        self.executables = Config('executables')
-        self.params = Config('parameters')
         self.gatk = GATK()
         self.picard = Picard()
         self.bcftools = BcfTools()
@@ -65,8 +63,8 @@ class VcfMunger:
         app_name = 'SnpEff'
         outfile = vcf_path.replace('.vcf', '.{}.vcf'.format(app_name))
         command = '{executable} -v {reference_genome} {in}'.format(**{
-            'executable': self.executables[app_name],
-            'reference_genome': self.params[app_name]['reference_genome'],
+            'executable': Config.executables[app_name],
+            'reference_genome': Config.params[app_name]['reference_genome'],
             'in': vcf_path,
         })
         log_filepath = join(dirname(vcf_path), app_name)
@@ -80,10 +78,10 @@ class VcfMunger:
         app_name = 'VEP'
         outfile = vcf_path.replace('.vcf', '.{}.vcf'.format(app_name))
         options = ['--{} {}'.format(k, v)
-                   for k, v in self.params[app_name].items()]
+                   for k, v in Config.params[app_name].items()]
         options_str = ' '.join(options)
         command = '{executable} {options} -i {in} -o {out} --stats'.format(**{
-            'executable': self.executables[app_name],
+            'executable': Config.executables[app_name],
             'options': options_str,
             'in': vcf_path,
             'out': outfile,

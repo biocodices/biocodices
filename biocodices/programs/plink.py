@@ -11,7 +11,7 @@ class Plink:
     fam_fields = ['FID', 'IID', 'father', 'mother', 'sexcode', 'phenotype']
     sex_codes = {1: 'Male', 2: 'Female', 0: 'Unknown', -9: 'Unknown'}
     phenotype_codes = {1: 'Control', 2: 'Case', -9: 'Unknown', 'NA': 'Uknown'}
-    executable = Config('executables')['plink']
+    executable = Config.executables['plink']
 
     def __init__(self, bfile_path):
         self.tests = self.config('association_tests')

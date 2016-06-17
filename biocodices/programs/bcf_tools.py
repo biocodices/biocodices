@@ -53,7 +53,7 @@ class BcfTools(AbstractGenomicsProgram):
     @staticmethod
     def tabix(gzipped_vcf_path):
         """Index a bgzip-zipped VCF.gz to let some bcftools modules use it."""
-        executable = Config('executables')['tabix']
+        executable = Config.executables['tabix']
         command = '{} {}'.format(executable, gzipped_vcf_path)
         log_filepath = join(dirname(gzipped_vcf_path), 'tabix')
         ProgramCaller(command).run(log_filepath=log_filepath)
@@ -62,7 +62,7 @@ class BcfTools(AbstractGenomicsProgram):
     @staticmethod
     def bgzip(vcf_path):
         """Zips a VCF to vcf.gz to let some bcftools modules use it."""
-        executable = Config('executables')['bgzip']
+        executable = Config.executables['bgzip']
         outfile = vcf_path.replace('.vcf', '.vcf.gz')
         command = '{} -ci {}'.format(executable, vcf_path)
         log_filepath = join(dirname(outfile), 'bgzip')

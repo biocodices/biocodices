@@ -84,15 +84,12 @@ class Sample:
         return pd.Series(depth_stats).median()
 
     def create_gvcf(self):
-        # The creation of a VCF per sample at this point has no use and it
-        # takes several minutes.
-        #  if vcf:
-            #  self.vcf = self.reads_munger.create_vcf(self.recalibrated_bam)
-        # if gvcf:
-        self.gvcf = self.reads_munger.create_gvcf(self.recalibrated_bam)
+        self.raw_gvcf = self.reads_munger.create_gvcf(self.recalibrated_bam)
+        return self.raw_gvcf
 
     def create_vcf(self):
-        self.gvcf = self.reads_munger.create_vcf(self.recalibrated_bam)
+        self.raw_vcf = self.reads_munger.create_vcf(self.recalibrated_bam)
+        return self.raw_vcf
 
     def read_alignment_metrics(self):
         # This is called by the sample's Cohort to plot everything together.
@@ -180,7 +177,7 @@ class Sample:
         self.bam = self._files('bam')
         self.realigned_bam = self._files('realigned.bam')
         self.recalibrated_bam = self._files('realigned.recalibrated.bam')
-        self.vcf = self._files('realigned.recalibrated.vcf')
-        self.gvcf = self._files('realigned.recalibrated.g.vcf')
-        self.joint_vcf = self._files('joint.vcf')
-        self.filtered_vcf = self._files('filtered.vcf')
+        self.raw_vcf = self._files(Config.filenames['sample_raw_vcf_suffix'])
+        self.raw_gvcf = self._files(Config.filenames['sample_raw_gvcf_suffix'])
+        self.filtered_vcf = \
+            self._files(Config.filenames['sample_filtered_vcf_suffix'])

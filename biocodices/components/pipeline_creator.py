@@ -113,6 +113,9 @@ class PipelineCreator:
                                    self.cohort.msg('Subset from multisample VCF'),
                                    n_processes=n_processes)
 
+        #  if self.args['--annotation']:
+
+
         self.pipeline = pipeline
         return pipeline
 
@@ -163,7 +166,7 @@ class PipelineCreator:
         for d in samples_dirs:
             os.makedirs(d, exist_ok=True)
 
-        for log_filepath in all_log_filepaths(base_dir=self.cohort.dir,
+        for log_filepath in all_log_filepaths(base_dir=self.cohort.results_dir,
                                               samples_dirs=samples_dirs):
             if not os.path.isfile(log_filepath):
                 open(log_filepath, 'a').close()

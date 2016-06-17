@@ -44,6 +44,7 @@ Examples:
 
 """
 
+from os.path import abspath, expanduser
 from docopt import docopt
 from biocodices import software_name
 
@@ -57,7 +58,9 @@ def cli():
     # was just bioco -h.
     from biocodices.components import PipelineCreator
 
-    if '--parallel' in arguments:
+    arguments['--base-dir'] = abspath(expanduser(arguments['--base-dir']))
+
+    if arguments['--parallel']:
         arguments['--parallel'] = int(arguments['--parallel'])
     else:
         arguments['--parallel'] = 1

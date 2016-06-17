@@ -1,13 +1,10 @@
 import os
 
 from biocodices.programs import AbstractGenomicsProgram, ProgramCaller
-from biocodices.helpers.general import rename_tempfile
+from biocodices.helpers import Config, rename_tempfile
 
 
 class GATK(AbstractGenomicsProgram):
-    joint_genotyping_outfile = 'raw_variants.vcf'
-    hard_filtering_outfile = 'filtered.vcf'
-
     def __init__(self):
         super(self.__class__, self).__init__('GATK')
 
@@ -62,7 +59,7 @@ class GATK(AbstractGenomicsProgram):
         Generates a new VCF file in the same directory and returns its path.
         """
         outfile = os.path.basename(recalibrated_bam).split('.')[0]
-        outfile += '.raw_variants.vcf'
+        outfile += Config.filenames['sample_raw_vcf_suffix']
         outfile = os.path.join(os.path.dirname(recalibrated_bam), outfile)
         self.run('HaplotypeCaller', recalibrated_bam, outfile,
                  extra_output_extension='idx', task_subtype='vcf')
@@ -74,7 +71,7 @@ class GATK(AbstractGenomicsProgram):
         Generates a new gVCF file in the same directory and returns its path.
         """
         outfile = os.path.basename(recalibrated_bam).split('.')[0]
-        outfile += '.raw_variants.g.vcf'
+        outfile += Config.filenames['sample_raw_gvcf_suffix']
         outfile = os.path.join(os.path.dirname(recalibrated_bam), outfile)
         self.run('HaplotypeCaller', recalibrated_bam, outfile,
                  extra_output_extension='idx', task_subtype='gvcf')
@@ -85,7 +82,8 @@ class GATK(AbstractGenomicsProgram):
         Do a joint genotyping using the provided list of gVCFs. Writes
         a multisample VCF and returns its filepath.
         """
-        outfile = os.path.join(output_dir, self.joint_genotyping_outfile)
+        outfile = os.path.join(output_dir,
+                               Config.filenames['cohort_raw_vcf'])
         params_str = ''
         for gvcf_filename in gvcf_list:
             params_str += ' --variant {}'.format(gvcf_filename)

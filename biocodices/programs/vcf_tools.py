@@ -15,7 +15,7 @@ class VcfTools(AbstractGenomicsProgram):
         - sample_ids: a list of the columns (i.e. samples ids) to keep.
         - outfile: an absolute path for the new vcf file.
         """
-        command = Config('executables')['vcf-subset']
+        command = Config.executables['vcf-subset']
         for sample_id in sample_ids:
             command += ' -c {}'.format(sample_id)
         command += ' {}'.format(vcf_path)
