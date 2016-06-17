@@ -72,13 +72,13 @@ class PhenotypeDataset:
     def _parse(self, df):
         all_phenos = df.apply(self._int_if_binary)
         binary_columns = [col for col, series in df.items()
-                          if self._is_this_series_binary(series)]
+                          if self.is_this_series_binary(series)]
         binary = all_phenos[binary_columns]
         quanti = all_phenos.drop(binary_columns, axis=1)
         return (all_phenos, binary, quanti)
 
     @staticmethod
-    def _is_this_series_binary(series):
+    def is_this_series_binary(series):
         non_nan_values = set(series.dropna().unique())
         binary = len(non_nan_values) < 3
         return binary
@@ -88,7 +88,7 @@ class PhenotypeDataset:
         # Transform to integers and -9 (missing) if the phenotype is binary
         # Leave floats and 'NA' (missing) if the phenotytpe is continuous
 
-        if cls._is_this_series_binary(series):
+        if cls.is_this_series_binary(series):
             return series.fillna(cls.BINARY_MISSING).map(int)
         else:
             return series.map(float).fillna(cls.MISSING)

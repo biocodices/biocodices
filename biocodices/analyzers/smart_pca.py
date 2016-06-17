@@ -51,7 +51,7 @@ class SmartPCA(BasePCA):
         # See ./POPGEN/README in the eigensoft package for a description
         # about each of these parameters and some extra ones.
         args = {
-            'genotypename': self.dataset.pedfile,
+            'genotypename': self.dataset.ped,
             'snpname': self._create_pedsnp(),
             'indivname': self._create_pedind(),
             'numoutevec': 15,  # PCs to take
@@ -68,7 +68,7 @@ class SmartPCA(BasePCA):
         return args
 
     def _create_parameters_file(self):
-        parfile_path = join(self.dataset.path_label + '.pca.par')
+        parfile_path = join(self.dataset.label_path + '.pca.par')
         with open(parfile_path, 'w+') as parfile:
             for argname, argvalue in self.args.items():
                 parfile.write('{}: {}\n'.format(argname, argvalue))
@@ -77,25 +77,36 @@ class SmartPCA(BasePCA):
     def _create_pedsnp(self):
         # .pedsnp format is exactly the same as .bim, but smartpca needs
         # the file to have that extension.
-        pedsnp_filepath = self.dataset.path_label + '.pedsnp'
-        copyfile(self.dataset.bimfile, pedsnp_filepath)
+        pedsnp_filepath = self.dataset.label_path + '.pedsnp'
+        copyfile(self.dataset.bim, pedsnp_filepath)
         return pedsnp_filepath
 
     def _create_pedind(self):
-        ped = pd.read_table(self.dataset.pedfile, header=None, sep='\s+')
-        pedind = ped.ix[:, :6]  # .pedind = the first 6 columns of .ped
-        pedind_filepath = self.dataset.path_label + '.pedind'
+        ped = pd.read_table(self.dataset.ped, header=None, sep='\s+',
+                            dtype=str)
+        # ^ The 'dtype=str' is important to keep sample IDs and family IDs
+        # untransformed. Otherwise, pandas tries to read them as numbers
+        # and might change them.
+        ped[5] = ped[5].replace(-9, 1)
+        # ^ EIGENSOFT Q&A says we should replace 'funny values' like -9 for 1,
+        # otherwise it sets 'ignore' to the samples with those values in the
+        # 6th column.
+        pedind = ped.ix[:, :5]  # .pedind = the first 6 columns of .ped
+        pedind_filepath = self.dataset.label_path + '.pedind'
         pedind.to_csv(pedind_filepath, sep=' ', header=False, index=False)
         return pedind_filepath
 
     def _parse_evec_file(self, df):
-        df[0] = df[0].map(lambda s: s.split(':')[1])
-        df = df.set_index(0)
-        df = df.ix[:, df.columns[:-1]]  # Remove the '???' useless col
+        # The results file joins FID and IID with a ':'.
+        df['FID'] = df[0].map(lambda s: s.split(':')[0])
+        df['IID'] = df[0].map(lambda s: s.split(':')[1])
+        df = df.set_index(['FID', 'IID'])
+        df = df.drop(0, axis=1)
+        df = df.ix[:, df.columns[:-1]]
+        # ^ Removes a '???/Case/Control' col
         df.columns = ['PC{}'.format(column) for column in df.columns]
-        df.index.name = 'sample'
         df = df.join(self.dataset.samplegroup.samples).reset_index()
-        df = df.set_index(['phenotype', 'sexcode', 'sample'])
+        df = df.set_index(['phenotype', 'sexcode', 'FID', 'IID'])
         df = df.sort_index()
         return df
 

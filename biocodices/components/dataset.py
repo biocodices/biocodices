@@ -13,16 +13,27 @@ class Dataset:
         self.label_path = expanduser(plink_label_path)
         self.dir = dirname(self.label_path)
         self._check_plinkfiles()
-
         self.label = basename(self.label_path)
-        self.panel = Panel(self.bim)
-        self.markers = self.panel.markers
-        self.samplegroup = SampleGroup(self.fam)
-        self.samples = self.samplegroup.samples
 
     def __repr__(self):
         tmpl = '[ Dataset from:\n  {}\n  {} ]'
         return tmpl.format(self.panel, self.samplegroup)
+
+    @property
+    def samplegroup(self):
+        return SampleGroup(self.fam)
+
+    @property
+    def panel(self):
+        return Panel(self.bim)
+
+    @property
+    def markers(self):
+        return self.panel.markers
+
+    @property
+    def samples(self):
+        return self.samplegroup.samples
 
     @property
     def genotypes(self):
@@ -68,6 +79,11 @@ class Dataset:
         Computes a Principal Components Analysis with the genotypes in this
         dataset. Returns a PCA object that responds to #result and #plot().
         """
+        # SmartPCA needs a ped file to read the genotypes
+        # Re-create it each time to make sure it's updated with any changes
+        # to the famfile in this dataset.
+        Plink(self.label_path).make_ped()
+
         if implementation == 'smartpca':
             pca = SmartPCA(dataset=self)
             pca.run(overwrite=overwrite, args=args)
@@ -103,10 +119,6 @@ class Dataset:
             if not isfile(self.ped):
                 raise FileNotFoundError('No bed or ped found there.')
             Plink.make_bed_from_ped(self.label_path)
-
-        self.plink = Plink(self.label_path)
-        if not isfile(self.ped):
-            self.plink.make_ped()  # Created for SmartPCA
 
     def _read_traw(self, filepath):
         df = pd.read_table(filepath, index_col='SNP')
