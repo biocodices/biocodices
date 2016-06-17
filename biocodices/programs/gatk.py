@@ -1,4 +1,4 @@
-from os.path import dirname, join, basename
+import os
 
 from biocodices.programs import AbstractGenomicsProgram, ProgramCaller
 from biocodices.helpers.general import rename_tempfile
@@ -32,8 +32,8 @@ class GATK(AbstractGenomicsProgram):
         if extra_params_str:
             params_str += (' ' + extra_params_str)
         command = '{} {}'.format(self.executable, params_str)
-        log_filepath = join(dirname(infile or outfile),
-                            (log_label or module_name))
+        log_filepath = os.path.join(os.path.dirname(infile or outfile),
+                                    (log_label or module_name))
         ProgramCaller(command).run(log_filepath=log_filepath)
         rename_tempfile(outfile, extra_output_extension)
 
@@ -48,7 +48,10 @@ class GATK(AbstractGenomicsProgram):
         return recalibrated_bam
 
     def create_depth_vcf(self, recalibrated_bam):
-        """Expects a recalibrated BAM and outputs an depth stats VCF"""
+        """
+        Expects a recalibrated BAM and outputs an depth stats VCF.
+        Generates a new metrics VCF in the same directory and returns its path.
+        """
         outfile = recalibrated_bam.replace('.bam', '.depth_stats.vcf')
         self.run('DiagnoseTargets', recalibrated_bam, outfile)
         return outfile
@@ -56,8 +59,11 @@ class GATK(AbstractGenomicsProgram):
     def create_vcf(self, recalibrated_bam):
         """
         Expects a recalibrated BAM as infile, ready for the variant calling.
+        Generates a new VCF file in the same directory and returns its path.
         """
-        outfile = recalibrated_bam.replace('.bam', '.vcf')
+        outfile = os.path.basename(recalibrated_bam).split('.')[0]
+        outfile += '.raw_variants.vcf'
+        outfile = os.path.join(os.path.dirname(recalibrated_bam), outfile)
         self.run('HaplotypeCaller', recalibrated_bam, outfile,
                  extra_output_extension='idx', task_subtype='vcf')
         return outfile
@@ -65,16 +71,21 @@ class GATK(AbstractGenomicsProgram):
     def create_gvcf(self, recalibrated_bam):
         """
         Expects a recalibrated BAM as infile, ready for the variant calling.
+        Generates a new gVCF file in the same directory and returns its path.
         """
-        outfile = recalibrated_bam.replace('.bam', '.g.vcf')
+        outfile = os.path.basename(recalibrated_bam).split('.')[0]
+        outfile += '.raw_variants.g.vcf'
+        outfile = os.path.join(os.path.dirname(recalibrated_bam), outfile)
         self.run('HaplotypeCaller', recalibrated_bam, outfile,
                  extra_output_extension='idx', task_subtype='gvcf')
         return outfile
 
     def joint_genotyping(self, gvcf_list, output_dir):
-        """Do a joint genotyping using the provided list of gVCFs. Writes
-        a multisample VCF and returns its filepath."""
-        outfile = join(output_dir, self.joint_genotyping_outfile)
+        """
+        Do a joint genotyping using the provided list of gVCFs. Writes
+        a multisample VCF and returns its filepath.
+        """
+        outfile = os.path.join(output_dir, self.joint_genotyping_outfile)
         params_str = ''
         for gvcf_filename in gvcf_list:
             params_str += ' --variant {}'.format(gvcf_filename)
@@ -135,7 +146,8 @@ class GATK(AbstractGenomicsProgram):
         Written to merge INDEL and SNP vcfs from the same sample.
         """
         # Check the VCFs are from the same sample (just checks the filename).
-        sample_ids = [basename(vcf).split('.')[0] for vcf in variant_vcfs]
+        sample_ids = [os.path.basename(vcf).split('.')[0]
+                      for vcf in variant_vcfs]
         sample_ids = list(set(sample_ids))
         if len(sample_ids) > 1:
             msg = 'Are you trying to merge vcfs from different samples? {}'

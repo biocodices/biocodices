@@ -1,8 +1,16 @@
+from datetime import datetime
 from shutil import move
 from itertools import product
 from os.path import join, abspath
 import requests
 import sys
+
+
+def timestamp(sep=':', hour=True, date=False):
+    template = '%H{0}%M{0}%S'.format(sep)
+    if date:
+        template = '%Y-%m-%d_{}'.format(template)
+    return datetime.now().strftime(template)
 
 
 def params_dict_to_str(params_dict):

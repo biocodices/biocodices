@@ -57,10 +57,10 @@ def cli():
     # was just bioco -h.
     from biocodices.components import PipelineCreator
 
-    if '--processes' in arguments:
-        arguments['--processes'] = int(arguments['--processes'])
+    if '--parallel' in arguments:
+        arguments['--parallel'] = int(arguments['--parallel'])
     else:
-        arguments['--processes'] = 1
+        arguments['--parallel'] = 1
 
     if arguments['--complete-pipeline']:
         arguments['--trim-reads'] = True
@@ -70,11 +70,14 @@ def cli():
         arguments['--joint-genotyping'] = True
         arguments['--hard-filtering'] = True
 
-    pipeline_creator = PipelineCreator(arguments)
-    pipeline_creator.pre_pipeline()
-    pipeline = pipeline_creator.build_pipeline()
-    pipeline.run()
-    pipeline_creator.post_pipeline()
+    try:
+        pipeline_creator = PipelineCreator(arguments)
+        pipeline_creator.pre_pipeline()
+        pipeline = pipeline_creator.build_pipeline()
+        pipeline.run()
+        pipeline_creator.post_pipeline()
+    except KeyboardInterrupt:
+        print('\nUser interrupted the program. Quitting.')
 
 if __name__ == '__main__':
     cli()
