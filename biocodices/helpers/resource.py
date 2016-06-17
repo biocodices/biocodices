@@ -3,6 +3,10 @@ from .config import Config
 
 
 class Resource:
+    @staticmethod
+    def available_resources():
+        return Config('resources')
+
     def __new__(self, label):
         """
         Handles resources filepaths. You can query a deep key from the yaml

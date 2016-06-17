@@ -19,11 +19,11 @@ class Project:
         return [basename(fn) for fn in
                 glob(join(self.data_dir, (pattern or '*')))]
 
-    def result_files(self, pattern=None):
+    def results_files(self, pattern=None):
         return [basename(fn) for fn in
                 glob(join(self.results_dir, (pattern or '*')))]
 
-    def result_file(self, filename):
+    def results_file(self, filename):
         return join(self.results_dir, filename)
 
     def data_file(self, filename):
