@@ -1,4 +1,4 @@
-from os.path import join, basename
+from os.path import join, dirname
 
 from biocodices.helpers import Config, Resource
 from biocodices.programs import ProgramCaller, GATK, Picard, BWA, FastQC
@@ -6,40 +6,29 @@ from biocodices.helpers.general import params_dict_to_str
 
 
 class ReadsMunger:
-    def __init__(self, results_dir):
-        self.results_dir = results_dir
-        # ^ This class needs a results_dir arg since it can't infer the results
-        # directory from the location of the input fastq files, which are in
-        # the **data** dir of each project.
-        self.executables = Config('executables')
+    def __init__(self):
+        self.fastqc = FastQC()
+        self.bwa = BWA()
         self.picard = Picard()
         self.gatk = GATK()
-        self.bwa = BWA()
-        self.fastqc = FastQC()
-
-    def analyze_reads(self, reads_filepath):
-        self.fastqc.analyze_reads(reads_filepath, self.results_dir)
 
     def trim_adapters(self, reads_filepaths):
         """
         Expects a list of two files: forward and reverse reads of the same
-        sample. It will search for an adapters file defined by Config.
+        sample. It will search for an adapters file defined in resources.yml.
         """
-        trimmed_fastqs = []
-        for reads_filepath in reads_filepaths:
-            new_fn = basename(reads_filepath).replace('.fastq', '.trimmed.fastq')
-            new_filepath = join(self.results_dir, new_fn)
-            trimmed_fastqs.append(new_filepath)
+        trimmed_fastqs = [fp.replace('.fastq', '.trimmed.fastq')
+                          for fp in reads_filepaths]
 
         params_str = params_dict_to_str(Config.params['fastq-mcf'])
         for trimmed_fastq in trimmed_fastqs:
             params_str += ' -o {}'.format(trimmed_fastq)
 
-        command = '{} {}'.format(self.executables['fastq-mcf'], params_str)
+        command = '{} {}'.format(Config.executables['fastq-mcf'], params_str)
         adapters_file = Resource('illumina_adapters_file')
         command += ' {} {} {}'.format(adapters_file, *reads_filepaths)
 
-        log_filepath = self._file('fastq-mcf')
+        log_filepath = join(dirname(trimmed_fastqs[0]), 'fastq-mcf')
         ProgramCaller(command).run(log_filepath=log_filepath)
 
         return trimmed_fastqs

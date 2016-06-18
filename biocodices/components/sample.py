@@ -1,4 +1,4 @@
-from os import join, basename, abspath, expanduser, isfile
+from os.path import join, basename, abspath, expanduser, isfile
 import pandas as pd
 from termcolor import colored
 
@@ -22,15 +22,6 @@ class Sample:
 
     def __repr__(self):
         return '<Sample {} from {}>'.format(self.id, self.sequencer_run_id)
-
-    def analyze_and_trim_reads(self):
-        for reads_filepath in self.fastqs:
-            self.reads_munger.analyze_reads(reads_filepath)
-
-        self.reads_munger.trim_adapters(self.fastqs)
-
-        for trimmed_filepath in self.trimmed_fastqs:
-            self.reads_munger.analyze_reads(trimmed_filepath)
 
     def alignment_metrics(self):
         self.reads_munger.generate_alignment_metrics(self.recalibrated_bam)
@@ -58,17 +49,18 @@ class Sample:
         if ext in ['fastq', 'trimmed.fastq']:
             return self._reads_files(ext)
 
-        return '{}.{}'.format(join(self.results_dir, self.id), ext)
+        return '{}.{}'.format(join(self.dir, self.id), ext)
 
     def _reads_files(self, ext):
-        read_filepath = join(location, '{}.{}.{}')
+        read_filepath = join(self.dir, '{}.{}.{}')
         forward_filepath = read_filepath.format(self.id, 'R1', ext)
         reverse_filepath = read_filepath.format(self.id, 'R2', ext)
         if ext == 'fastq':
             if not isfile(forward_filepath) or \
                not isfile(reverse_filepath):
-                msg = "I couldn't find BOTH R1 and R2 reads: {}, {}"
-                raise OSError(msg.format(forward_filepath, reverse_filepath))
+                msg = "I couldn't find *both* R1 and R2 reads: {}, {}"
+                raise FileNotFoundError(msg.format(forward_filepath,
+                                                   reverse_filepath))
 
         return forward_filepath, reverse_filepath
 
@@ -79,7 +71,7 @@ class Sample:
         self.clinic = self._get_clinic()
         self.long_name = '{} ({}) from {}'.format(
             self.name, self.id, self.clinic)
-        self.reads_munger = ReadsMunger(self.results_dir)
+        self.reads_munger = ReadsMunger()
         self.vcf_munger = VcfMunger()
         self.fastqs = self._files('fastq')
         self.trimmed_fastqs = self._files('trimmed.fastq')

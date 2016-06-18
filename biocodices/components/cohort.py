@@ -1,6 +1,8 @@
 import re
 from glob import glob
-from os.path import join, abspath, basename, expanduser
+from os import makedirs
+from os.path import join, abspath, basename, expanduser, dirname
+from shutil import move
 import pandas as pd
 from termcolor import colored
 
@@ -20,6 +22,7 @@ class Cohort:
         self.id = basename(self.dir)
         self.data_dir = join(self.dir, 'data')
         self.results_dir = join(self.dir, 'results')
+        self._arrange_sample_files()
         self.samples = self._search_samples()
         self.sequencer_runs = list(set([sample.sequencer_run_id
                                         for sample in self.samples]))
@@ -38,10 +41,10 @@ class Cohort:
         self.__vcf_stats = None
 
     def __repr__(self):
-        tmpl = '{} with {} from {}'
+        tmpl = '<{} with {} from {}>'
         return tmpl.format(self.__class__.__name__,
                            plural('sample', len(self.samples)),
-                           ', '.join(self.sequencer_runs))
+                           ', '.join(sorted(self.sequencer_runs)))
 
     def vcf_stats(self, vcf_FORMAT_field=None):
         """Create a pandas DataFrame with the values from one FORMAT field of
@@ -72,21 +75,24 @@ class Cohort:
         median_coverages = pd.Series(median_coverages)
         return median_coverages
 
-    #  def plot_variant_calling_metrics(self):
-        #  frames = [sample.read_variant_calling_metrics()
-                  #  for sample in self.samples]
-        #  df = pd.concat(frames, ignore_index=True).dropna(axis=1)
-        #  plotter = VariantCallingMetricsPlotter(df)
-        #  plotter.plot_and_savefig(self.dir)
+    def _arrange_sample_files(self):
+        glob_expr = join(self.data_dir, '*.{}'.format(Sample.reads_format))
+
+        # Move the reads files from the data to the results dir
+        # Create a folder per sample to store them.
+        for reads_fp in sorted(glob(glob_expr)):
+            sample_id = re.search(r'(.*).R(1|2)', basename(reads_fp)).groups(1)[0]
+            sample_dir = join(self.results_dir, sample_id)
+            makedirs(sample_dir, exist_ok=True)
+            move(reads_fp, join(sample_dir, basename(reads_fp)))
 
     def _search_samples(self):
-        glob_expr = join(self.data_dir, '*.{}'.format(Sample.reads_format))
-        all_reads_filenames = sorted(glob(glob_expr))
-        sample_ids = [re.search(r'(.*).R1', basename(reads_fn)).groups(1)[0]
-                      for reads_fn in all_reads_filenames
-                      if 'R1' in reads_fn]
-
-        return [Sample(sample_id, self) for sample_id in sample_ids]
+        samples = []
+        for reads_fp in sorted(glob(join(self.results_dir, '*/*.R1.*'))):
+            # Create only one Sample object per pair of reads R1-R2
+            sample_dir = dirname(reads_fp)
+            samples.append(Sample(sample_dir))
+        return samples
 
     def msg(self, msg):
         prefix = colored('[{}]'.format(self.id), 'magenta')

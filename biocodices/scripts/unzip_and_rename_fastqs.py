@@ -62,15 +62,15 @@ def main():
             print("(!) Please add a PATTERN to match this {}\n".format(fn))
             sys.exit()
 
-    print('\nMoving the renamed files to a sister directory "results"\n')
-    for fn in glob('*.fastq'):
-        current_filepath = abspath(fn)
-        dest_dir = join(dirname(current_filepath), '../results')
-        dest_dir = abspath(dest_dir)
-        makedirs(dest_dir, exist_ok=True)
-        move(current_filepath, join(dest_dir, basename(current_filepath)))
+    #  print('\nMoving the renamed files to a sister directory "results"\n')
+    #  for fn in glob('*.fastq'):
+        #  current_filepath = abspath(fn)
+        #  dest_dir = join(dirname(current_filepath), '../results')
+        #  dest_dir = abspath(dest_dir)
+        #  makedirs(dest_dir, exist_ok=True)
+        #  move(current_filepath, join(dest_dir, basename(current_filepath)))
 
-    print("=> Done. You can find the unzipped fastq files in ../restuls\n")
+    #  print("=> Done. You can find the unzipped fastq files in ../restuls\n")
 
 
 if __name__ == '__main__':

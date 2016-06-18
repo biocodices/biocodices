@@ -1,17 +1,31 @@
 import luigi
+
 from biocodices.components import Cohort
+from biocodices.programs import FastQC
+from biocodices.variant_calling import ReadsMunger
 
 
 class TrimReads(luigi.Task):
-    cohort_base_dir = luigi.Parameter()
-
-    def run(self):
-        self.cohort = Cohort(self.cohort_base_dir)
-        for sample in self.cohort.samples:
-            sample.analyze_and_trim_reads
+    base_dir = luigi.Parameter(default='.')
+    reads_munger = ReadsMunger()
+    fastqc = FastQC()
 
     def output(self):
-        out = []
+        self.cohort = Cohort(self.base_dir)
+
+        return [luigi.LocalTarget(trimmed_fastq)
+                for sample in self.cohort.samples
+                for trimmed_fastq in sample.trimmed_fastqs]
+
+    def run(self):
         for sample in self.cohort.samples:
-            out += [luigi.LocalTarget(reads_file)
-                    for reads_file in sample.trimmed_fastqs]
+
+            # The analysis is done for each reads file separatedly
+            #  for reads_filepath in sample.fastqs:
+                #  self.fastqc.analyze_reads(reads_filepath)
+
+            # The trimming is done for the pair in the same command:
+            self.reads_munger.trim_adapters(sample.fastqs)
+
+if __name__ == '__main__':
+    luigi.run()
