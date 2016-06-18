@@ -1,25 +1,23 @@
-import os
+from os import join, basename, abspath, expanduser, isfile
 import pandas as pd
 from termcolor import colored
 
 from biocodices.variant_calling import ReadsMunger, VcfMunger
-from biocodices.helpers.language import seconds_to_hms_string
 from biocodices.helpers import Config
 
 
 class Sample:
     reads_format = 'fastq'
 
-    def __init__(self, sample_id, cohort):
+    def __init__(self, base_dir):
         """
-        Expects a sample_id and a Cohort object.
-        It will look for its fastq files in the cohort.data_dir with
-        filenames like: <sample_id>.R1.fastq, <sample_id>.R2.fastq
+        Expects a base directory named after a sample. The directory basename
+        will be used as a label or ID for the sample. The directory should
+        contain fastq files like: <sample_id>.R1.fastq, <sample_id>.R2.fastq
         (for the forward and reverse reads, respectively).
         """
-        self.id = sample_id
-        self.cohort = cohort
-        self.results_dir = os.path.join(self.cohort.results_dir, self.id)
+        self.id = basename(base_dir)
+        self.dir = abspath(expanduser(base_dir))
         self._set_data()
 
     def __repr__(self):
@@ -40,7 +38,7 @@ class Sample:
 
     def get_median_coverage(self):
         self.depth_vcf = self._files('realigned.recalibrated.depth_stats.vcf')
-        if not os.path.isfile(self.depth_vcf):
+        if not isfile(self.depth_vcf):
             self.depth_vcf = self.reads_munger.depth_vcf(self.recalibrated_bam)
         depth_stats = VcfMunger.read_depth_stats_vcf(self.depth_vcf)
         return pd.Series(depth_stats).median()
@@ -52,36 +50,23 @@ class Sample:
         df['sample'] = self.id
         return df
 
-    def log(self, extension):
-        return os.path.join(self.results_dir,
-                            '{}.{}.log'.format(self.id, extension))
-
     def msg(self, msg):
         prefix = colored('[{}]'.format(self.id), 'cyan')
         return '{} {}'.format(prefix, msg)
-
-    def _log_total_time(self, t1, t2):
-        elapsed = seconds_to_hms_string((t2 - t1).seconds)
-        with open(self.log('time'), 'w') as logfile:
-            msg = 'Variant calling for {} took {}.\n'
-            logfile.write(msg.format(self.id, elapsed))
 
     def _files(self, ext):
         if ext in ['fastq', 'trimmed.fastq']:
             return self._reads_files(ext)
 
-        return '{}.{}'.format(os.path.join(self.results_dir, self.id), ext)
+        return '{}.{}'.format(join(self.results_dir, self.id), ext)
 
     def _reads_files(self, ext):
-        location = self.cohort.data_dir
-        if ext == 'trimmed.fastq':
-            location = self.results_dir
-        read_filepath = os.path.join(location, '{}.{}.{}')
+        read_filepath = join(location, '{}.{}.{}')
         forward_filepath = read_filepath.format(self.id, 'R1', ext)
         reverse_filepath = read_filepath.format(self.id, 'R2', ext)
         if ext == 'fastq':
-            if not os.path.isfile(forward_filepath) or \
-               not os.path.isfile(reverse_filepath):
+            if not isfile(forward_filepath) or \
+               not isfile(reverse_filepath):
                 msg = "I couldn't find BOTH R1 and R2 reads: {}, {}"
                 raise OSError(msg.format(forward_filepath, reverse_filepath))
 
@@ -120,13 +105,13 @@ class Sample:
         try:
             return Config('db')[self.id][0]
         except KeyError:
-            return self.cohort.id
+            return self.id
 
     def _get_seq_run_id(self):
         try:
             return Config('db')[self.id][1]
         except KeyError:
-            return self.cohort.id
+            return self.id
 
     def _get_name(self):
         try:

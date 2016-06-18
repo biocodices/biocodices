@@ -55,7 +55,8 @@ class Pipeline:
 
         for task_label, task in self.tasks.items():
             self.print_and_log_to_file(task_label)
-            task()
+            result = task()
+            print('result:', result)
 
         self.total_time = stopwatch.stop()
         finish_message = 'Finished the pipeline. Total time: {}.'

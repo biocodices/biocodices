@@ -121,7 +121,7 @@ class PipelineCreator:
                            self.cohort.filtered_vcf)
             pipeline.add_task(func, self.cohort.msg('Apply genotype filters'))
 
-            func = partial(self.vcf_munder.limit_regions,
+            func = partial(self.vcf_munger.limit_regions,
                            self.cohort.geno_filtered_vcf)
             pipeline.add_task(func, self.cohort.msg('Limit VCF regions'))
 
