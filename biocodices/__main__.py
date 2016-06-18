@@ -33,6 +33,9 @@ Options:
     -f --hard-filtering                 Do a hard filtering on the cohort
                                         VCF. Parameters will be read from:
                                         ~/.biocodices/parameters.yml
+    -u --subset                         Create a VCF for each sample at the end
+                                        of the process, subsetting the
+                                        multisample VCF.
     -s --samples SAMPLE SAMPLE...       Do the steps only on these samples.
     -k --skip-samples SAMPLE SAMPLE...  Skip these samples, do the rest.
     -m --metrics                        Generate and plot alignment and
@@ -72,6 +75,8 @@ def cli():
         arguments['--metrics'] = True
         arguments['--joint-genotyping'] = True
         arguments['--hard-filtering'] = True
+        arguments['--annotate'] = True
+        arguments['--subset'] = True
 
     try:
         pipeline_creator = PipelineCreator(arguments)

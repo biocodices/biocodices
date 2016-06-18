@@ -59,7 +59,7 @@ class GATK(AbstractGenomicsProgram):
         Generates a new VCF file in the same directory and returns its path.
         """
         outfile = os.path.basename(recalibrated_bam).split('.')[0]
-        outfile += Config.filenames['sample_raw_vcf_suffix']
+        outfile += Config.filenames['sample_raw_vcf']
         outfile = os.path.join(os.path.dirname(recalibrated_bam), outfile)
         self.run('HaplotypeCaller', recalibrated_bam, outfile,
                  extra_output_extension='idx', task_subtype='vcf')
@@ -71,7 +71,7 @@ class GATK(AbstractGenomicsProgram):
         Generates a new gVCF file in the same directory and returns its path.
         """
         outfile = os.path.basename(recalibrated_bam).split('.')[0]
-        outfile += Config.filenames['sample_raw_gvcf_suffix']
+        outfile += Config.filenames['sample_raw_gvcf']
         outfile = os.path.join(os.path.dirname(recalibrated_bam), outfile)
         self.run('HaplotypeCaller', recalibrated_bam, outfile,
                  extra_output_extension='idx', task_subtype='gvcf')
@@ -95,6 +95,10 @@ class GATK(AbstractGenomicsProgram):
         return outfile
 
     def select_variants(self, vcf, variant_type):
+        """
+        Selects variants of a type (SNP, INDEL) ant creates a new VCF with
+        them. Returns the filepath of the new file.
+        """
         variant_vcf = vcf.replace('.vcf', '.{}.vcf'.format(variant_type))
         module_name = 'SelectVariants'
         log_label = '{}_{}'.format(module_name, variant_type)
@@ -119,20 +123,6 @@ class GATK(AbstractGenomicsProgram):
         filter_expression = ' || '.join(filters)
         params_str = '--filterName {} --filterExpression "{}"'.format(
             filter_name, filter_expression)
-        log_label = '{}_{}'.format(module_name, filter_name)
-
-        self.run(module_name, vcf, outfile, log_label=log_label,
-                 extra_params_str=params_str, extra_output_extension='idx')
-        return outfile
-
-    def filter_genotypes(self, vcf):
-        module_name = 'VariantFiltration'
-        filter_name = 'genotype'
-        outfile = vcf.replace('.vcf', '.geno-filtered.vcf')
-        filters = self.params['{}_filters'.format(module_name)][filter_name]
-        filter_expression = ' || '.join(filters)
-        params_str = '--genotypeFilterName {} '.format(filter_name)
-        params_str += '--genotypeFilterExpression "{}"'.format(filter_expression)
         log_label = '{}_{}'.format(module_name, filter_name)
 
         self.run(module_name, vcf, outfile, log_label=log_label,
@@ -166,6 +156,23 @@ class GATK(AbstractGenomicsProgram):
         # with the -V <variant> flag, leaving the -I flag unused.
         self.run('CombineVariants', None, outfile, extra_params_str=params_str,
                  extra_output_extension='idx')
+        return outfile
+
+    def filter_genotypes(self, vcf):
+        """
+        Apply filters to each sample's genotype with the thresholds defined
+        in the parameters file. Generates a new VCF, returns its filepath.
+        """
+        module_name = 'VariantFiltration'
+        outfile = vcf.replace('.vcf', '.geno-filtered.vcf')
+        filters = self.params['{}_filters'.format(module_name)]['genotype']
+        filter_expression = ' || '.join(filters)
+        params_str = '--genotypeFilterName genotype_filter '
+        params_str += '--genotypeFilterExpression "{}"'.format(filter_expression)
+        log_label = '{}_genotype_filter'.format(module_name)
+
+        self.run(module_name, vcf, outfile, log_label=log_label,
+                 extra_params_str=params_str, extra_output_extension='idx')
         return outfile
 
     def _realigner_target_creator(self, bam):

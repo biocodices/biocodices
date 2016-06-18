@@ -32,26 +32,14 @@ class Picard(AbstractGenomicsProgram):
         self.run('CollectAlignmentSummaryMetrics', recalibrated_bam, outfile)
         return outfile
 
-    #  def variant_calling_metrics(self, filtered_vcf):
-        #  outfile = infile.replace('.vcf', '')
-        #  self.run('CollectVariantCallingMetrics', infile, outfile,
-        #           out_rename=False)
-        #  # ^ out_rename=False since this picard module will create two ouput files
-        #  # appending 'variant_calling_{detail,summary}_metrics' at the end of
-        #  # each, so my automated renaming will fail when looking for my .temp
-        #  # files. I do the renaming here, 'manually':
-        #  outfiles = [outfile + '.temp.variant_calling_detail_metrics',
-                    #  outfile + '.temp.variant_calling_summary_metrics']
-        #  for outfile in outfiles:
-            #  rename(outfile, outfile.replace('.temp', ''))
-
-    def add_or_replace_read_groups(self, sample):
-        outfile = sample.bam
+    def add_or_replace_read_groups(self, sam_path, sample_id,
+                                   sample_library_id, sequencer_run_id):
+        outfile = sam_path.replace('.sam', '.bam')
         extra_params_variables = {
-            'sample_id': sample.id,
-            'library_id': sample.library_id,
-            'ngs_id': sample.sequencer_run_id,
+            'sample_id': sample_id,
+            'library_id': sample_library_id,
+            'ngs_id': sequencer_run_id,
         }
-        self.run('AddOrReplaceReadGroups', sample.sam, outfile,
+        self.run('AddOrReplaceReadGroups', sam_path, outfile,
                  extra_params_variables, 'bai')
         return outfile

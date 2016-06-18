@@ -17,35 +17,21 @@ class VcfMunger:
         of INDELS and SNPS, apply different filters to each sub-VCF, and then
         merge the filtered VCFs in a new one. It returns the filepath of the
         last VCF generated."""
-        snps_vcf, indels_vcf = self.create_snp_and_indel_vcfs(vcf_path)
-        filtered_snps_vcf = self.apply_variant_filters(snps_vcf, 'snps')
-        filtered_indels_vcf = self.apply_variant_filters(indels_vcf, 'indels')
+        snps_vcf = self.gatk.select_variants(vcf_path, 'snps')
+        indels_vcf = self.gatk.select_variants(vcf_path, 'indels')
+        filtered_snps_vcf = self.gatk.filter_variants_vcf(snps_vcf, 'snps')
+        filtered_indels_vcf = self.gatk.filter_variants_vcf(indels_vcf,
+                                                            'indels')
         merged_vcf_filepath = join(dirname(vcf_path),
-                                   GATK.hard_filtering_outfile)
-        merged_vcf = self.merge_variant_vcfs([filtered_snps_vcf,
-                                              filtered_indels_vcf],
-                                             outfile=merged_vcf_filepath)
+                                   Config.filenames['cohort_filtered_vcf'])
+        merged_vcf = self.gatk.combine_variant_vcfs(
+            [filtered_snps_vcf, filtered_indels_vcf],
+            outfile=merged_vcf_filepath)
 
         return merged_vcf
 
-    def create_snp_and_indel_vcfs(self, vcf_file):
-        snps_vcf = self.gatk.select_variants(vcf_file, 'snps')
-        indels_vcf = self.gatk.select_variants(vcf_file, 'indels')
-        return snps_vcf, indels_vcf
-
-    def apply_variant_filters(self, vcf_path, variant_type):
-        return self.gatk.filter_variants_vcf(vcf_path, variant_type)
-
-    def merge_variant_vcfs(self, variant_vcfs, outfile):
-        return self.gatk.combine_variant_vcfs(variant_vcfs, outfile=outfile)
-
     def variant_calling_metrics(self, vcf_path):
         return self.picard.variant_calling_metrics(vcf_path)
-
-    def subset_samples(self, vcf_path, sample_ids, outfile):
-        """Extract a list of samples from a multisample VCF to a new VCF."""
-        self.bcftools.subset_samples(vcf_path, sample_ids, outfile)
-        return outfile
 
     def limit_regions(self, vcf_path):
         """Limit the variants in a VCF within the regions defined in a .bed
@@ -53,13 +39,8 @@ class VcfMunger:
         indexed_gzipped_vcf = self.bcftools.compress_and_index_vcf(vcf_path)
         return self.bcftools.limit_regions(indexed_gzipped_vcf)
 
-    def apply_genotype_filters(self, vcf_path):
-        """Apply filters to each sample's genotype with the thresholds defined
-        in the parameters file. Generates a new VCF, returns its filepath."""
-        return self.gatk.filter_genotypes(vcf_path)
-
     def annotate_with_snpeff(self, vcf_path):
-        """Add SnpEff annotations in the ANN INFO field. Generates a new VCF."""
+        """Add SnpEff annotations in the ANN INFO field. Generates a VCF."""
         app_name = 'SnpEff'
         outfile = vcf_path.replace('.vcf', '.{}.vcf'.format(app_name))
         command = '{executable} -v {reference_genome} {in}'.format(**{

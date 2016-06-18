@@ -6,8 +6,7 @@ from termcolor import colored
 
 from biocodices.components import Sample
 from biocodices.variant_calling import VcfMunger
-from biocodices.programs import GATK
-from biocodices.helpers import Config, plural
+from biocodices.helpers import plural
 from biocodices.plotters import AlignmentMetricsPlotter
 
 
@@ -30,10 +29,12 @@ class Cohort:
             msg = 'I found no sample files (.fastq) in {}'
             raise EmptyCohortException(msg.format(self.data_dir))
 
-        self.unfiltered_vcf = join(self.results_dir,
-                                   Config.filenames['cohort_raw_vcf'])
-        self.filtered_vcf = join(self.results_dir,
-                                 Config.filenames['cohort_filtered_vcf'])
+        self.unfiltered_vcf = join(self.results_dir, 'raw_variants.vcf')
+        self.filtered_vcf = join(self.results_dir, 'filtered.vcf')
+        self.geno_filtered_vcf = join(self.results_dir,
+                                      'filtered.geno-filtered.vcf')
+        self.limited_vcf = join(self.results_dir,
+                                'filtered.geno-filtered.lim.vcf')
         self.__vcf_stats = None
 
     def __repr__(self):
@@ -55,19 +56,6 @@ class Cohort:
             return self.__vcf_stats.loc[:, col_index]
 
         return self.__vcf_stats
-
-    def joint_genotyping(self):
-        gatk = GATK()
-        gvcf_list = [sample.raw_gvcf for sample in self.samples]
-        output_dir = self.results_dir
-        gatk.joint_genotyping(gvcf_list, output_dir)
-
-    def apply_filters_to_vcf(self, vcf_path):
-        return self.vcf_munger.hard_filtering(vcf_path)
-
-    def subset_samples(self, multisample_vcf, sample_ids, outfile):
-        return self.vcf_munger.subset_samples(multisample_vcf, sample_ids,
-                                              outfile)
 
     def plot_alignment_metrics(self):
         frames = [sample.read_alignment_metrics() for sample in self.samples]

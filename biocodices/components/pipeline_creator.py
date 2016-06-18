@@ -5,6 +5,8 @@ from collections import OrderedDict
 from termcolor import colored
 
 from biocodices import software_name
+from biocodices.variant_calling import VcfMunger
+from biocodices.programs import GATK, BcfTools
 from biocodices.helpers import all_log_filepaths, logo, timestamp
 from biocodices.components.cohort import Cohort, EmptyCohortException
 from biocodices.components import Pipeline
@@ -17,6 +19,9 @@ class PipelineCreator:
         base directory to instatiate a Cohort and look for samples.
         """
         self.args = arguments
+        self.gatk = GATK()
+        self.bcftools = BcfTools()
+        self.vcf_munger = VcfMunger()
 
     def pre_pipeline(self):
         self._print_welcome_message()
@@ -53,8 +58,10 @@ class PipelineCreator:
             # works in parallel. Plus it takes a humongous amount of RAM.
             task_group = OrderedDict()
             for sample in self.cohort.samples:
+                func = partial(sample.reads_munger.align_to_reference,
+                               sample.trimmed_fastqs)
                 task_label = sample.msg('Align reads')
-                task_group[task_label] = sample.align_reads
+                task_group[task_label] = func
 
             # Limit the parallelization in this step to a max of 2 processes
             # since the aligner is a memory hog.
@@ -65,7 +72,10 @@ class PipelineCreator:
             task_group = OrderedDict()
             for sample in self.cohort.samples:
                 task_label = sample.msg('Process alignment files')
-                task_group[task_label] = sample.process_alignment_files
+                func = partial(sample.reads_munger.process_alignment_files,
+                               sample.sam, sample.id, sample.library_id,
+                               sample.sequencer_run_id)
+                task_group[task_label] = func
             pipeline.add_multitask(task_group,
                                    self.cohort.msg('Alignment processing'),
                                    n_processes=n_processes)
@@ -82,7 +92,9 @@ class PipelineCreator:
             task_group = OrderedDict()
             for sample in self.cohort.samples:
                 task_label = sample.msg('Create gVCF')
-                task_group[task_label] = sample.create_gvcf
+                func = partial(self.gatk.create_gvcf,
+                               sample.recalibrated_bam)
+                task_group[task_label] = func
             pipeline.add_multitask(task_group,
                                    self.cohort.msg('Haplotype Caller'),
                                    n_processes=n_processes)
@@ -94,27 +106,40 @@ class PipelineCreator:
                               self.cohort.msg('Compute median coverages'))
 
         if self.args['--joint-genotyping']:
-            pipeline.add_task(self.cohort.joint_genotyping,
-                              self.cohort.msg('Joint genotyping'))
+            gvcf_list = [sample.raw_gvcf for sample in self.cohort.samples]
+            func = partial(self.gatk.joint_genotyping,
+                           gvcf_list=gvcf_list,
+                           output_dir=self.cohort.results_dir)
+            pipeline.add_task(func, self.cohort.msg('Joint genotyping'))
 
         if self.args['--hard-filtering']:
-            pipeline.add_task(partial(self.cohort.apply_filters_to_vcf,
-                                      self.cohort.unfiltered_vcf),
-                              self.cohort.msg('Hard filtering'))
+            #  func = partial(self.vcf_munger.hard_filtering,
+                           #  self.cohort.unfiltered_vcf)
+            #  pipeline.add_task(func, self.cohort.msg('Hard filtering'))
 
+            func = partial(self.gatk.filter_genotypes,
+                           self.cohort.filtered_vcf)
+            pipeline.add_task(func, self.cohort.msg('Apply genotype filters'))
+
+            func = partial(self.vcf_munder.limit_regions,
+                           self.cohort.geno_filtered_vcf)
+            pipeline.add_task(func, self.cohort.msg('Limit VCF regions'))
+
+
+        if self.args['--subset']:
             task_group = OrderedDict()
+
             for sample in self.cohort.samples:
                 task_label = sample.msg('Subset from multisample VCF')
-                task = partial(self.cohort.subset_samples,
-                               self.cohort.filtered_vcf,
-                               [sample.id], sample.filtered_vcf)
+                task = partial(self.bcftools.subset_samples,
+                               vcf_path=self.cohort.filtered_vcf,
+                               sample_ids=[sample.id],
+                               outfile=sample.filtered_vcf)
                 task_group[task_label] = task
-            pipeline.add_multitask(task_group,
-                                   self.cohort.msg('Subset from multisample VCF'),
-                                   n_processes=n_processes)
 
-        #  if self.args['--annotation']:
-
+            pipeline.add_multitask(
+                task_group, self.cohort.msg('Subset from multisample VCF'),
+                n_processes=n_processes)
 
         self.pipeline = pipeline
         return pipeline

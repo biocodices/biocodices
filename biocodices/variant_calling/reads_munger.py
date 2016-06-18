@@ -50,26 +50,20 @@ class ReadsMunger:
         outfile = self.bwa.align_to_reference(reads_filepaths)
         return outfile
 
-    def add_or_replace_read_groups(self, sample):
-        return self.picard.add_or_replace_read_groups(sample)
+    def process_alignment_files(self, sam_path, sample_id,
+                                sample_library_id, sequencer_run_id):
+        picard_args = sam_path, sample_id, sample_library_id, sequencer_run_id
+        bam = self.picard.add_or_replace_read_groups(*picard_args)
+        realigned_bam = self.gatk.realign_reads_around_indels(bam)
+        recalibrated_bam = self.gatk.recalibrate_quality_scores(realigned_bam)
 
-    def realign_reads_around_indels(self, bam_filepath):
-        return self.gatk.realign_reads_around_indels(bam_filepath)
-
-    def recalibrate_quality_scores(self, realigned_bam):
-        return self.gatk.recalibrate_quality_scores(realigned_bam)
+        return recalibrated_bam
 
     def generate_alignment_metrics(self, recalibrated_bam):
         return self.picard.alignment_metrics(recalibrated_bam)
 
     def depth_vcf(self, recalibrated_bam):
         return self.gatk.create_depth_vcf(recalibrated_bam)
-
-    def create_vcf(self, recalibrated_bam):
-        return self.gatk.create_vcf(recalibrated_bam)
-
-    def create_gvcf(self, recalibrated_bam):
-        return self.gatk.create_gvcf(recalibrated_bam)
 
     #  def generate_variant_calling_metrics(self, filtered_vcf):
         #  self.picard.variant_calling_metrics(filtered_vcf)
