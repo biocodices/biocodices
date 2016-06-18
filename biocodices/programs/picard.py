@@ -27,14 +27,16 @@ class Picard(AbstractGenomicsProgram):
         if out_rename:
             rename_tempfile(outfile, extra_output_extension)
 
-    def alignment_metrics(self, recalibrated_bam):
-        outfile = recalibrated_bam.replace('.bam', '.alignment_metrics.tsv')
+    def generate_alignment_metrics(self, recalibrated_bam, out_path=None):
+        outfile = out_path or \
+            recalibrated_bam.replace('.bam', '.alignment_metrics.tsv')
         self.run('CollectAlignmentSummaryMetrics', recalibrated_bam, outfile)
         return outfile
 
     def add_or_replace_read_groups(self, sam_path, sample_id,
-                                   sample_library_id, sequencer_run_id):
-        outfile = sam_path.replace('.sam', '.bam')
+                                   sample_library_id, sequencer_run_id,
+                                   out_path=None):
+        outfile = out_path or sam_path.replace('.sam', '.bam')
         extra_params_variables = {
             'sample_id': sample_id,
             'library_id': sample_library_id,

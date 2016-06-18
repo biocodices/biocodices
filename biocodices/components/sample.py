@@ -1,8 +1,9 @@
 from os.path import join, basename, abspath, expanduser, isfile
+from shutil import move
 import pandas as pd
 from termcolor import colored
 
-from biocodices.variant_calling import ReadsMunger, VcfMunger
+from biocodices.variant_calling import VcfMunger
 from biocodices.helpers import Config
 
 
@@ -23,15 +24,8 @@ class Sample:
     def __repr__(self):
         return '<Sample {} from {}>'.format(self.id, self.sequencer_run_id)
 
-    def alignment_metrics(self):
-        self.reads_munger.generate_alignment_metrics(self.recalibrated_bam)
-        self.get_median_coverage()
-
-    def get_median_coverage(self):
-        self.depth_vcf = self._files('realigned.recalibrated.depth_stats.vcf')
-        if not isfile(self.depth_vcf):
-            self.depth_vcf = self.reads_munger.depth_vcf(self.recalibrated_bam)
-        depth_stats = VcfMunger.read_depth_stats_vcf(self.depth_vcf)
+    def get_median_coverage(self, depth_vcf):
+        depth_stats = VcfMunger.read_depth_stats_vcf(depth_vcf)
         return pd.Series(depth_stats).median()
 
     def read_alignment_metrics(self):
@@ -49,6 +43,9 @@ class Sample:
         if ext in ['fastq', 'trimmed.fastq']:
             return self._reads_files(ext)
 
+        return self.file(ext)
+
+    def file(self, ext):
         return '{}.{}'.format(join(self.dir, self.id), ext)
 
     def _reads_files(self, ext):
@@ -71,12 +68,11 @@ class Sample:
         self.clinic = self._get_clinic()
         self.long_name = '{} ({}) from {}'.format(
             self.name, self.id, self.clinic)
-        self.reads_munger = ReadsMunger()
         self.vcf_munger = VcfMunger()
         self.fastqs = self._files('fastq')
         self.trimmed_fastqs = self._files('trimmed.fastq')
-        self.sam = self._files('sam')
-        self.bam = self._files('bam')
+        #  self.sam = self._files('sam')
+        #  self.bam = self._files('bam')
         self.realigned_bam = self._files('realigned.bam')
         self.recalibrated_bam = self._files('realigned.recalibrated.bam')
         self.raw_vcf = self._files(Config.filenames['sample_raw_vcf'])

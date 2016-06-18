@@ -5,5 +5,6 @@ from .plink import Plink
 from .picard import Picard
 from .bwa import BWA
 from .fastqc import FastQC
+from .fastq_mcf import trim_adapters
 from .vcf_tools import VcfTools
 from .bcf_tools import BcfTools
