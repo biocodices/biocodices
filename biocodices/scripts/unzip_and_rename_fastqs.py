@@ -3,62 +3,75 @@
 import re
 import subprocess
 import sys
-from os.path import join, expanduser, isdir, isfile, abspath
 from os import rename, makedirs
+from os.path import basename, dirname, join, isfile, abspath
 from glob import glob
-from shutil import copy2
+from shutil import move
 
 
-def main(data_dir):
-    # Pattern to extract the sample ID
-    filename_pattern = r'(SAR\d+).*01(\d{5}|Control).*(R\d)'
+# Pattern to extract the sample ID from the fastq filenames
+PATTERNS = [
+    r'(SAR\d+).*01-(\d{5}).*_(R\d)',
+    r'(SAR\d+).*01(\d{5}).*_(R\d)',
+    r'(sar\d+).*ENPv1_(\d{5}).*_(R\d)',
+]
 
-    gzipped_fastq_glob = join(data_dir, '*.fastq.gz')
-    gzipped_fastq_filepaths = glob(gzipped_fastq_glob)
+# Add this prefix to the new FASTQ filenames
+PREFIX_TO_ADD = 'ENPv1'
 
-    msg = 'Backuping the {} zipped fastqs and renaming the copies...'
-    print(msg.format(len(gzipped_fastq_filepaths)))
 
-    for fp in gzipped_fastq_filepaths:
-        # Copy original files to archive directory
-        original_files_dir = join(data_dir, 'zipped_fastqs')
-        makedirs(original_files_dir, exist_ok=True)
-        copy2(fp, original_files_dir)
+def main():
+    print('\nUnzipping the fastq.gz files\n')
+    for fn in glob('*.fastq.gz'):
+        if any(bit in fn for bit in ['cont', 'Cont']):
+            continue  # Skip controls
 
-    # This is a separate loop so we make sure the backuping is complete
-    # before attempting the unzipping.
-    for fp in gzipped_fastq_filepaths:
-        # Rename with a cleaner sample ID
-        match = re.search(filename_pattern, fp)
-        inta_sample_id, sample_id, read = match.groups(1)
-        if 'Control' in fp:
-            new_fp = join(data_dir, 'Control_{}.{}.fastq.gz'.format(inta_sample_id, read))
-        else:
-            new_fp = join(data_dir, 'ENPv1_{}.{}.fastq.gz'.format(sample_id, read))
-            if isfile(new_fp):
-                msg = ('File {} already exists. Repeated sample ID? Check the '
-                       'input fastq files for sample {}/{}.')
-                raise Exception(msg.format(new_fp, inta_sample_id, sample_id))
-        rename(fp, new_fp)
+        command = 'gzip -dc {}'.format(fn)
+        new_fn = fn.replace('.fastq.gz', '.fastq')
 
-    print('Unzipping!')
-    for fp in glob(join(data_dir, "*.fastq.gz")):  # Get the renamed filepaths
-        command = 'gzip -d {}'.format(fp)
-        print(command)
-        subprocess.run(command.split(' '), check=True)
+        with open(new_fn, 'w') as new_file:
+            print(command + ' > ' + new_fn)
+            subprocess.run(command.split(' '), stdout=new_file, check=True)
 
-    print('\n=> Done. Go check {}'.format(abspath(data_dir)))
+    print('\nRenaming the unzipped fastqs with sample IDs\n')
+    for fn in glob('*.fastq'):
+        matched_this_one = False
+
+        for pattern in PATTERNS:
+            match = re.search(pattern, fn)
+            if not match:
+                continue
+
+            inta_sample_id, sample_id, read_number = match.groups(1)
+            new_fn = '{}_{}.{}.fastq'.format(PREFIX_TO_ADD, sample_id,
+                                             read_number)
+            if isfile(new_fn):
+                msg = ('(!) File {} already exists.\n\n'
+                       'Repeated sample ID? Check '
+                       'the input fastq files for sample {}/{}.')
+                print(msg.format(new_fn, inta_sample_id, sample_id))
+                sys.exit()
+
+            print(fn + ' -> ' + new_fn)
+            rename(fn, new_fn)
+
+            matched_this_one = True
+            break  # if a pattern was found, don't keep trying with more
+
+        if not matched_this_one:
+            print("(!) Please add a PATTERN to match this {}\n".format(fn))
+            sys.exit()
+
+    print('\nMoving the renamed files to a sister directory "results"\n')
+    for fn in glob('*.fastq'):
+        current_filepath = abspath(fn)
+        dest_dir = join(dirname(current_filepath), '../results')
+        dest_dir = abspath(dest_dir)
+        makedirs(dest_dir, exist_ok=True)
+        move(current_filepath, join(dest_dir, basename(current_filepath)))
+
+    print("=> Done. You can find the unzipped fastq files in ../restuls\n")
 
 
 if __name__ == '__main__':
-    args = sys.argv
-    if len(args) != 2:
-        print('\nUsage:')
-        print('{} <data dir with fastq.gz files>'.format(__file__))
-        sys.exit()
-
-    data_dir = expanduser(sys.argv[1])
-    if not isdir(data_dir):
-        print("\nAre you sure that directory exists?\n{}".format(data_dir))
-
-    main(data_dir)
+    main()
