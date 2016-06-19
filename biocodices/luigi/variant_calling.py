@@ -122,7 +122,8 @@ class HaplotypeCall(luigi.Task):
 class CohortAlignmentMetrics(luigi.Task):
     base_dir = luigi.Parameter(default='.')
     def requires(self):
-        return [AlignmentMetrics(sample.dir) for sample in self.cohort.samples]
+        for sample in self.cohort.samples:
+            yield AlignmentMetrics(sample.dir)
     def run(self):
         self.cohort.plot_alignment_metrics(
             metrics_files=[task.output().fn for task in self.requires()],
@@ -135,7 +136,8 @@ class CohortAlignmentMetrics(luigi.Task):
 class JointGenotyping(luigi.Task):
     base_dir = luigi.Parameter(default='.')
     def requires(self):
-        return [HaplotypeCall(sample.dir) for sample in self.cohort.samples]
+        for sample in self.cohort.samples:
+            yield HaplotypeCall(sample.dir)
     def run(self):
         gvcf_list = [task.output().fn for task in self.requires()]
         GATK().joint_genotyping(gvcf_list=gvcf_list, out_path=self.output().fn)
@@ -185,8 +187,7 @@ class LimitRegions(luigi.Task):
 
 class SnpEffAnnotation(luigi.Task):
     base_dir = luigi.Parameter(default='.')
-    def requires(self):
-        return LimitRegions(self.cohort.dir)
+    def requires(self): return LimitRegions(self.cohort.dir)
     def run(self):
         VcfMunger().annotate_with_snpeff(self.infile, out_path=self.outfile)
     def output(self):
@@ -198,8 +199,7 @@ class SnpEffAnnotation(luigi.Task):
 
 class VEPAnnotation(luigi.Task):
     base_dir = luigi.Parameter(default='.')
-    def requires(self):
-        return SnpEffAnnotation(self.cohort.dir)
+    def requires(self): return SnpEffAnnotation(self.cohort.dir)
     def run(self):
         VcfMunger().annotate_with_VEP(self.infile, out_path=self.outfile)
     def output(self):
@@ -212,8 +212,7 @@ class VEPAnnotation(luigi.Task):
 class DatabaseAnnotation(luigi.Task):
     base_dir = luigi.Parameter(default='.')
     database = luigi.Parameter()
-    def requires(self):
-        return VEPAnnotation(self.cohort.dir)
+    def requires(self): return VEPAnnotation(self.cohort.dir)
     def run(self):
         VcfMunger().annotate_pubmed_with_DB(
             vcf_path=self.infile,

@@ -14,6 +14,10 @@ conda config --add channels conda-forge
 conda install python=3.5
 conda install python-ternary seaborn pandas matplotlib numpy sqlalchemy
 pip install myvariant multiqc termcolor inflect pyvcf docopt yaml pymysql
+
+mkdir ~/.luigi
+# Start Luigi server for the pipeline
+luigid --pidfile ~/.luigi/pidfile --state-path ~/.luigi/statefile --logdir ~/.luigi/log
 ```
 
 ## Software and resources
@@ -34,6 +38,18 @@ Get these programs and install them:
     - Install with the INSTALL.pl script and download the cache for homo
       sapiens GRCh37.
 * [SnpEff](http://snpeff.sourceforge.net/)
+* [Cellbase](https://github.com/opencb/cellbase)
+    - Clone the repo and build the DB following the instructions there.
+    - `git clone -b master https://github.com/opencb/cellbase.git`
+    - `sudo apt-get install mongodb maven`
+    - `sudo /usr/bin/mongod --config /etc/mongodb.conf` 
+    - Copy the XML from their instructions to `~/.m2/settings.xml`
+    - In the repo's dir: `mvn clean install -DskipTest`
+      I had problems with some test failing to parse a json response that was
+      actually a 405 HTTP response handling HTML. I then ran this and it worked
+      `mvn clean install -rf :cellbase-core -DskipTests`
+    - `cellbase download --assembly GRCh37 --data all`. This will grab some
+        ~20 gigas of disk, so be sure to have that space available.
 
 You also need to download some resources from the web:
 
