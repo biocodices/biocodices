@@ -163,12 +163,10 @@ class GenotypeFiltering(luigi.Task):
     def requires(self):
         return HardFiltering(self.cohort.dir)
     def run(self):
-        raw_vcf = self.requires().output().fn
-        GATK().filter_genotypes(raw_vcf, out_path=self.outfile)
+        GATK().filter_genotypes(self.input().fn, out_path=self.outfile)
     def output(self):
         self.cohort = Cohort(self.base_dir)
-        self.infile = self.requires().output().fn
-        self.outfile = self.infile.replace('.vcf', '.geno.vcf')
+        self.outfile = self.input().fn.replace('.vcf', '.geno.vcf')
         return luigi.LocalTarget(self.outfile)
 
 
@@ -177,11 +175,10 @@ class LimitRegions(luigi.Task):
     def requires(self):
         return GenotypeFiltering(self.cohort.dir)
     def run(self):
-        VcfMunger().limit_regions(self.infile, out_path=self.outfile)
+        VcfMunger().limit_regions(self.input().fn, out_path=self.outfile)
     def output(self):
         self.cohort = Cohort(self.base_dir)
-        self.infile = self.requires().output().fn
-        self.outfile = self.infile.replace('.vcf', '.lim.vcf')
+        self.outfile = self.inpput().fn.replace('.vcf', '.lim.vcf')
         return luigi.LocalTarget(self.outfile)
 
 
@@ -189,11 +186,10 @@ class SnpEffAnnotation(luigi.Task):
     base_dir = luigi.Parameter(default='.')
     def requires(self): return LimitRegions(self.cohort.dir)
     def run(self):
-        VcfMunger().annotate_with_snpeff(self.infile, out_path=self.outfile)
+        VcfMunger().annotate_with_snpeff(self.input().fn, out_path=self.outfile)
     def output(self):
         self.cohort = Cohort(self.base_dir)
-        self.infile = self.requires().output().fn
-        self.outfile = self.infile.replace('.vcf', '.Eff.vcf')
+        self.outfile = self.input().fn.replace('.vcf', '.Eff.vcf')
         return luigi.LocalTarget(self.outfile)
 
 
@@ -201,11 +197,10 @@ class VEPAnnotation(luigi.Task):
     base_dir = luigi.Parameter(default='.')
     def requires(self): return SnpEffAnnotation(self.cohort.dir)
     def run(self):
-        VcfMunger().annotate_with_VEP(self.infile, out_path=self.outfile)
+        VcfMunger().annotate_with_VEP(self.input().fn, out_path=self.outfile)
     def output(self):
         self.cohort = Cohort(self.base_dir)
-        self.infile = self.requires().output().fn
-        self.outfile = self.infile.replace('.vcf', '.VEP.vcf')
+        self.outfile = self.input().fn.replace('.vcf', '.VEP.vcf')
         return luigi.LocalTarget(self.outfile)
 
 
@@ -215,7 +210,7 @@ class DatabaseAnnotation(luigi.Task):
     def requires(self): return VEPAnnotation(self.cohort.dir)
     def run(self):
         VcfMunger().annotate_pubmed_with_DB(
-            vcf_path=self.infile,
+            vcf_path=self.input().fn,
             database=self.database,
             citations_table='variationscitations',
             rs_column='VariationName',
@@ -224,8 +219,7 @@ class DatabaseAnnotation(luigi.Task):
         )
     def output(self):
         self.cohort = Cohort(self.base_dir)
-        self.infile = self.requires().output().fn
-        self.outfile = self.infile.replace('.vcf', '.db.vcf')
+        self.outfile = self.input().fn.replace('.vcf', '.db.vcf')
         return luigi.LocalTarget(self.outfile)
 
 
