@@ -85,29 +85,6 @@ class RealignReads(luigi.Task):
         return luigi.LocalTarget(self.sample.file('recalibrated.bam'))
 
 
-class AlignmentMetrics(luigi.Task):
-    sample_dir = luigi.Parameter()
-    def requires(self): return RealignReads(self.sample_dir)
-    def run(self):
-        recalibrated_bam = self.requires().output().fn
-        Picard().generate_alignment_metrics(recalibrated_bam,
-                                            out_path=self.output().fn)
-    def output(self):
-        self.sample = Sample(self.sample_dir)
-        return luigi.LocalTarget(self.sample.file('alignment_metrics.tsv'))
-
-
-class CoverageMetrics(luigi.Task):
-    sample_dir = luigi.Parameter()
-    def requires(self): return RealignReads(self.sample_dir)
-    def run(self):
-        recalibrated_bam = self.requires().output().fn
-        GATK().create_depth_vcf(recalibrated_bam, out_path=self.output().fn)
-    def output(self):
-        self.sample = Sample(self.sample_dir)
-        return luigi.LocalTarget(self.sample.file('depth_stats.vcf'))
-
-
 class HaplotypeCall(luigi.Task):
     sample_dir = luigi.Parameter()
     def requires(self): return RealignReads(self.sample_dir)
@@ -117,20 +94,6 @@ class HaplotypeCall(luigi.Task):
     def output(self):
         self.sample = Sample(self.sample_dir)
         return luigi.LocalTarget(self.sample.file('raw_variants.g.vcf'))
-
-
-class CohortAlignmentMetrics(luigi.Task):
-    base_dir = luigi.Parameter(default='.')
-    def requires(self):
-        for sample in self.cohort.samples:
-            yield AlignmentMetrics(sample.dir)
-    def run(self):
-        self.cohort.plot_alignment_metrics(
-            metrics_files=[task.output().fn for task in self.requires()],
-            out_path=self.output().fn)
-    def output(self):
-        self.cohort = Cohort(self.base_dir)
-        return luigi.LocalTarget(self.cohort.file('alignment_metrics.png'))
 
 
 class JointGenotyping(luigi.Task):
@@ -149,7 +112,7 @@ class JointGenotyping(luigi.Task):
 class HardFiltering(luigi.Task):
     base_dir = luigi.Parameter(default='.')
     def requires(self):
-        return JointGenotyping(self.cohort.dir)
+        return JointGenotyping(self.base_dir)
     def run(self):
         raw_vcf = self.requires().output().fn
         VcfMunger().hard_filtering(raw_vcf, out_path=self.output().fn)
@@ -161,7 +124,7 @@ class HardFiltering(luigi.Task):
 class GenotypeFiltering(luigi.Task):
     base_dir = luigi.Parameter(default='.')
     def requires(self):
-        return HardFiltering(self.cohort.dir)
+        return HardFiltering(self.base_dir)
     def run(self):
         GATK().filter_genotypes(self.input().fn, out_path=self.outfile)
     def output(self):
@@ -173,18 +136,18 @@ class GenotypeFiltering(luigi.Task):
 class LimitRegions(luigi.Task):
     base_dir = luigi.Parameter(default='.')
     def requires(self):
-        return GenotypeFiltering(self.cohort.dir)
+        return GenotypeFiltering(self.base_dir)
     def run(self):
         VcfMunger().limit_regions(self.input().fn, out_path=self.outfile)
     def output(self):
         self.cohort = Cohort(self.base_dir)
-        self.outfile = self.inpput().fn.replace('.vcf', '.lim.vcf')
+        self.outfile = self.input().fn.replace('.vcf', '.lim.vcf')
         return luigi.LocalTarget(self.outfile)
 
 
 class SnpEffAnnotation(luigi.Task):
     base_dir = luigi.Parameter(default='.')
-    def requires(self): return LimitRegions(self.cohort.dir)
+    def requires(self): return LimitRegions(self.base_dir)
     def run(self):
         VcfMunger().annotate_with_snpeff(self.input().fn, out_path=self.outfile)
     def output(self):
@@ -195,7 +158,7 @@ class SnpEffAnnotation(luigi.Task):
 
 class VEPAnnotation(luigi.Task):
     base_dir = luigi.Parameter(default='.')
-    def requires(self): return SnpEffAnnotation(self.cohort.dir)
+    def requires(self): return SnpEffAnnotation(self.base_dir)
     def run(self):
         VcfMunger().annotate_with_VEP(self.input().fn, out_path=self.outfile)
     def output(self):
@@ -207,7 +170,7 @@ class VEPAnnotation(luigi.Task):
 class DatabaseAnnotation(luigi.Task):
     base_dir = luigi.Parameter(default='.')
     database = luigi.Parameter()
-    def requires(self): return VEPAnnotation(self.cohort.dir)
+    def requires(self): return VEPAnnotation(self.base_dir)
     def run(self):
         VcfMunger().annotate_pubmed_with_DB(
             vcf_path=self.input().fn,
@@ -221,6 +184,14 @@ class DatabaseAnnotation(luigi.Task):
         self.cohort = Cohort(self.base_dir)
         self.outfile = self.input().fn.replace('.vcf', '.db.vcf')
         return luigi.LocalTarget(self.outfile)
+
+
+class MakeReports(luigi.Task):
+    base_dir = luigi.Parameter(default='.')
+    database = luigi.Parameter()
+    def requires(self): return DatabaseAnnotation(self.base_dir, self.database)
+    def run(self): pass  # TODO: implement
+    def output(self): pass  # TODO: implement
 
 
 def run_pipeline():
