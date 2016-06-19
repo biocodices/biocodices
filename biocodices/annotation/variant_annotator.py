@@ -11,8 +11,11 @@ class VariantAnnotator:
     @classmethod
     def annotate_in_batch(cls, rs_list, processes=10, timeout=10):
         """Query MyVariant.info and Ensembl for a list of rs IDs. Runs in
-        parallel. Returns a merged pandas DataFrame with the SNPs as
-        indices."""
+        parallel. Returns a dictionary with:
+            'detail': a merged pandas DataFrame with the SNPs as indices.
+            'publications': a list of dicts, each dict is a publication with
+                            phenotype, title, and ID.
+        """
         with Pool(processes) as pool:
             results = [pool.apply_async(cls.annotate, (rs, ))
                        for rs in rs_list]

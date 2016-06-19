@@ -16,12 +16,10 @@ class Project:
         return '<{} "{}">'.format(self.__class__.__name__, self.label)
 
     def data_files(self, pattern=None):
-        return [basename(fn) for fn in
-                glob(join(self.data_dir, (pattern or '*')))]
+        return [fn for fn in glob(join(self.data_dir, (pattern or '*')))]
 
     def results_files(self, pattern=None):
-        return [basename(fn) for fn in
-                glob(join(self.results_dir, (pattern or '*')))]
+        return [fn for fn in glob(join(self.results_dir, (pattern or '*')))]
 
     def results_file(self, filename):
         return join(self.results_dir, filename)
