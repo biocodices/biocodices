@@ -12,37 +12,43 @@ class VcfMunger:
         self.picard = Picard()
         self.bcftools = BcfTools()
 
-    def hard_filtering(self, vcf_path):
+    def hard_filtering(self, vcf_path, out_path):
         """Do a hard filtering on the passed VCF. It will split it in subsets
         of INDELS and SNPS, apply different filters to each sub-VCF, and then
-        merge the filtered VCFs in a new one. It returns the filepath of the
-        last VCF generated."""
-        snps_vcf = self.gatk.select_variants(vcf_path, 'snps')
-        indels_vcf = self.gatk.select_variants(vcf_path, 'indels')
-        filtered_snps_vcf = self.gatk.filter_variants_vcf(snps_vcf, 'snps')
-        filtered_indels_vcf = self.gatk.filter_variants_vcf(indels_vcf,
-                                                            'indels')
-        merged_vcf_filepath = join(dirname(vcf_path),
-                                   Config.filenames['cohort_filtered_vcf'])
-        merged_vcf = self.gatk.combine_variant_vcfs(
-            [filtered_snps_vcf, filtered_indels_vcf],
-            outfile=merged_vcf_filepath)
+        merge the filtered VCFs in a new one at <out_path>."""
+        raw_snps_vcf = self.gatk.select_variants(vcf_path, 'snps')
+        raw_indels_vcf = self.gatk.select_variants(vcf_path, 'indels')
+        snps_vcf = self.gatk.filter_variants_vcf(raw_snps_vcf, 'snps')
+        indels_vcf = self.gatk.filter_variants_vcf(raw_indels_vcf, 'indels')
+        return self.gatk.combine_variant_vcfs([snps_vcf, indels_vcf],
+                                              outfile=out_path)
 
-        return merged_vcf
+    def realign_reads_around_indels(self, bam):
+        targets_filepath = self.gatk.realigner_target_creator(bam)
+        realigned_bam = self.gatk.indel_realigner(targets_filepath, bam)
+        return realigned_bam
 
-    def variant_calling_metrics(self, vcf_path):
-        return self.picard.variant_calling_metrics(vcf_path)
+    def recalibrate_quality_scores(self, realigned_bam, out_path=None):
+        recalibration = self.gatk.create_recalibration_table(realigned_bam)
+        recalibrated_bam = self.gatk.recalibrate_bam(realigned_bam, recalibration,
+                                                     out_path=out_path)
+        return recalibrated_bam
 
-    def limit_regions(self, vcf_path):
+    @classmethod
+    def get_median_coverage(cls, depth_vcf):
+        depth_stats = cls.read_depth_stats_vcf(depth_vcf)
+        return pd.Series(depth_stats).median()
+
+    def limit_regions(self, vcf_path, out_path=None):
         """Limit the variants in a VCF within the regions defined in a .bed
         file set in the parameters config file. Generates a new VCF."""
         indexed_gzipped_vcf = self.bcftools.compress_and_index_vcf(vcf_path)
-        return self.bcftools.limit_regions(indexed_gzipped_vcf)
+        return self.bcftools.limit_regions(indexed_gzipped_vcf, out_path)
 
-    def annotate_with_snpeff(self, vcf_path):
+    def annotate_with_snpeff(self, vcf_path, out_path=None):
         """Add SnpEff annotations in the ANN INFO field. Generates a VCF."""
         app_name = 'SnpEff'
-        outfile = vcf_path.replace('.vcf', '.{}.vcf'.format(app_name))
+        outfile = out_path or vcf_path.replace('.vcf', '.{}.vcf'.format(app_name))
         command = '{executable} -v {reference_genome} {in}'.format(**{
             'executable': Config.executables[app_name],
             'reference_genome': Config.params[app_name]['reference_genome'],
@@ -53,33 +59,34 @@ class VcfMunger:
                                    log_filepath=log_filepath)
         return outfile
 
-    def annotate_with_VEP(self, vcf_path):
+    def annotate_with_VEP(self, vcf_path, out_path=None):
         """Add Variant Effect Predictor's annotations in the CSQ INFO field.
         Generates a new VCF."""
         app_name = 'VEP'
-        outfile = vcf_path.replace('.vcf', '.{}.vcf'.format(app_name))
+        outfile = out_path or vcf_path.replace('.vcf', '.{}.vcf'.format(app_name))
         options = ['--{} {}'.format(k, v)
                    for k, v in Config.params[app_name].items()]
-        options_str = ' '.join(options)
-        command = '{executable} {options} -i {in} -o {out} --stats'.format(**{
+        options_str = ' '.join(options).format(**{
+            'stats_file': vcf_path.replace('.vcf', '.VEP_stats.html'),
+        })
+        command = '{executable} {options} -i {in} -o {out}'.format(**{
             'executable': Config.executables[app_name],
             'options': options_str,
             'in': vcf_path,
             'out': outfile,
-            'stats_file': vcf_path.replace('.vcf', '.VEPstats'),
         })
         log_filepath = join(dirname(vcf_path), app_name)
         ProgramCaller(command).run(log_filepath=log_filepath)
         return outfile
 
     def annotate_pubmed_with_DB(self, vcf_path, database, citations_table,
-                                rs_column, pubmed_column):
+                                rs_column, pubmed_column, out_path=None):
         """Pass a database name and the name of the table with the PUBMED IDs
         per SNP. A new VCF will be written with the PUBMED IDs in a new INFO
         field."""
         citations = DB(database=database).table(citations_table)
         cited_variations = citations[rs_column]
-        outfile = vcf_path.replace('.vcf', '.db.vcf')
+        outfile = out_path or vcf_path.replace('.vcf', '.db.vcf')
 
         with open(vcf_path, 'r') as in_vcf, open(outfile, 'w') as out_vcf:
             reader = vcf.Reader(in_vcf)

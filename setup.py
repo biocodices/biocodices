@@ -16,6 +16,7 @@ dependencies = [
     'pymysql',
     'python-ternary',
     'pyvcf',
+    'luigi',
 ]
 
 setup(name=__program_name__,
@@ -29,7 +30,7 @@ setup(name=__program_name__,
       packages=find_packages(),
       entry_points={
           'console_scripts': [
-            'bioco = biocodices.__main__:cli'
+            'bioco = biocodices.luigi.variant_calling:run_pipeline'
           ]
       },
       zip_safe=False)

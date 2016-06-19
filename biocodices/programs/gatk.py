@@ -34,17 +34,6 @@ class GATK(AbstractGenomicsProgram):
         ProgramCaller(command).run(log_filepath=log_filepath)
         rename_tempfile(outfile, extra_output_extension)
 
-    def realign_reads_around_indels(self, bam):
-        targets_filepath = self._realigner_target_creator(bam)
-        realigned_bam = self._indel_realigner(targets_filepath, bam)
-        return realigned_bam
-
-    def recalibrate_quality_scores(self, realigned_bam, out_path=None):
-        recalibration = self._create_recalibration_table(realigned_bam)
-        recalibrated_bam = self._recalibrate_bam(realigned_bam, recalibration,
-                                                 out_path=out_path)
-        return recalibrated_bam
-
     def create_depth_vcf(self, recalibrated_bam, out_path=None):
         """
         Expects a recalibrated BAM and outputs an depth stats VCF.
@@ -81,21 +70,15 @@ class GATK(AbstractGenomicsProgram):
                  extra_output_extension='idx', task_subtype='gvcf')
         return out_path
 
-    def joint_genotyping(self, gvcf_list, output_dir):
+    def joint_genotyping(self, gvcf_list, out_path):
         """
         Do a joint genotyping using the provided list of gVCFs. Writes
-        a multisample VCF and returns its filepath.
+        a multisample VCF to out_path.
         """
-        outfile = join(output_dir, Config.filenames['cohort_raw_vcf'])
-        params_str = ''
-        for gvcf_filename in gvcf_list:
-            params_str += ' --variant {}'.format(gvcf_filename)
-
-        # The None is bc joint genotyping doesn't take an I (input) parameter
-        self.run('GenotypeGVCFs', None, outfile, extra_params_str=params_str,
-                 extra_output_extension='idx')
-
-        return outfile
+        params_str = ' '.join(['--variant ' + gvcf for gvcf in gvcf_list])
+        self.run('GenotypeGVCFs', infile=None, outfile=out_path,
+                 extra_params_str=params_str, extra_output_extension='idx')
+        return out_path
 
     def select_variants(self, vcf, variant_type):
         """
@@ -160,13 +143,13 @@ class GATK(AbstractGenomicsProgram):
                  extra_output_extension='idx')
         return outfile
 
-    def filter_genotypes(self, vcf):
+    def filter_genotypes(self, vcf, out_path=None):
         """
         Apply filters to each sample's genotype with the thresholds defined
         in the parameters file. Generates a new VCF, returns its filepath.
         """
         module_name = 'VariantFiltration'
-        outfile = vcf.replace('.vcf', '.geno-filtered.vcf')
+        outfile = out_path or vcf.replace('.vcf', '.geno-filtered.vcf')
         filters = self.params['{}_filters'.format(module_name)]['genotype']
         filter_expression = ' || '.join(filters)
         params_str = '--genotypeFilterName genotype_filter '
@@ -177,7 +160,7 @@ class GATK(AbstractGenomicsProgram):
                  extra_params_str=params_str, extra_output_extension='idx')
         return outfile
 
-    def _realigner_target_creator(self, bam):
+    def realigner_target_creator(self, bam):
         target_intervals = bam.replace('.bam', '.intervals')
         extra_params_str = ''
         for indels_file in self.known_indels:
@@ -187,7 +170,7 @@ class GATK(AbstractGenomicsProgram):
                  extra_params_str=extra_params_str)
         return target_intervals
 
-    def _indel_realigner(self, targets_filepath, bam):
+    def indel_realigner(self, targets_filepath, bam):
         realigned_bam = bam.replace('.bam', '.realigned.bam')
         extra_params_variables = {
             'target_intervals': targets_filepath,
@@ -197,7 +180,7 @@ class GATK(AbstractGenomicsProgram):
                  extra_params_variables=extra_params_variables)
         return realigned_bam
 
-    def _create_recalibration_table(self, realigned_bam):
+    def create_recalibration_table(self, realigned_bam):
         recalibration = realigned_bam.replace('.bam', '.recalibration')
         extra_params_str = ''
         for indels_file in self.known_indels:
@@ -207,7 +190,7 @@ class GATK(AbstractGenomicsProgram):
                  extra_params_str=extra_params_str)
         return recalibration
 
-    def _recalibrate_bam(self, realigned_bam, recalibration, out_path=None):
+    def recalibrate_bam(self, realigned_bam, recalibration, out_path=None):
         recalibrated_bam = \
             out_path or recalibration.replace('.recalibration',
                                               '.recalibrated.bam')

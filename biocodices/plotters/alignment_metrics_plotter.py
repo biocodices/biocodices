@@ -10,7 +10,7 @@ class AlignmentMetricsPlotter:
     def __init__(self, df):
         self.data = df
 
-    def plot_and_savefig(self, out_dir):
+    def plot_and_savefig(self, out_path=None):
         sns.set_context('notebook')
         sns.set_style('white')
 
@@ -39,8 +39,10 @@ class AlignmentMetricsPlotter:
                 ax.legend_.set_visible(False)
 
         plt.tight_layout()
-        fp = join(out_dir, 'alignment_metrics')
-        plt.savefig(fp, dpi=300, bbox_inches='tight')
+        if out_path:
+            plt.savefig(out_path, dpi=300, bbox_inches='tight')
+
+        return ax
 
     def draw_ax(self, ax, category):
         sns.barplot(ax=ax, x='sample', y=category, hue='CATEGORY',

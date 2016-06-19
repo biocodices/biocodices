@@ -17,4 +17,3 @@ class Config:
 
     params = read_config('parameters')
     executables = read_config('executables')
-    filenames = read_config('filenames')

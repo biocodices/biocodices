@@ -1,12 +1,15 @@
 import subprocess
 import re
+import logging
 from datetime import datetime
+
 from biocodices.helpers.language import seconds_to_hms_string
 
 
 class ProgramCaller:
     def __init__(self, command):
         self.command = re.sub(' +', ' ', command)
+        self.logger = logging.getLogger()
         # Trim multiple spaces, so they don't create a 'phantom' empty argument.
 
     def run(self, stdout_sink=None, stderr_sink=None, log_filepath=None):
@@ -37,17 +40,20 @@ class ProgramCaller:
                     stderr=stderr_sink_IO,
                     check=True)
             except subprocess.CalledProcessError:
-                msg = (
-                    '* This command failed:\n{}\n'
-                    '* With stdout_sink:\n{}\n'
-                    '* With stderr_sink:\n{}\n'
+                print_msg = (
+                    '* This command failed:\n\n{}\n\n'
+                    '* With stdout_sink:\n\n{}\n\n'
+                    '* With stderr_sink:\n\n{}\n\n'
                 ).format(
                     self.command,
                     (stdout_sink or self.log_filepath),
                     (stderr_sink or self.log_filepath)
                 )
-                print(msg)
-                log_file.write('---\n' + msg)
+                self.logger.critical(print_msg)
+
+                log_msg = '---\nThe command failed at {}.\n'
+                log_file.write(log_msg.format(self._timestamp()))
+
                 raise
             finally:
                 # The log_file will be closed automatically because of the

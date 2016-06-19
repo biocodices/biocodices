@@ -30,12 +30,12 @@ class BcfTools(AbstractGenomicsProgram):
                  log_label='bcftools_view_samples')
         return outfile
 
-    def limit_regions(self, gzipped_vcf_path):
+    def limit_regions(self, gzipped_vcf_path, out_path=None):
         """
         Subset a VCF.gz keeping the regions contained in the BED defined as
         'panel_amplicons' in the resources.yml file. Output a VCF.
         """
-        outfile = gzipped_vcf_path.replace('.vcf.gz', '.lim.vcf')
+        outfile = out_path or gzipped_vcf_path.replace('.vcf.gz', '.lim.vcf')
         params_str = '--regions-file {}'.format(Resource('panel_amplicons'))
         self.run('view', gzipped_vcf_path, outfile, params_str=params_str,
                  log_label='bcftools_view_regions')

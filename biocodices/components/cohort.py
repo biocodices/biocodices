@@ -32,12 +32,6 @@ class Cohort:
             msg = 'I found no sample files (.fastq) in {}'
             raise EmptyCohortException(msg.format(self.data_dir))
 
-        self.unfiltered_vcf = join(self.results_dir, 'raw_variants.vcf')
-        self.filtered_vcf = join(self.results_dir, 'filtered.vcf')
-        self.geno_filtered_vcf = join(self.results_dir,
-                                      'filtered.geno-filtered.vcf')
-        self.limited_vcf = join(self.results_dir,
-                                'filtered.geno-filtered.lim.vcf')
         self.__vcf_stats = None
 
     def __repr__(self):
@@ -60,20 +54,28 @@ class Cohort:
 
         return self.__vcf_stats
 
-    def plot_alignment_metrics(self):
-        frames = [sample.read_alignment_metrics() for sample in self.samples]
+    @staticmethod
+    def read_alignment_metrics(metrics_file):
+        df = pd.read_table(metrics_file, sep='\s+', comment='#')
+        df['sample'] = basename(metrics_file).split('.')[0]
+        # ^ Hacky, depends on the filename convention <sampleID>.extension
+        return df
+
+    def plot_alignment_metrics(self, metrics_files, out_path=None):
+        frames = [self.read_alignment_metrics(fn) for fn in metrics_files]
         df = pd.concat(frames, ignore_index=True).dropna(axis=1)
         # Remove the info of both pairs, leave by first and second of pair.
         df_pairs = df[df['CATEGORY'] != 'PAIR']
         plotter = AlignmentMetricsPlotter(df_pairs)
-        plotter.plot_and_savefig(self.results_dir)
+        plotter.plot_and_savefig(out_path=out_path)
 
-    def median_coverages(self):
-        median_coverages = {}
-        for sample in self.samples:
-            median_coverages[sample.id] = sample.get_median_coverage()
-        median_coverages = pd.Series(median_coverages)
-        return median_coverages
+    # # FIXME: work on this
+    #  def median_coverages(self):
+        #  median_coverages = {}
+        #  for sample in self.samples:
+            #  median_coverages[sample.id] = VcfMunger.get_median_coverage()
+        #  median_coverages = pd.Series(median_coverages)
+        #  return median_coverages
 
     def _arrange_sample_files(self):
         glob_expr = join(self.data_dir, '*.{}'.format(Sample.reads_format))
@@ -93,6 +95,9 @@ class Cohort:
             sample_dir = dirname(reads_fp)
             samples.append(Sample(sample_dir))
         return samples
+
+    def file(self, filename):
+        return join(self.results_dir, filename)
 
     def msg(self, msg):
         prefix = colored('[{}]'.format(self.id), 'magenta')
