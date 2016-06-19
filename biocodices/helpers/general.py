@@ -1,9 +1,25 @@
 from datetime import datetime
 from shutil import move
 from itertools import product
-from os.path import join, abspath
+from os import makedirs
+from os.path import join, abspath, isfile
 import requests
 import sys
+
+
+def touch_all_the_logs(cohort):
+    # I wrote this just to be able to run a `tail -f *.log` on every log
+    # during the variant calling, even for logs that don't yet exist but
+    # that would later be created. What I do is just creating the empty
+    # logs beforehand. It's a necessarily hardcoded list, I guess:
+    samples_dirs = [sample.dir for sample in cohort.samples]
+    for d in samples_dirs:
+        makedirs(d, exist_ok=True)
+
+    for log_filepath in all_log_filepaths(base_dir=cohort.results_dir,
+                                          samples_dirs=samples_dirs):
+        if not isfile(log_filepath):
+            open(log_filepath, 'a').close()
 
 
 def timestamp(sep=':', hour=True, date=False):

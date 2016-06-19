@@ -11,18 +11,26 @@ Usage:
     bioco (-h | --help)
 
 Options:
-    -d --database DB_NAME               Database name to use for annotation
+    --database DB_NAME                  Database name to use for annotation
                                         of the variatns in the task
                                         DatabaseAnnotation. If you run this
                                         task without providing this option,
                                         the process will exit with an error.
+    --sample-dir SAMPLE_DIR             Sample results directory for tasks
+                                        that operate on a single sample.
+                                        Not needed for Cohort tasks.
+    --base-dir BASE_DIR                 Base directory for the run, parent
+                                        of the 'data' directory with the
+                                        fastq files.
 """
 
 from docopt import docopt
+from termcolor import colored
+import os
 import luigi
 
 from biocodices import software_name
-from biocodices.helpers import logo
+from biocodices.helpers import logo, touch_all_the_logs
 from biocodices.components import Cohort, Sample
 from biocodices.programs import trim_adapters, BWA, Picard, GATK
 from biocodices.variant_calling import VcfMunger
@@ -196,9 +204,17 @@ class MakeReports(luigi.Task):
 
 def run_pipeline():
     docopt(__doc__, version=software_name)
+
     print(logo())
-    welcome_msg = 'Welcome to {}! Starting the Luigi pipeline...\n'
+    welcome_msg = 'Welcome to {}! Starting the Luigi pipeline for...\n'
     print(welcome_msg.format(software_name))
+
+    cohort = Cohort(os.getcwd())
+    touch_all_the_logs(cohort)
+    print(colored(cohort, 'green'))
+    print('\nYou can follow the details of the process with:')
+    print('tail -n0 -f {}/{{*/,}}*.log\n'.format(cohort.results_dir))
+
     luigi.run()
 
 if __name__ == '__main__':

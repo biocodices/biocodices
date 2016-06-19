@@ -40,6 +40,9 @@ class Cohort:
                            plural('sample', len(self.samples)),
                            ', '.join(sorted(self.sequencer_runs)))
 
+    def __str__(self):
+        return re.search(r'<(.*)>', self.__repr__()).groups()[0]
+
     def vcf_stats(self, vcf_FORMAT_field=None):
         """Create a pandas DataFrame with the values from one FORMAT field of
         the passed VCF file: 'DP' for depth, 'GQ' for genotype quality.
