@@ -181,4 +181,12 @@ class VcfMunger:
             frames.append(df)
 
         samples_df = pd.concat(frames, axis=1).fillna('')
+        if samples_df.empty:
+            return samples_df
+
+        colmap = {'level_0': 'chr', 'level_1': 'pos', 'level_2': 'rs_id'}
+        samples_df = samples_df.reset_index().rename(columns=colmap)
+        samples_df.set_index(['chr', 'pos'], inplace=True)
+        samples_df.columns.names = [None, None]
+
         return samples_df
