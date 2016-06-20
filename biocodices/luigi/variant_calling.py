@@ -132,7 +132,7 @@ class HardFiltering(luigi.Task):
 class GenotypeFiltering(luigi.Task):
     base_dir = luigi.Parameter(default='.')
     def requires(self):
-        return HardFiltering(self.base_dir)
+        return JointGenotyping(self.base_dir)
     def run(self):
         GATK().filter_genotypes(self.input().fn, out_path=self.outfile)
     def output(self):

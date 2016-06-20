@@ -9,6 +9,7 @@ from biocodices.helpers.language import seconds_to_hms_string
 class ProgramCaller:
     def __init__(self, command):
         self.command = re.sub(' +', ' ', command)
+        self.command = self.command.strip()
         self.logger = logging.getLogger()
         # Trim multiple spaces, so they don't create a 'phantom' empty argument.
 

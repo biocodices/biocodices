@@ -25,3 +25,5 @@ clinvar:
 
 ENPv1_amplicons: &ENPv1_amplicons ENPv1_amplicons_sorted.bed
 panel_amplicons: *ENPv1_amplicons
+
+1000G_samples: /home/juan/tesina/1000Genomes/original-1000Genomes-files

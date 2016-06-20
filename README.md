@@ -48,8 +48,8 @@ Get these programs and install them:
       I had problems with some test failing to parse a json response that was
       actually a 405 HTTP response handling HTML. I then ran this and it worked
       `mvn clean install -rf :cellbase-core -DskipTests`
-    - `cellbase download --assembly GRCh37 --data all`. This will grab some
-        ~20 gigas of disk, so be sure to have that space available.
+    - `build/bin/cellbase.sh download --assembly GRCh37 --data all -o <path to download>`.
+      This will grab some ~20 gigas of disk, so be sure to have that space available.
 
 You also need to download some resources from the web:
 

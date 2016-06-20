@@ -1,29 +1,26 @@
 import re
 from glob import glob
 from os import makedirs
-from os.path import join, abspath, basename, expanduser, dirname
+from os.path import join, basename, dirname
 from shutil import move
 import pandas as pd
 from termcolor import colored
 
-from biocodices.components import Sample
+from biocodices.components import Sample, Project
 from biocodices.variant_calling import VcfMunger
 from biocodices.helpers import plural
 from biocodices.plotters import AlignmentMetricsPlotter
 
 
-class Cohort:
+class Cohort(Project):
     def __init__(self, base_dir):
         """
         Expects the path to a directory that will have a 'data' subdirectory
         with fastq forward (R1) and reverse (R2) files from samples in it.
         """
-        self.dir = abspath(expanduser(base_dir))
-        self.id = basename(self.dir)
-        self.data_dir = join(self.dir, 'data')
-        self.results_dir = join(self.dir, 'results')
-        self._arrange_sample_files()
-        self.samples = self._search_samples()
+        super(self.__class__, self).__init__(base_dir)
+        self._move_sample_data_files_to_results_subdirs()
+        self.samples = self._check_available_samples()
         self.sequencer_runs = list(set([sample.sequencer_run_id
                                         for sample in self.samples]))
         self.vcf_munger = VcfMunger()
@@ -80,7 +77,7 @@ class Cohort:
         #  median_coverages = pd.Series(median_coverages)
         #  return median_coverages
 
-    def _arrange_sample_files(self):
+    def _move_sample_data_files_to_results_subdirs(self):
         glob_expr = join(self.data_dir, '*.{}'.format(Sample.reads_format))
 
         # Move the reads files from the data to the results dir
@@ -91,7 +88,7 @@ class Cohort:
             makedirs(sample_dir, exist_ok=True)
             move(reads_fp, join(sample_dir, basename(reads_fp)))
 
-    def _search_samples(self):
+    def _check_available_samples(self):
         samples = []
         for reads_fp in sorted(glob(join(self.results_dir, '*/*.R1.*'))):
             # Create only one Sample object per pair of reads R1-R2

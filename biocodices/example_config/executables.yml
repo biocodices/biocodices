@@ -14,3 +14,4 @@ plink: /home/juan/bin/plink
 tabix: /home/juan/bin/tabix
 bgzip: /usr/local/bin/bgzip
 SnpEff: java -jar /home/juan/software/snpEff/snpEff.jar
+VEP: /home/juan/software/ensembl-tools-release-84/scripts/variant_effect_predictor/variant_effect_predictor.pl 

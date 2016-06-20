@@ -1,25 +1,29 @@
 from datetime import datetime
 from shutil import move
 from itertools import product
-from os import makedirs
-from os.path import join, abspath, isfile
+from os.path import join
 import requests
 import sys
 
 
 def touch_all_the_logs(cohort):
+    """
+    Creates empty files for all the logs that will be written during the
+    variant calling, so you can tail -f them.
+    """
     # I wrote this just to be able to run a `tail -f *.log` on every log
     # during the variant calling, even for logs that don't yet exist but
     # that would later be created. What I do is just creating the empty
     # logs beforehand. It's a necessarily hardcoded list, I guess:
     samples_dirs = [sample.dir for sample in cohort.samples]
-    for d in samples_dirs:
-        makedirs(d, exist_ok=True)
 
-    for log_filepath in all_log_filepaths(base_dir=cohort.results_dir,
-                                          samples_dirs=samples_dirs):
-        if not isfile(log_filepath):
-            open(log_filepath, 'a').close()
+    for path, fn in product(samples_dirs, sample_log_filenames()):
+        log_path = join(path, fn + '.log')
+        open(log_path, 'w').close()
+
+    for fn in cohort_log_filenames():
+        log_path = join(cohort.dir, fn + '.log')
+        open(log_path, 'w').close()
 
 
 def timestamp(sep=':', hour=True, date=False):
@@ -52,8 +56,8 @@ def restful_api_query(url):
     return response.json()
 
 
-def all_log_filepaths(base_dir, samples_dirs):
-    log_filenames = [
+def sample_log_filenames():
+    return [
         'fastqc',
         'fastq-mcf',
         'bwa',
@@ -65,20 +69,22 @@ def all_log_filepaths(base_dir, samples_dirs):
         'CollectAlignmentSummaryMetrics',
         'DiagnoseTargets',
         'HaplotypeCaller_gvcf',
-        '../GenotypeGVCFs',
-        '../SelectVariants_indels',
-        '../SelectVariants_snps',
-        '../VariantFiltration_indels_filter',
-        '../VariantFiltration_snps_filter',
-        '../CombineVariants',
         'bcftools_view_samples',
-        '../VariantFiltration_genotype_filter',
-        '../SnpEff',
-        '../VEP',
     ]
 
-    return [abspath(join(base_dir, fn + '.log'))
-            for sample_dir, fn in product(samples_dirs, log_filenames)]
+
+def cohort_log_filenames():
+    return [
+        'GenotypeGVCFs',
+        'SelectVariants_indels',
+        'SelectVariants_snps',
+        'VariantFiltration_indels_filter',
+        'VariantFiltration_snps_filter',
+        'CombineVariants',
+        'VariantFiltration_genotype_filter',
+        'SnpEff',
+        'VEP',
+    ]
 
 
 def logo():

@@ -11,7 +11,6 @@ class DB:
         """
         Create a connection to a db by name. Use the DB instance to query it.
         """
-        Base = automap_base()
         creds = Config('mysql_credentials')
         creds.update({'database': database})
         url = 'mysql+pymysql://{user}:{pass}@{host}/{database}'.format(**creds)
@@ -31,5 +30,5 @@ class DB:
         return pd.read_sql_table(table_name, self.conn)
 
     @property
-    def table_names(self):
+    def show_tables(self):
         return [t[0] for t in self.query('show tables;', as_list=True)]

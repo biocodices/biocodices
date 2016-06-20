@@ -122,28 +122,29 @@ GATK:
         o: '{output}'
 
     VariantFiltration_filters:
-        # Order in which to apply the filters, since dict keys are unordered.
-        # These filters will be applied after the joint genotyping and
-        # across all samples of the cohort, following the directions found
-        # here: http://gatkforums.broadinstitute.org/gatk/discussion/2806/
-        # howto-apply-hard-filters-to-a-call-set
 
+        # filterName: filterExpression
+        # Each filter will be applied as a different pair of parameters
         snps:
-            - 'QD < 2.0'
-            - 'MQ < 40.0'
-            - 'MQRankSum < -12.5'
-            - 'ReadPosRankSum < -8.0'
-            # - 'FS > 60.0'
-            # - 'SOR > 4.0'
+            QD: 'QD < 2.0'
+            MQ: 'MQ < 40.0'
+            MQRS: 'MQRankSum < -12.5'
+            RPRS: 'ReadPosRankSum < -8.0'
+            # FS: 'FS > 60.0'
+            # SOR: 'SOR > 4.0'
         indels:
-            - 'QD < 2.0'
-            - 'ReadPosRankSum < 20.0'
-            # - 'FS > 200.0'
-            # - 'SOR > 10.0'
-            # - 'InbreedingCoeff < -0.8'  # Only for more than 10 samples
+            QD: 'QD < 2.0'
+            RPRS: 'ReadPosRankSum < 20.0'
+            # FS: 'FS > 200.0'
+            # SOR: 'SOR > 10.0'
+            # IBC: 'InbreedingCoeff < -0.8'  # Only for more than 10 samples
+
+        # genotypeFilterName: genotypeFilterExpression
+        # Each filter will be applied as a different pair of parameters
         genotype:
-            - 'GQ < 30.0 && RGQ < 30.0'
-            - 'DP < 50.0'
+            GQ: 'isHomRef == 0 && GQ < 30.0' 
+            RGS: 'isHomRef == 1 && RGQ < 30.0'
+            DP: 'DP < 50'
 
     CombineVariants:
         T: CombineVariants
@@ -159,6 +160,8 @@ VEP:
     everything: ''  # Boolean flags with no value.
     offline: ''
     merged: ''  # Because I'm using the merged VEP+RefSeq cached genome
+    no_progress: ''
+    force_overwrite: ''
+    vcf: ''  # Output as VCF!
     stats_file: '{stats_file}'
-
-
+    fork: *cores

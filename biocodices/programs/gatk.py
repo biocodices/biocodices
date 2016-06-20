@@ -105,12 +105,13 @@ class GATK(AbstractGenomicsProgram):
         input_vcf = vcf
         outfile = input_vcf.replace('.vcf', '.filtered.vcf')
         filters = self.params['{}_filters'.format(module_name)][variant_type]
-        filter_name = '{}_filter'.format(variant_type)
-        filter_expression = ' || '.join(filters)
-        params_str = '--filterName {} --filterExpression "{}"'.format(
-            filter_name, filter_expression)
-        log_label = '{}_{}'.format(module_name, filter_name)
 
+        params_str = ''
+        for filter_name, filter_expression in filters.items():
+            param = '--filterName "{}" --filterExpression "{}" '
+            params_str += param.format(filter_name, filter_expression)
+
+        log_label = '{}_{}'.format(module_name, filter_name)
         self.run(module_name, vcf, outfile, log_label=log_label,
                  extra_params_str=params_str, extra_output_extension='idx')
         return outfile
@@ -151,11 +152,13 @@ class GATK(AbstractGenomicsProgram):
         module_name = 'VariantFiltration'
         outfile = out_path or vcf.replace('.vcf', '.geno-filtered.vcf')
         filters = self.params['{}_filters'.format(module_name)]['genotype']
-        filter_expression = ' || '.join(filters)
-        params_str = '--genotypeFilterName genotype_filter '
-        params_str += '--genotypeFilterExpression "{}"'.format(filter_expression)
-        log_label = '{}_genotype_filter'.format(module_name)
 
+        params_str = ''
+        for filter_name, filter_expression in filters.items():
+            param = '--genotypeFilterName "{}" --genotypeFilterExpression "{}" '
+            params_str += param.format(filter_name, filter_expression)
+
+        log_label = '{}_genotype_filter'.format(module_name)
         self.run(module_name, vcf, outfile, log_label=log_label,
                  extra_params_str=params_str, extra_output_extension='idx')
         return outfile
