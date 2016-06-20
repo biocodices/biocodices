@@ -142,9 +142,9 @@ GATK:
         # genotypeFilterName: genotypeFilterExpression
         # Each filter will be applied as a different pair of parameters
         genotype:
-            GQ: 'isHomRef == 0 && GQ < 30.0' 
-            RGS: 'isHomRef == 1 && RGQ < 30.0'
-            DP: 'DP < 50'
+            LowGQ: 'isHomRef == 0 && GQ < 30.0' 
+            LowRGQ: 'isHomRef == 1 && RGQ < 30.0'
+            LowDP: 'DP < 50'
 
     CombineVariants:
         T: CombineVariants
