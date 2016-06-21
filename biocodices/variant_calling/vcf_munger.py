@@ -175,4 +175,9 @@ class VcfMunger:
         # ^ Restores the multi-index because at this point it was
         #   converted to a simple index of tuples.
 
+        new_df.loc[:, pd.IndexSlice[:, 'DP']] = \
+            new_df.loc[:, pd.IndexSlice[:, 'DP']].applymap(int)
+        new_df.loc[:, pd.IndexSlice[:, 'GQ']] = \
+            new_df.loc[:, pd.IndexSlice[:, 'GQ']].applymap(float)
+
         return new_df
