@@ -140,7 +140,8 @@ class VcfMunger:
         vcf_df = pd.read_table(vcf_path, sep='\s+', comment='#', names=header,
                                index_col=['#CHROM', 'POS', 'ID'])
         info_df = vcf_df.iloc[:, 1:5]
-        samples_df = cls._parse_samples_part_of_vcf(vcf_df)
+        raw_samples_df = vcf_df.iloc[:, 5:]
+        samples_df = cls._parse_samples_part_of_vcf(raw_samples_df)
         return info_df, samples_df
 
     @staticmethod
@@ -152,41 +153,26 @@ class VcfMunger:
                     return line.strip().split('\t')
 
     @staticmethod
-    def _parse_samples_part_of_vcf(vcf_df):
+    def _parse_samples_part_of_vcf(raw_samples_df):
         """Auxiliary method for vcf_to_frames()"""
-        raw_samples_df = vcf_df.iloc[:, 5:]
-        assert raw_samples_df.columns[0] == 'FORMAT'
-        format_col = raw_samples_df['FORMAT']
 
-        frames = []
-        for sample in raw_samples_df.columns[1:]:
-            indices = list(format_col.index)[::-1]
+        format_series = raw_samples_df['FORMAT'].to_dict()
+        # ^ Converting to_dict() removes rows with a duplicated index.
 
-            def genotype_dict(cell):
-                ix = indices.pop()
-                # FIXME: This is a nasty hack, has to be rethought
-                format_at_this_row = format_col.loc[ix]
-                if type(format_at_this_row) == pd.Series:
-                    format_cell = format_at_this_row.iloc[0].split(':')
-                else:
-                    format_cell = format_at_this_row.split(':')
-                sample_genotype_cell = cell.split(':')
-                return dict(zip(format_cell, sample_genotype_cell))
+        new_df = pd.DataFrame({})
 
-            col_as_dict = raw_samples_df[sample].map(genotype_dict).to_dict()
-            df = pd.DataFrame(col_as_dict).reset_index()
-            df['sample'] = sample
-            df.set_index(['sample', 'index'], inplace=True)
-            df = df.transpose()
-            frames.append(df)
+        for sample_id, gt_column in raw_samples_df.iloc[:, 1:].iteritems():
+            for ix, gt_data in gt_column.str.split(':').iteritems():
+                format_keys = format_series[ix].split(':')
+                row_as_dict = {sample_id: dict(zip(format_keys, gt_data))}
 
-        samples_df = pd.concat(frames, axis=1).fillna('')
-        if samples_df.empty:
-            return samples_df
+                # unstack() creates a multi-index SAMPLE_ID > [GT, AD, DP, GQ]
+                new_series = pd.DataFrame(row_as_dict).unstack()
+                new_df[ix, sample_id] = new_series
 
-        colmap = {'level_0': 'chr', 'level_1': 'pos', 'level_2': 'rs_id'}
-        samples_df = samples_df.reset_index().rename(columns=colmap)
-        samples_df.set_index(['chr', 'pos'], inplace=True)
-        samples_df.columns.names = [None, None]
+        new_df = new_df.transpose()
+        new_df.index = raw_samples_df.index.drop_duplicates()
+        # ^ Restores the multi-index because at this point it was
+        #   converted to a simple index of tuples.
 
-        return samples_df
+        return new_df
