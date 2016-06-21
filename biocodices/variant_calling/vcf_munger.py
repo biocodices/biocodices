@@ -1,5 +1,6 @@
 import vcf
 import pandas as pd
+import numpy as np
 from os.path import dirname, join
 
 from biocodices.helpers import Config, DB
@@ -179,5 +180,16 @@ class VcfMunger:
             new_df.loc[:, pd.IndexSlice[:, 'DP']].applymap(int)
         new_df.loc[:, pd.IndexSlice[:, 'GQ']] = \
             new_df.loc[:, pd.IndexSlice[:, 'GQ']].applymap(float)
+
+        def last_item_or_nan(ls):
+            try: return int(ls[-1])
+            except IndexError: return np.nan
+
+        sample_ids = new_df.columns.get_level_values(0)
+        for sample_id in sample_ids:
+            new_df[(sample_id, 'DP_A1')] = \
+                new_df[sample_id]['AD'].str.split(',').map(lambda l: int(l[0]))
+            new_df[(sample_id, 'DP_A2')] = \
+                new_df[sample_id]['DP'] - new_df[sample_id]['DP_A1']
 
         return new_df
