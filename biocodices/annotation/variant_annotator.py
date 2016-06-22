@@ -40,9 +40,11 @@ class VariantAnnotator:
                         taken both from GRASP via Myvariant and Ensembl.
         """
         if myvariant:
-            myvariant_df, myvariant_publications = cls.query_myvariant(rs)
+            myvariant_df, myvariant_publications = \
+                cls.parse_myvariant(cls.query_myvariant(rs))
         if ensembl:
-            ensembl_df, ensembl_publications = cls.query_ensembl(rs)
+            ensembl_df, ensembl_publications = \
+                cls.parse_ensembl(cls.query_ensembl(rs))
 
         if myvariant and ensembl:
             annotation = myvariant_df.join(ensembl_df)
@@ -63,7 +65,10 @@ class VariantAnnotator:
 
     @staticmethod
     def query_myvariant(rs, fields=['all']):
-        results = MyVariantInfo().query(rs, fields=fields)
+        return MyVariantInfo().query(rs, fields=fields)
+
+    @staticmethod
+    def parse_myvariant(results):
         summary = MyvariantParser.parse_query_results(results)
         publications = MyvariantParser.parse_publications(results)
         return summary, publications
@@ -78,7 +83,10 @@ class VariantAnnotator:
             # Ensembl API returns an error 400 when the query gives no results.
             print(error)
             results = {}
+        return results
 
+    @staticmethod
+    def parse_ensembl(results):
         summary = EnsemblParser.parse_query_results(results)
         publications = EnsemblParser.parse_publications(results)
         return summary, publications

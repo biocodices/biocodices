@@ -26,9 +26,10 @@ class DB:
         return result
 
     def table(self, table_name):
-        """Retrieve a database table as a pandas DataFrame."""
+        """Retrieve by name a database table as a pandas DataFrame."""
         return pd.read_sql_table(table_name, self.conn)
 
     @property
-    def show_tables(self):
+    def tables(self):
+        """Show table names from the current database."""
         return [t[0] for t in self.query('show tables;', as_list=True)]
