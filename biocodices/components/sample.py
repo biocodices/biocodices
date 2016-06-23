@@ -1,5 +1,5 @@
 from os import walk, getcwd
-from os.path import join, basename, abspath, expanduser, isfile
+from os.path import join, basename, isfile
 
 
 class Sample:
@@ -22,7 +22,7 @@ class Sample:
         return '{}.{}'.format(join(self.dir, self.id), ext)
 
     def __repr__(self):
-        return '<Sample {} from {}>'.format(self.id, self.sequencer_run_id)
+        return '<Sample {}>'.format(self.id)
 
     def _reads_files(self, ext):
         read_filepath = join(self.dir, '{}.{}.{}')

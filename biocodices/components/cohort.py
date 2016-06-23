@@ -78,7 +78,7 @@ class Cohort(Project):
             move(reads_fp, join(sample_dir, basename(reads_fp)))
 
     def _available_samples(self):
-        for reads_fp in sorted(glob(join(self.results_dir, '*/*.R1.*'))):
+        for reads_fp in sorted(glob(join(self.results_dir, '*/*.R1.fastq'))):
             # Create only one Sample object per pair of reads R1-R2
             sample_dir = dirname(reads_fp)
             sample_id = basename(sample_dir)
