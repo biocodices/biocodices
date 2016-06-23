@@ -4,7 +4,6 @@ from os import makedirs
 from os.path import join, basename, dirname
 from shutil import move
 import pandas as pd
-from termcolor import colored
 
 from biocodices.components import Sample, Project
 from biocodices.variant_calling import VcfMunger
@@ -20,9 +19,7 @@ class Cohort(Project):
         """
         super(self.__class__, self).__init__(base_dir)
         self._move_sample_data_files_to_results_subdirs()
-        self.samples = self._check_available_samples()
-        self.sequencer_runs = list(set([sample.sequencer_run_id
-                                        for sample in self.samples]))
+        self.samples = list(self._available_samples())
         self.vcf_munger = VcfMunger()
 
         if len(self.samples) == 0:
@@ -32,10 +29,9 @@ class Cohort(Project):
         self.__vcf_stats = None
 
     def __repr__(self):
-        tmpl = '<{} with {} from {}>'
+        tmpl = '<{} with {}>'
         return tmpl.format(self.__class__.__name__,
-                           plural('sample', len(self.samples)),
-                           ', '.join(sorted(self.sequencer_runs)))
+                           plural('sample', len(self.samples)))
 
     def __str__(self):
         return re.search(r'<(.*)>', self.__repr__()).groups()[0]
@@ -61,6 +57,7 @@ class Cohort(Project):
         # ^ Hacky, depends on the filename convention <sampleID>.extension
         return df
 
+    # FIXME: get these metrics method into a different analyzer class
     def plot_alignment_metrics(self, metrics_files, out_path=None):
         frames = [self.read_alignment_metrics(fn) for fn in metrics_files]
         df = pd.concat(frames, ignore_index=True).dropna(axis=1)
@@ -68,14 +65,6 @@ class Cohort(Project):
         df_pairs = df[df['CATEGORY'] != 'PAIR']
         plotter = AlignmentMetricsPlotter(df_pairs)
         plotter.plot_and_savefig(out_path=out_path)
-
-    # # FIXME: work on this
-    #  def median_coverages(self):
-        #  median_coverages = {}
-        #  for sample in self.samples:
-            #  median_coverages[sample.id] = VcfMunger.get_median_coverage()
-        #  median_coverages = pd.Series(median_coverages)
-        #  return median_coverages
 
     def _move_sample_data_files_to_results_subdirs(self):
         glob_expr = join(self.data_dir, '*.{}'.format(Sample.reads_format))
@@ -88,20 +77,15 @@ class Cohort(Project):
             makedirs(sample_dir, exist_ok=True)
             move(reads_fp, join(sample_dir, basename(reads_fp)))
 
-    def _check_available_samples(self):
-        samples = []
+    def _available_samples(self):
         for reads_fp in sorted(glob(join(self.results_dir, '*/*.R1.*'))):
             # Create only one Sample object per pair of reads R1-R2
             sample_dir = dirname(reads_fp)
-            samples.append(Sample(sample_dir))
-        return samples
+            sample_id = basename(sample_dir)
+            yield Sample(sample_id)
 
     def file(self, filename):
         return join(self.results_dir, filename)
-
-    def msg(self, msg):
-        prefix = colored('[{}]'.format(self.id), 'magenta')
-        return '{} {}'.format(prefix, msg)
 
 
 class EmptyCohortException(Exception):

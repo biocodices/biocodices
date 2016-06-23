@@ -7,7 +7,7 @@
 
 
 Usage:
-    bioco TASK_NAME [options]
+    bioco TASK [options]
     bioco (-h | --help)
 
 Options:
@@ -16,7 +16,8 @@ Options:
                                         DatabaseAnnotation. If you run this
                                         task without providing this option,
                                         the process will exit with an error.
-    --sample-dir SAMPLE_DIR             Sample results directory for tasks
+    --sample SAMPLE_ID                  Sample ID that must match the name
+                                        of a subdirectory of the cwd. FOr tasks
                                         that operate on a single sample.
                                         Not needed for Cohort tasks.
     --base-dir BASE_DIR                 Base directory for the run, parent
@@ -30,58 +31,67 @@ import os
 import luigi
 
 from biocodices import software_name
-from biocodices.helpers import logo, touch_all_the_logs
+from biocodices.helpers import logo, touch_all_the_logs, DB
 from biocodices.components import Cohort, Sample
 from biocodices.programs import trim_adapters, BWA, Picard, GATK
 from biocodices.variant_calling import VcfMunger
 
 
 class UnzipAndCoppyFastqs(luigi.ExternalTask):
-    sample_dir = luigi.Parameter()
+    sample_id = luigi.Parameter()
     def output(self):
-        self.sample = Sample(self.sample_dir)
-        return [luigi.LocalTarget(fn) for fn in self.sample.fastqs]
+        sample = Sample(self.sample_id)
+        return [luigi.LocalTarget(fn) for fn in sample.fastqs]
 
 
 class TrimReads(luigi.Task):
-    sample_dir = luigi.Parameter()
-    def requires(self): return UnzipAndCoppyFastqs(self.sample_dir)
-    def run(self): trim_adapters(self.sample.fastqs)
+    sample_id = luigi.Parameter()
+    def requires(self): return UnzipAndCoppyFastqs(self.sample_id)
+    def run(self): trim_adapters([target.fn for target in self.input()])
     def output(self):
-        self.sample = Sample(self.sample_dir)
+        self.sample = Sample(self.sample_id)
         return [luigi.LocalTarget(fn) for fn in self.sample.trimmed_fastqs]
 
 
 class AlignReads(luigi.Task):
-    sample_dir = luigi.Parameter()
-    def requires(self): return TrimReads(self.sample_dir)
+    sample_id = luigi.Parameter()
+    def requires(self): return TrimReads(self.sample_id)
     def run(self):
-        trimmed_fastqs = [target.fn for target in self.requires().output()]
+        trimmed_fastqs = [target.fn for target in self.input()]
         BWA().align_to_reference(trimmed_fastqs)
     def output(self):
-        self.sample = Sample(self.sample_dir)
-        return luigi.LocalTarget(self.sample.file('sam'))
+        sample = Sample(self.sample_id)
+        return luigi.LocalTarget(sample.file('sam'))
 
 
 class AddOrReplaceReadGroups(luigi.Task):
-    sample_dir = luigi.Parameter()
-    def requires(self): return AlignReads(self.sample_dir)
+    sample_id = luigi.Parameter()
+    def requires(self): return AlignReads(self.sample_id)
     def run(self):
+
+        # Nasty hardcoding of biocodices-specific DB connection.
+        # FIXME: think how to solve this in a general way.
+        db = DB('biocodices')
+        samples = db.table('NGS_MUESTRAS').set_index('SAMPLE_ID')
+        library_id = samples.loc[self.sample_id]['LIB_ID']
+        sequencer_run_id = samples.loc[self.sample_id]['NGS_ID']
+
         Picard().add_or_replace_read_groups(
             sam_path=self.requires().output().fn,
-            sample_id=self.sample.id,
-            sample_library_id=self.sample.library_id,
-            sequencer_run_id=self.sample.sequencer_run_id,
+            sample_id=self.sample_id,
+            sample_library_id=library_id,
+            sequencer_run_id=sequencer_run_id,
             out_path=self.output().fn,
         )
+
     def output(self):
-        self.sample = Sample(self.sample_dir)
-        return luigi.LocalTarget(self.sample.file('raw.bam'))
+        sample = Sample(self.sample_id)
+        return luigi.LocalTarget(sample.file('raw.bam'))
 
 
 class RealignReads(luigi.Task):
-    sample_dir = luigi.Parameter()
-    def requires(self): return AddOrReplaceReadGroups(self.sample_dir)
+    sample_id = luigi.Parameter()
+    def requires(self): return AddOrReplaceReadGroups(self.sample_id)
     def run(self):
         vcf_munger = VcfMunger()
         raw_bam = self.requires().output().fn
@@ -89,18 +99,18 @@ class RealignReads(luigi.Task):
         vcf_munger.recalibrate_quality_scores(realigned_bam,
                                               out_path=self.output().fn)
     def output(self):
-        self.sample = Sample(self.sample_dir)
+        self.sample = Sample(self.sample_id)
         return luigi.LocalTarget(self.sample.file('recalibrated.bam'))
 
 
 class HaplotypeCall(luigi.Task):
-    sample_dir = luigi.Parameter()
-    def requires(self): return RealignReads(self.sample_dir)
+    sample_id = luigi.Parameter()
+    def requires(self): return RealignReads(self.sample_id)
     def run(self):
         recalibrated_bam = self.requires().output().fn
         GATK().create_gvcf(recalibrated_bam, out_path=self.output().fn)
     def output(self):
-        self.sample = Sample(self.sample_dir)
+        self.sample = Sample(self.sample_id)
         return luigi.LocalTarget(self.sample.file('raw_variants.g.vcf'))
 
 
@@ -108,7 +118,7 @@ class JointGenotyping(luigi.Task):
     base_dir = luigi.Parameter(default='.')
     def requires(self):
         for sample in self.cohort.samples:
-            yield HaplotypeCall(sample.dir)
+            yield HaplotypeCall(sample.id)
     def run(self):
         gvcf_list = [task.output().fn for task in self.requires()]
         GATK().joint_genotyping(gvcf_list=gvcf_list, out_path=self.output().fn)
@@ -125,8 +135,8 @@ class HardFiltering(luigi.Task):
         raw_vcf = self.requires().output().fn
         VcfMunger().hard_filtering(raw_vcf, out_path=self.output().fn)
     def output(self):
-        self.cohort = Cohort(self.base_dir)
-        return luigi.LocalTarget(self.cohort.file('filtered.vcf'))
+        cohort = Cohort(self.base_dir)
+        return luigi.LocalTarget(cohort.file('filtered.vcf'))
 
 
 class GenotypeFiltering(luigi.Task):
@@ -136,7 +146,6 @@ class GenotypeFiltering(luigi.Task):
     def run(self):
         GATK().filter_genotypes(self.input().fn, out_path=self.outfile)
     def output(self):
-        self.cohort = Cohort(self.base_dir)
         self.outfile = self.input().fn.replace('.vcf', '.geno.vcf')
         return luigi.LocalTarget(self.outfile)
 
@@ -148,7 +157,6 @@ class LimitRegions(luigi.Task):
     def run(self):
         VcfMunger().limit_regions(self.input().fn, out_path=self.outfile)
     def output(self):
-        self.cohort = Cohort(self.base_dir)
         self.outfile = self.input().fn.replace('.vcf', '.lim.vcf')
         return luigi.LocalTarget(self.outfile)
 
@@ -159,7 +167,6 @@ class SnpEffAnnotation(luigi.Task):
     def run(self):
         VcfMunger().annotate_with_snpeff(self.input().fn, out_path=self.outfile)
     def output(self):
-        self.cohort = Cohort(self.base_dir)
         self.outfile = self.input().fn.replace('.vcf', '.Eff.vcf')
         return luigi.LocalTarget(self.outfile)
 
@@ -170,7 +177,6 @@ class VEPAnnotation(luigi.Task):
     def run(self):
         VcfMunger().annotate_with_VEP(self.input().fn, out_path=self.outfile)
     def output(self):
-        self.cohort = Cohort(self.base_dir)
         self.outfile = self.input().fn.replace('.vcf', '.VEP.vcf')
         return luigi.LocalTarget(self.outfile)
 
@@ -189,7 +195,6 @@ class DatabaseAnnotation(luigi.Task):
             out_path=self.outfile,
         )
     def output(self):
-        self.cohort = Cohort(self.base_dir)
         self.outfile = self.input().fn.replace('.vcf', '.db.vcf')
         return luigi.LocalTarget(self.outfile)
 
@@ -203,17 +208,23 @@ class MakeReports(luigi.Task):
 
 
 def run_pipeline():
-    docopt(__doc__, version=software_name)
+    arguments = docopt(__doc__, version=software_name)
 
     print(logo())
-    welcome_msg = 'Welcome to {}! Starting the Luigi pipeline for...\n'
+    welcome_msg = 'Welcome to {}! Starting the Luigi pipeline...\n'
     print(welcome_msg.format(software_name))
+    print('Options in effect:')
+    for k, v in arguments.items():
+        if v: print(' {} {}'.format(k, v))
+    print()
 
-    cohort = Cohort(os.getcwd())
-    touch_all_the_logs(cohort)
-    print(colored(cohort, 'green'))
-    print('\nYou can follow the details of the process with:')
-    print('tail -n0 -f {}/{{*/,}}*.log\n'.format(cohort.results_dir))
+    # TODO: Improve this.
+    if arguments['TASK'] == 'MakeReports':
+        cohort = Cohort(os.getcwd())
+        touch_all_the_logs(cohort)
+        print(colored(cohort, 'green'))
+        print('\nYou can follow the details of the process with:')
+        print('tail -n0 -f {}/{{*/,}}*.log\n'.format(cohort.results_dir))
 
     luigi.run()
 
