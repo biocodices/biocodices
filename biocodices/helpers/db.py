@@ -1,6 +1,4 @@
 import pandas as pd
-from sqlalchemy.ext.automap import automap_base
-from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 
 from biocodices.helpers import Config
@@ -16,7 +14,6 @@ class DB:
         url = 'mysql+pymysql://{user}:{pass}@{host}/{database}'.format(**creds)
         engine = create_engine(url)
 
-        self.session = Session(engine)
         self.conn = engine.connect()
 
     def query(self, query_string, as_list=False):
