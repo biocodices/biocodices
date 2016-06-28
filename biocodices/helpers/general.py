@@ -22,7 +22,7 @@ def touch_all_the_logs(cohort):
         open(log_path, 'w').close()
 
     for fn in cohort_log_filenames():
-        log_path = join(cohort.dir, fn + '.log')
+        log_path = join(cohort.results_dir, fn + '.log')
         open(log_path, 'w').close()
 
 

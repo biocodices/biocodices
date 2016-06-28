@@ -1,36 +1,28 @@
-from os.path import join, basename, abspath, expanduser, isfile
-from shutil import move
-import pandas as pd
-from termcolor import colored
-
-from biocodices.variant_calling import VcfMunger
-from biocodices.helpers import Config
+from os import walk, getcwd
+from os.path import join, basename, isfile
 
 
 class Sample:
     reads_format = 'fastq'
 
-    def __init__(self, base_dir):
+    def __init__(self, sample_id):
         """
-        Expects a base directory named after a sample. The directory basename
-        will be used as a label or ID for the sample. The directory should
-        contain fastq files like: <sample_id>.R1.fastq, <sample_id>.R2.fastq
-        (for the forward and reverse reads, respectively).
+        Expects a sample_id that will *exactly* match the name of ONLY ONE
+        subdirectory under the current working dir.
+        The ideal use case is that you run bioco from the root dir of a Cohort,
+        so then this class will just search for its subdirectory in the results
+        folder.
         """
-        self.id = basename(base_dir)
-        self.dir = abspath(expanduser(base_dir))
+        self.id = sample_id
+        self.dir = self._find_subdir(self.id)
         self.fastqs = self._reads_files('fastq')
         self.trimmed_fastqs = self._reads_files('trimmed.fastq')
 
-    def __repr__(self):
-        return '<Sample {} from {}>'.format(self.id, self.sequencer_run_id)
-
-    def msg(self, msg):
-        prefix = colored('[{}]'.format(self.id), 'cyan')
-        return '{} {}'.format(prefix, msg)
-
     def file(self, ext):
         return '{}.{}'.format(join(self.dir, self.id), ext)
+
+    def __repr__(self):
+        return '<Sample {}>'.format(self.id)
 
     def _reads_files(self, ext):
         read_filepath = join(self.dir, '{}.{}.{}')
@@ -45,38 +37,19 @@ class Sample:
 
         return forward_filepath, reverse_filepath
 
-    # The following methods use two yml files to get stuff that is in the
-    # database. Consequently, they have to be updated regularly.
-    # It would be better to just read the database, but this is probably
-    # faster for the program to start.
-    # The sole reason why we need this info (library id, sequencing id,) is
-    # for the AddOrRelaceReadGroups step of the variant calling.
-    # These methods also mean some hardcoding of biocidces company logic.
-    # FIXME: think of a better way of doing this.
-    @property
-    def library_id(self):
-        try:
-            return Config('db')[self.id][0]
-        except KeyError:
-            return self.id
+    @staticmethod
+    def _find_subdir(sample_id):
+        matching_dirs = []
+        for dirpath, _, _ in walk(getcwd()):
+            if sample_id == basename(dirpath):
+                matching_dirs.append(dirpath)
 
-    @property
-    def sequencer_run_id(self):
-        try:
-            return Config('db')[self.id][1]
-        except KeyError:
-            return self.id
+        if len(matching_dirs) > 1:
+            msg = 'More than one subdirectory has this ID: %s' % sample_id
+            raise ValueError(msg)
+        elif len(matching_dirs) == 0:
+            msg = 'No subdirectory found with this ID: %s' % sample_id
+            raise ValueError(msg)
 
-    @property
-    def name(self):
-        try:
-            return Config('db_names')[self.id][0]
-        except KeyError:
-            return self.id
 
-    @property
-    def clinic(self):
-        try:
-            return Config('db_names')[self.id][1]
-        except KeyError:
-            return 'unknown clinic'
+        return matching_dirs[0]
