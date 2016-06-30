@@ -16,7 +16,7 @@ Options:
                                         DatabaseAnnotation. If you run this
                                         task without providing this option,
                                         the process will exit with an error.
-    --sample SAMPLE_ID                  Sample ID that must match the name
+    --sample-id SAMPLE_ID               Sample ID that must match the name
                                         of a subdirectory of the cwd. FOr tasks
                                         that operate on a single sample.
                                         Not needed for Cohort tasks.
