@@ -61,6 +61,7 @@ class AlignReads(luigi.Task):
         BWA().align_to_reference(trimmed_fastqs)
     def output(self):
         sample = Sample(self.sample_id)
+        print([target.fn for target in self.input()])
         return luigi.LocalTarget(sample.file('sam'))
 
 
@@ -74,7 +75,14 @@ class AddOrReplaceReadGroups(luigi.Task):
         db = DB('biocodices')
         samples = db.table('NGS_MUESTRAS').set_index('SAMPLE_ID')
         library_id = samples.loc[self.sample_id]['LIB_ID']
+        if type(library_id) != str:
+            # When there's more than one result, you get a series.
+            # I'm choosing the last row, assuming duplicated results.
+            # FIXME: this is prone to errors.
+            library_id = library_id.iloc[0]
         sequencer_run_id = samples.loc[self.sample_id]['NGS_ID']
+        if type(sequencer_run_id) != str:
+            sequencer_run_id = sequencer_run_id.iloc[0]
 
         Picard().add_or_replace_read_groups(
             sam_path=self.requires().output().fn,
@@ -83,9 +91,11 @@ class AddOrReplaceReadGroups(luigi.Task):
             sequencer_run_id=sequencer_run_id,
             out_path=self.output().fn,
         )
+        db.conn.close()
 
     def output(self):
         sample = Sample(self.sample_id)
+        print(self.input().fn)
         return luigi.LocalTarget(sample.file('raw.bam'))
 
 
@@ -94,12 +104,13 @@ class RealignReads(luigi.Task):
     def requires(self): return AddOrReplaceReadGroups(self.sample_id)
     def run(self):
         vcf_munger = VcfMunger()
-        raw_bam = self.requires().output().fn
+        raw_bam = self.input().fn
         realigned_bam = vcf_munger.realign_reads_around_indels(raw_bam)
         vcf_munger.recalibrate_quality_scores(realigned_bam,
                                               out_path=self.output().fn)
     def output(self):
         self.sample = Sample(self.sample_id)
+        print(self.input().fn)
         return luigi.LocalTarget(self.sample.file('recalibrated.bam'))
 
 
@@ -107,10 +118,11 @@ class HaplotypeCall(luigi.Task):
     sample_id = luigi.Parameter()
     def requires(self): return RealignReads(self.sample_id)
     def run(self):
-        recalibrated_bam = self.requires().output().fn
+        recalibrated_bam = self.input().fn
         GATK().create_gvcf(recalibrated_bam, out_path=self.output().fn)
     def output(self):
         self.sample = Sample(self.sample_id)
+        print(self.input().fn)
         return luigi.LocalTarget(self.sample.file('raw_variants.g.vcf'))
 
 
@@ -120,7 +132,7 @@ class JointGenotyping(luigi.Task):
         for sample in self.cohort.samples:
             yield HaplotypeCall(sample.id)
     def run(self):
-        gvcf_list = [task.output().fn for task in self.requires()]
+        gvcf_list = [target.fn for target in self.input()]
         GATK().joint_genotyping(gvcf_list=gvcf_list, out_path=self.output().fn)
     def output(self):
         self.cohort = Cohort(self.base_dir)

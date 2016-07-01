@@ -1,5 +1,5 @@
 from os import walk, getcwd
-from os.path import join, basename, isfile
+from os.path import join, basename, isfile, dirname
 
 
 class Sample:
@@ -41,6 +41,9 @@ class Sample:
     def _find_subdir(sample_id):
         matching_dirs = []
         for dirpath, _, _ in walk(getcwd()):
+            if basename(dirname(dirpath)) != 'results':
+                # Only looks for the subdir in a results folder
+                continue
             if sample_id == basename(dirpath):
                 matching_dirs.append(dirpath)
 

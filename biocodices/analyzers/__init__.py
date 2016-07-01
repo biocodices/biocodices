@@ -5,4 +5,3 @@ from .fst import Fst
 from .sklearn_pca import SklearnPCA
 from .smart_pca import SmartPCA
 from .quality_control import QualityControl
-from .sequencing_analysis import plot_vcf_stats
