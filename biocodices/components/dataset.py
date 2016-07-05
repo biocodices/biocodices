@@ -44,7 +44,7 @@ class Dataset:
         # .genotypes property showed something, the .bed actually had
         # something else.
 
-        self.plink.make_traw()  # Create just to read genotypes from
+        Plink(self.label_path).make_traw()  # Create just to read genotypes from
         return self._read_traw(self.traw)
 
     def quality_control(self):
@@ -70,7 +70,7 @@ class Dataset:
         Returns a new (filtered) dataset.
         """
         out = out or (self.label_path + '_filtered_for_tests')
-        self.plink.pre_tests_filter(mind, maf, geno, hwe, out)
+        Plink(self.label_path).pre_tests_filter(mind, maf, geno, hwe, out)
         return Dataset(out)
 
     def pca(self, implementation='smartpca', overwrite=False,
