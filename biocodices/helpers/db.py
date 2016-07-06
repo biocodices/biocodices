@@ -52,3 +52,11 @@ class DB:
         protein_changes_by_rs = df.sort_values(by='GeneID').reset_index(drop=True)
 
         return protein_changes_by_rs
+
+    def alleles_by_rs(self):
+        """Biocodices-parkinsonDB specific merging of tables."""
+        alleles = self.table('variations').set_index('VariationName')
+        alleles['Alleles'] = alleles['Alleles'].str.split('/')
+        alleles['original_allele'] = alleles['Alleles'].map(lambda l: l[0])
+        alleles['new_alleles'] = alleles['Alleles'].map(lambda l: ','.join(l[1:]))
+        return alleles[['original_allele', 'new_alleles']]
