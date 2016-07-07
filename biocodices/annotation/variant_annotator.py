@@ -9,7 +9,8 @@ from biocodices.helpers.general import restful_api_query
 
 class VariantAnnotator:
     @classmethod
-    def annotate_in_batch(cls, rs_list, processes=10, timeout=10):
+    def annotate_in_batch(cls, rs_list, processes=10, timeout=10,
+                          myvariant=True, ensembl=True):
         """Query MyVariant.info and Ensembl for a list of rs IDs. Runs in
         parallel. Returns a dictionary with:
             'detail': a merged pandas DataFrame with the SNPs as indices.
@@ -17,7 +18,8 @@ class VariantAnnotator:
                             phenotype, title, and ID.
         """
         with Pool(processes) as pool:
-            results = [pool.apply_async(cls.annotate, (rs, ))
+            annotate_args = dict(myvariant=myvariant, ensembl=ensembl)
+            results = [pool.apply_async(cls.annotate, (rs,), annotate_args)
                        for rs in rs_list]
             results = [result.get(timeout=timeout) for result in results]
 
@@ -29,7 +31,7 @@ class VariantAnnotator:
         return {'detail': annotations, 'publications': publications}
 
     @classmethod
-    def annotate(cls, rs, myvariant=True, ensembl=False,
+    def annotate(cls, rs, myvariant=True, ensembl=True,
                  myvariant_fields=['all']):
         """
         Query MyVariant.info and Ensembl for info about an rs ID.
