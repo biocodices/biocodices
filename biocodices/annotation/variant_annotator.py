@@ -29,7 +29,7 @@ class VariantAnnotator:
         return {'detail': annotations, 'publications': publications}
 
     @classmethod
-    def annotate(cls, rs, myvariant=True, ensembl=True,
+    def annotate(cls, rs, myvariant=True, ensembl=False,
                  myvariant_fields=['all']):
         """
         Query MyVariant.info and Ensembl for info about an rs ID.
@@ -42,6 +42,8 @@ class VariantAnnotator:
         if myvariant:
             myvariant_df, myvariant_publications = \
                 cls.parse_myvariant(cls.query_myvariant(rs))
+            if myvariant_df.empty:
+                print('No info from MyVariant.info for %s' % rs)
         if ensembl:
             ensembl_df, ensembl_publications = \
                 cls.parse_ensembl(cls.query_ensembl(rs))
