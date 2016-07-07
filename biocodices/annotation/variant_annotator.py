@@ -9,46 +9,47 @@ from biocodices.helpers.general import restful_api_query
 
 class VariantAnnotator:
     @classmethod
-    def annotate_in_batch(cls, rs_list, processes=10, timeout=10,
+    def annotate_in_batch(cls, identifiers, processes=10, timeout=10,
                           myvariant=True, ensembl=True):
-        """Query MyVariant.info and Ensembl for a list of rs IDs. Runs in
-        parallel. Returns a dictionary with:
+        """Query MyVariant.info and Ensembl for a list of rs IDs or strings
+        like 'chr1:1234:1235'. Runs in parallel. Returns a dictionary with:
             'detail': a merged pandas DataFrame with the SNPs as indices.
             'publications': a list of dicts, each dict is a publication with
                             phenotype, title, and ID.
         """
         with Pool(processes) as pool:
             annotate_args = dict(myvariant=myvariant, ensembl=ensembl)
-            results = [pool.apply_async(cls.annotate, (rs,), annotate_args)
-                       for rs in rs_list]
+            results = [pool.apply_async(cls.annotate, (identifier,), annotate_args)
+                       for identifier in identifiers]
             results = [result.get(timeout=timeout) for result in results]
 
         annotations = pd.concat([ann['detail'] for ann in results],
                                 ignore_index=True)
         #  index = ['dbsnp_chrom', 'dbsnp_hg19_start', 'rs_id', 'hgvs_id']
         #  annotations.set_index(index, inplace=True)
-        publications = {ann['rs']: ann['publications'] for ann in results}
+        publications = {ann['identifier']: ann['publications'] for ann in results}
         return {'detail': annotations, 'publications': publications}
 
     @classmethod
-    def annotate(cls, rs, myvariant=True, ensembl=True,
+    def annotate(cls, identifier, myvariant=True, ensembl=True,
                  myvariant_fields=['all']):
         """
-        Query MyVariant.info and Ensembl for info about an rs ID.
+        Query MyVariant.info and Ensembl for info about an rs ID. It also
+        accepts identifiers like 'chr1:1234-1235'.
         Returns a dict with the following keys:
         'myvariant': a pandas DF with selected info from MyVariant.info.
         'ensembl': a dict with selected info from Ensembl.
-        'publications': a list of publications that mention this rs
+        'publications': a list of publications that mention this rs/identifier
                         taken both from GRASP via Myvariant and Ensembl.
         """
         if myvariant:
             myvariant_df, myvariant_publications = \
-                cls.parse_myvariant(cls.query_myvariant(rs))
+                cls.parse_myvariant(cls.query_myvariant(identifier))
             if myvariant_df.empty:
-                print('No info from MyVariant.info for %s' % rs)
+                print('No info from MyVariant.info for %s' % identifier)
         if ensembl:
             ensembl_df, ensembl_publications = \
-                cls.parse_ensembl(cls.query_ensembl(rs))
+                cls.parse_ensembl(cls.query_ensembl(identifier))
 
         if myvariant and ensembl:
             annotation = myvariant_df.join(ensembl_df)
@@ -60,16 +61,17 @@ class VariantAnnotator:
             annotation = ensembl_df
             publications = ensembl_publications
 
-        annotation['rs_id'] = rs
+        annotation['rs_id'] = identifier  # Leaving this for backwards compatibility
+        annotation['query'] = identifier
         return {
-            'rs': rs,
+            'identifier': identifier,
             'detail': annotation,
             'publications': publications
         }
 
     @staticmethod
-    def query_myvariant(rs, fields=['all']):
-        return MyVariantInfo().query(rs, fields=fields)
+    def query_myvariant(identifier, fields=['all']):
+        return MyVariantInfo().query(identifier, fields=fields)
 
     @staticmethod
     def parse_myvariant(results):

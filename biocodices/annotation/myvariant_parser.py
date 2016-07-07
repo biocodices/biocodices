@@ -98,7 +98,7 @@ class MyvariantParser:
         dbsnp_dict = dbsnp_dict or {}
         summary = {}
 
-        simple_fields = ['alt', 'ref', 'chrom', 'class']
+        simple_fields = ['alt', 'ref', 'chrom', 'class', 'rsid']
         for field in simple_fields:
             summary['dbsnp_' + field] = dbsnp_dict.get(field)
 
