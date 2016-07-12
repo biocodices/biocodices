@@ -145,6 +145,59 @@ class VcfMunger:
         samples_df = cls._parse_samples_part_of_vcf(raw_samples_df)
         return info_df, samples_df
 
+    @classmethod
+    def vcf_to_frames2(cls, vcf_path):
+        """ Given a VCF filepath, it will return two pandas DataFrames:
+            - info_df: info per variant.
+            - samples_df: genotypes and genotyping data per variant / sample.
+        """
+        header = cls._header_from_vcf(vcf_path)
+        vcf_df = pd.read_table(vcf_path, sep='\s+', comment='#', names=header,
+                               index_col=['#CHROM', 'POS', 'ID'])
+        info_df = vcf_df.iloc[:, 1:5]
+        raw_samples_df = vcf_df.iloc[:, 5:]
+        samples_df = cls._parse_samples_part_of_vcf2(raw_samples_df)
+        return info_df, samples_df
+
+    @staticmethod
+    def _parse_samples_part_of_vcf2(raw_samples_df):
+        format_series = raw_samples_df['FORMAT'].to_dict()
+        # ^ Converting to_dict() removes rows with a duplicated index.
+
+        new_df = pd.DataFrame({})
+        for ix, row in raw_samples_df.reset_index().iterrows():
+            # For each row in the VCF, find out the genotype format
+            genotype_format = row['FORMAT'].split(':')
+            format_ix = row.index.get_loc('FORMAT')
+
+            # Find out which columns contain the genotypes
+            genotypes_first_ix = format_ix + 1
+            genotypes = row.iloc[genotypes_first_ix:]
+
+            # For each genotype at this row, append a row to the new DF
+            for sample_id, genotype_data in genotypes.str.split(':').iteritems():
+                genotype = dict(zip(genotype_format, genotype_data))
+                genotype.update({
+                    'sample': sample_id,
+                    'chrom': row['#CHROM'],
+                    'pos': row['POS'],
+                    'id': row['ID'],
+                })
+                row_series = pd.Series(genotype)
+                new_df = new_df.append(row_series, ignore_index=True)
+
+        #  new_df['DP_A1'] = new_df['AD'].str.split(',').map(lambda l: l[0])
+        #  new_df['DP_A2'] = new_df['AD'].str.split(',').map(lambda l: l[1])
+
+        def try_int(value):
+            try: return int(value)
+            except ValueError: return value
+
+        new_df['chrom'] = new_df['chrom'].map(try_int)
+        new_df['pos'] = new_df['pos'].map(try_int)
+
+        return new_df
+
     @staticmethod
     def _header_from_vcf(vcf_path):
         """Auxiliary method for vcf_to_frames()"""
@@ -180,10 +233,6 @@ class VcfMunger:
             new_df.loc[:, pd.IndexSlice[:, 'DP']].applymap(int)
         new_df.loc[:, pd.IndexSlice[:, 'GQ']] = \
             new_df.loc[:, pd.IndexSlice[:, 'GQ']].applymap(float)
-
-        def last_item_or_nan(ls):
-            try: return int(ls[-1])
-            except IndexError: return np.nan
 
         sample_ids = new_df.columns.get_level_values(0)
         for sample_id in sample_ids:
