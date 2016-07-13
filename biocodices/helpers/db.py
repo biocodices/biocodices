@@ -17,6 +17,10 @@ class DB:
 
         self.conn = engine.connect()
 
+        # Store the tables in memory and close the DB connection
+        for table_name in self.tables:
+            setattr(self, table_name, self.table(table_name))
+
     def query(self, query_string, as_list=False):
         result = self.conn.execute(query_string)
         if as_list:
@@ -34,7 +38,7 @@ class DB:
 
     def protein_changes_by_rs(self):
         """Biocodices-parkinsonDB specific merging of tables."""
-        df = self.table('mutations_report')
+        df = self.mutations_report
         df = df.loc[:, ['VariationName', 'GeneID','TypeVariation', 'GenomicChange', 'ProteinChange']]
 
         def parse_protein_change(change, ret):
@@ -56,8 +60,9 @@ class DB:
 
     def alleles_by_rs(self):
         """Biocodices-parkinsonDB specific merging of tables."""
-        alleles = self.table('variations').set_index('VariationName')
+        alleles = self.variations.set_index('VariationName')
         alleles['Alleles'] = alleles['Alleles'].str.split('/')
         alleles['original_allele'] = alleles['Alleles'].map(lambda l: l[0])
         alleles['new_alleles'] = alleles['Alleles'].map(lambda l: ','.join(l[1:]))
+
         return alleles[['original_allele', 'new_alleles']]
