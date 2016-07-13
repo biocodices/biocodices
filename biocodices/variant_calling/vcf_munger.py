@@ -146,7 +146,7 @@ class VcfMunger:
         return info_df, samples_df
 
     @classmethod
-    def vcf_to_frames2(cls, vcf_path):
+    def vcf_to_tidy_dataframe(cls, vcf_path):
         """ Given a VCF filepath, it will return two pandas DataFrames:
             - info_df: info per variant.
             - samples_df: genotypes and genotyping data per variant / sample.
@@ -156,15 +156,12 @@ class VcfMunger:
                                index_col=['#CHROM', 'POS', 'ID'])
         info_df = vcf_df.iloc[:, 1:5]
         raw_samples_df = vcf_df.iloc[:, 5:]
-        samples_df = cls._parse_samples_part_of_vcf2(raw_samples_df)
+        samples_df = cls._tidy_df_from_samples_in_vcf(raw_samples_df)
         return info_df, samples_df
 
     @staticmethod
-    def _parse_samples_part_of_vcf2(raw_samples_df):
-        format_series = raw_samples_df['FORMAT'].to_dict()
-        # ^ Converting to_dict() removes rows with a duplicated index.
-
-        new_df = pd.DataFrame({})
+    def _tidy_df_from_samples_in_vcf(raw_samples_df):
+        tidy_df = pd.DataFrame({})
         for ix, row in raw_samples_df.reset_index().iterrows():
             # For each row in the VCF, find out the genotype format
             genotype_format = row['FORMAT'].split(':')
@@ -184,19 +181,16 @@ class VcfMunger:
                     'id': row['ID'],
                 })
                 row_series = pd.Series(genotype)
-                new_df = new_df.append(row_series, ignore_index=True)
-
-        #  new_df['DP_A1'] = new_df['AD'].str.split(',').map(lambda l: l[0])
-        #  new_df['DP_A2'] = new_df['AD'].str.split(',').map(lambda l: l[1])
+                tidy_df = tidy_df.append(row_series, ignore_index=True)
 
         def try_int(value):
             try: return int(value)
             except ValueError: return value
 
-        new_df['chrom'] = new_df['chrom'].map(try_int)
-        new_df['pos'] = new_df['pos'].map(try_int)
+        tidy_df['chrom'] = tidy_df['chrom'].map(try_int)
+        tidy_df['pos'] = tidy_df['pos'].map(try_int)
 
-        return new_df
+        return tidy_df
 
     @staticmethod
     def _header_from_vcf(vcf_path):
