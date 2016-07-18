@@ -44,9 +44,13 @@ class DB:
         df = self.protein_changes_by_rs()
         original_columns = list(df.columns)
 
-        mut_columns = ['VariationName', 'Polyphen_prediction',
-                       'Sift_prediction']
-        df = pd.merge(df, self.mutations_effects[mut_columns],
+        mutrep_columns = ['VariationName', 'RISK_ALLELE']
+        df = pd.merge(df, self.mutations_report[mutrep_columns],
+                      on='VariationName').drop_duplicates()
+
+        muteff_columns = ['VariationName', 'Polyphen_prediction',
+                          'Sift_prediction']
+        df = pd.merge(df, self.mutations_effects[muteff_columns],
                       on='VariationName').drop_duplicates()
 
         cit_columns = ['VariationName', 'Review', 'Note']
@@ -55,21 +59,25 @@ class DB:
 
         # Set column order following the order of DFs merged
         columns = original_columns
-        columns += [col for col in mut_columns if col != 'VariationName']
+        columns += [col for col in mutrep_columns if col != 'VariationName']
+        columns += [col for col in muteff_columns if col != 'VariationName']
         columns += [col for col in cit_columns if col != 'VariationName']
         df = df[columns]
 
         new_df = pd.DataFrame({})
 
         for variant, variant_df in df.groupby('VariationName'):
-            new_row = variant_df.reset_index(drop=True).loc[0, 'VariationName':'new_alleles']
+            new_row = variant_df.reset_index(drop=True)
+            new_row = new_row.loc[0, 'VariationName':'RISK_ALLELE'].copy()
 
             polyphen_predictions = variant_df['Polyphen_prediction'].unique()
-            polyphen_predictions = [pred for pred in polyphen_predictions if pred and pred != '']
+            polyphen_predictions = [pred for pred in polyphen_predictions
+                                    if pred and pred != '']
             new_row['Polyphen_prediction'] = ','.join(polyphen_predictions)
 
             sift_predictions = variant_df['Sift_prediction'].unique()
-            sift_predictions = [pred for pred in sift_predictions if pred and pred != '']
+            sift_predictions = [pred for pred in sift_predictions
+                                if pred and pred != '']
             new_row['Sift_prediction'] = ','.join(sift_predictions)
 
             reviews = variant_df[['Review', 'Note']].drop_duplicates()['Review']
