@@ -20,7 +20,7 @@ class VariantAnnotator:
         with Pool(processes) as pool:
             annotate_args = dict(myvariant=myvariant, ensembl=ensembl)
             results = [pool.apply_async(cls.annotate, (identifier,), annotate_args)
-                       for identifier in identifiers]
+                       for identifier in set(identifiers)]
             results = [result.get(timeout=timeout) for result in results]
 
         annotations = pd.concat([ann['detail'] for ann in results],
