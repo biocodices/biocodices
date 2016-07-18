@@ -21,6 +21,8 @@ class DB:
         for table_name in self.tables:
             setattr(self, table_name, self.table(table_name))
 
+        self.enp1_variants = self._merge_enp1_tables()
+
     def query(self, query_string, as_list=False):
         result = self.conn.execute(query_string)
         if as_list:
@@ -36,6 +38,51 @@ class DB:
         """Show table names from the current database."""
         return [t[0] for t in self.query('show tables;', as_list=True)]
 
+    def _merge_enp1_tables(self):
+        """Merge the ENPv1 parkinsonDB tables to get the most relevant data
+        for each panel marker. Returns a big DataFrame."""
+        df = self.protein_changes_by_rs()
+        original_columns = list(df.columns)
+
+        mut_columns = ['VariationName', 'Polyphen_prediction',
+                       'Sift_prediction']
+        df = pd.merge(df, self.mutations_effects[mut_columns],
+                      on='VariationName').drop_duplicates()
+
+        cit_columns = ['VariationName', 'Review', 'Note']
+        df = pd.merge(df, self.variationscitations[cit_columns],
+                      on='VariationName').drop_duplicates()
+
+        # Set column order following the order of DFs merged
+        columns = original_columns
+        columns += [col for col in mut_columns if col != 'VariationName']
+        columns += [col for col in cit_columns if col != 'VariationName']
+        df = df[columns]
+
+        new_df = pd.DataFrame({})
+
+        for variant, variant_df in df.groupby('VariationName'):
+            new_row = variant_df.reset_index(drop=True).loc[0, 'VariationName':'new_alleles']
+
+            polyphen_predictions = variant_df['Polyphen_prediction'].unique()
+            polyphen_predictions = [pred for pred in polyphen_predictions if pred and pred != '']
+            new_row['Polyphen_prediction'] = ','.join(polyphen_predictions)
+
+            sift_predictions = variant_df['Sift_prediction'].unique()
+            sift_predictions = [pred for pred in sift_predictions if pred and pred != '']
+            new_row['Sift_prediction'] = ','.join(sift_predictions)
+
+            reviews = variant_df[['Review', 'Note']].drop_duplicates()['Review']
+            reviews = [review.strip() for review in reviews if review != '']
+            new_row['Review'] = ','.join(reviews)
+
+            new_df = new_df.append(new_row, ignore_index=True)
+
+        column_order = [col for col in df.columns if col != 'Note']
+        new_df = new_df.sort_values(by='GeneID')
+
+        return new_df[column_order].set_index('VariationName')
+
     def protein_changes_by_rs(self):
         """Biocodices-parkinsonDB specific merging of tables."""
         df = self.mutations_report
@@ -44,9 +91,10 @@ class DB:
         def parse_protein_change(change, ret):
             match = re.search(r'p.(\D{3})(\d+)(\D{3}|=)', change)
             if not match: return ''
+
             data = {'normal_aminoacid': match.group(1),
                     'protein_position': match.group(2),
-                    'new_aminoacid': match.group(3)}
+                    'new_aminoacid': match.group(3).replace('Ter', 'STOP')}
             return data[ret]
 
         df['Normal Aminoacid'] = df['ProteinChange'].map(lambda code: parse_protein_change(code, 'normal_aminoacid'))
@@ -62,7 +110,7 @@ class DB:
         """Biocodices-parkinsonDB specific merging of tables."""
         alleles = self.variations.set_index('VariationName')
         alleles['Alleles'] = alleles['Alleles'].str.split('/')
-        alleles['original_allele'] = alleles['Alleles'].map(lambda l: l[0])
+        alleles['ancestral_allele'] = alleles['Alleles'].map(lambda l: l[0])
         alleles['new_alleles'] = alleles['Alleles'].map(lambda l: ','.join(l[1:]))
 
-        return alleles[['original_allele', 'new_alleles']]
+        return alleles[['ancestral_allele', 'new_alleles']]
