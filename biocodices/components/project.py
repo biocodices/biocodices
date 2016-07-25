@@ -10,8 +10,9 @@ class Project:
         self.data_dir = join(self.dir, 'data')
         self.results_dir = join(self.dir, 'results')
 
-        if not isdir(self.results_dir):
-            mkdir(self.results_dir)
+        for directory in [self.dir, self.data_dir, self.results_dir]:
+            if not isdir(directory):
+                mkdir(directory)
 
     def __repr__(self):
         return '<{} "{}">'.format(self.__class__.__name__, self.id)
