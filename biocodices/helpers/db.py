@@ -21,7 +21,8 @@ class DB:
         for table_name in self.tables:
             setattr(self, table_name, self.table(table_name))
 
-        self.enp1_variants = self._merge_enp1_tables()
+        if database == 'parkinsonDB':
+            self.enp1_variants = self._merge_enp1_tables()
 
     def query(self, query_string, as_list=False):
         result = self.conn.execute(query_string)

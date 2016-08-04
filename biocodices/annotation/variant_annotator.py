@@ -1,13 +1,32 @@
 import requests
+import json
 from multiprocessing import Pool
 import pandas as pd
 from myvariant import MyVariantInfo
 
 from biocodices.annotation import MyvariantParser, EnsemblParser
-from biocodices.helpers.general import restful_api_query
+from biocodices.helpers.general import restful_api_query, in_groups_of
 
 
 class VariantAnnotator:
+    def ensembl_batch_query(self, rs_list):
+        url = 'http://grch37.rest.ensembl.org/variation/homo_sapiens'
+        headers = {'Content-Type': 'application/json',
+                   'Accept': 'application/json'}
+        ret = {}
+
+        # Ensembl API won't take goups of > 1000 identifiers
+        for rs_group in in_groups_of(1000, rs_list):
+            payload = json.dumps({'ids': rs_group})
+            response = requests.post(url, headers=headers, data=payload)
+
+            if response.ok:
+                ret.update(response.json())
+            else:
+                response.raise_for_status()
+
+        return ret
+
     @classmethod
     def annotate_in_batch(cls, identifiers, processes=10, timeout=10,
                           myvariant=True, ensembl=True):

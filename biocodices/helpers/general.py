@@ -1,9 +1,16 @@
 from datetime import datetime
 from shutil import move
-from itertools import product
+from itertools import product, zip_longest
 from os.path import join
 import requests
 import sys
+
+
+def in_groups_of(n, iterable):
+    # Python recipe taken from:
+    # https://docs.python.org/3.1/library/itertools.html#recipes
+    args = [iter(iterable)] * n
+    return ([e for e in t if e is not None] for t in zip_longest(*args))
 
 
 def touch_all_the_logs(cohort):
