@@ -9,8 +9,16 @@ from biocodices.helpers.general import restful_api_query, in_groups_of
 
 
 class VariantAnnotator:
-    def ensembl_batch_query(self, rs_list):
-        url = 'http://grch37.rest.ensembl.org/variation/homo_sapiens'
+    def ensembl_batch_query(self, rs_list, build='GRCh37'):
+        """
+        Takes a list of rs IDs and queries Ensembl.
+        Returns a dictionary with the rs IDs as keys.
+        It can annotate with builds GRCh37 and GRCh38.
+        """
+        url = 'http://rest.ensembl.org/variation/homo_sapiens'
+        if build == 'GRCh37':
+            url = url.replace('rest.', 'grch37.rest.')
+
         headers = {'Content-Type': 'application/json',
                    'Accept': 'application/json'}
         ret = {}
