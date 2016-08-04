@@ -1,5 +1,7 @@
 import requests
 import json
+import time
+import redis
 from multiprocessing import Pool
 import pandas as pd
 from myvariant import MyVariantInfo
@@ -9,12 +11,34 @@ from biocodices.helpers.general import restful_api_query, in_groups_of
 
 
 class VariantAnnotator:
-    def ensembl_batch_query(self, rs_list, build='GRCh37'):
+    # FIXME: this should check if Redis is present in the system!
+    redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+
+    @classmethod
+    def ensembl_cache_get(cls, rs_list):
+        ret = {}
+        for rs in rs_list:
+            info = cls.redis_client.get(rs)
+            if info:
+                info = json.loads(info.decode('utf8'))
+                ret.update({rs: info})
+        return ret
+
+    @classmethod
+    def ensembl_cache_set(cls, rs_info_dict):
+        expire_time = 60 * 60 * 24 * 30  # One month
+        for rs, info in rs_info_dict.items():
+            if not info: continue
+            info = json.dumps(info)
+            cls.redis_client.setex(rs, expire_time, info)
+
+    def ensembl_batch_query(self, rs_list, build='GRCh37', use_cache=True):
         """
         Takes a list of rs IDs and queries Ensembl.
         Returns a dictionary with the rs IDs as keys.
         It can annotate with builds GRCh37 and GRCh38.
         """
+        rs_list = set([rs for rs in rs_list if rs])
         url = 'http://rest.ensembl.org/variation/homo_sapiens'
         if build == 'GRCh37':
             url = url.replace('rest.', 'grch37.rest.')
@@ -22,16 +46,28 @@ class VariantAnnotator:
         headers = {'Content-Type': 'application/json',
                    'Accept': 'application/json'}
         ret = {}
+        if use_cache:
+            ret.update(self.ensembl_cache_get(rs_list))
+            rs_list = rs_list - ret.keys()
+            # ^ Remove the annotated ones from cache
 
         # Ensembl API won't take goups of > 1000 identifiers
-        for rs_group in in_groups_of(1000, rs_list):
+        for rs_group in in_groups_of(50, rs_list):
+            print('Query Ensembl for %s identifiers...' % len(rs_group))
             payload = json.dumps({'ids': rs_group})
             response = requests.post(url, headers=headers, data=payload)
 
             if response.ok:
                 ret.update(response.json())
+                self.ensembl_cache_set(response.json())
+                print(' -> 200 OK!')
             else:
-                response.raise_for_status()
+                sleep_time = int(response.headers['X-RateLimit-Reset'])
+                print(' -> 400 not OK. Sleeping %s seconds...' % sleep_time)
+                print('    (Will retry after sleep).')
+                time.sleep(sleep_time)
+                self.ensembl_batch_query(rs_list)
+                # response.raise_for_status()
 
         return ret
 
