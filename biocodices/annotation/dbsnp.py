@@ -3,6 +3,7 @@ import requests
 import json
 import redis
 from multiprocessing import Pool
+from itertools import chain
 
 from biocodices.helpers.general import in_groups_of
 
@@ -39,7 +40,7 @@ class DbSNP:
                 if self._cache(rs):
                     info_dict[rs] = self._cache(rs)
 
-            # print('Found %s/%s in dbSNP cache' % (len(info_dict), len(rs_list)))
+            print('Found %s/%s in dbSNP cache' % (len(info_dict), len(rs_list)))
             rs_list = rs_list - info_dict.keys()
 
         if use_web:
@@ -47,6 +48,26 @@ class DbSNP:
             info_dict.update(info_from_api)
 
         return info_dict
+
+    def genes(self, rs, use_web=False):
+        """Annotate the genes for a given rs."""
+        ann = self.annotate(rs, use_web=use_web).get(rs)
+        if not ann:
+            return []
+
+        mappings = ann.get('assembly', {}).values()
+        mappings = chain(*mappings)
+
+        gene_models = [m['geneModel'] for m in mappings if 'geneModel' in m]
+        gene_models = chain(*gene_models)
+
+        unique_genes = set()
+        for gene in gene_models:
+            gene_str = gene['geneSymbol'] or ''
+            genes_set = set(gene_str.split('|'))
+            unique_genes.update(genes_set)
+
+        return sorted(list(unique_genes))
 
     @staticmethod
     def _key(rs):
@@ -63,9 +84,9 @@ class DbSNP:
         """
         url = self._url(rs)
         headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-        # print('%s : Query %s' % (rs, url))
+        print('%s : Query %s' % (rs, url))
         response = requests.get(url, headers)
-        # print(' -> %s %s' % (response.status_code, response.reason))
+        print(' -> %s %s' % (response.status_code, response.reason))
 
         if response.ok:
             expire_after = 60 * 60 * 24 * 30  # One month
@@ -91,12 +112,12 @@ class DbSNP:
 
             for i, rs_group in enumerate(in_groups_of(parallel, rs_list)):
                 if i > 0:
-                    # print(' Sleep %s seconds' % sleep_time)
+                    print(' Sleep %s seconds' % sleep_time)
                     time.sleep(sleep_time)
 
                 results = {}
-                # print('Query dbSNP for %s rs IDs' % len(rs_group))
-                # print(' %s ... %s' % (rs_group[0], rs_group[-1]))
+                print('Query dbSNP for %s rs IDs' % len(rs_group))
+                print(' %s ... %s' % (rs_group[0], rs_group[-1]))
                 for rs in set(rs_list):
                     results[rs] = pool.apply_async(self._query, (rs,))
 

@@ -38,7 +38,7 @@ class Ensembl:
 
         if use_cache:
             info_dict.update(self._cache_get(rs_list))
-            # print('Found %s/%s in Ensembl cache' % (len(info_dict), len(rs_list)))
+            print('Found %s/%s in Ensembl cache' % (len(info_dict), len(rs_list)))
             rs_list = rs_list - info_dict.keys()
 
         if use_web:
@@ -47,6 +47,19 @@ class Ensembl:
 
         return info_dict
 
+    def genes(self, rs, use_web=False):
+        ann = self.annotate(rs, use_web=use_web).get(rs)
+        if not ann:
+            return []
+
+        gene_names = set()
+        for pheno in ann.get('phenotypes', []):
+            if 'genes' in pheno and pheno['genes']:
+                genes_str = pheno['genes'] or ''
+                genes_set = set(genes_str.split(','))
+                gene_names.update(genes_set)
+
+        return sorted(list(gene_names))
 
     def _key(self, rs):
         return 'ensembl:%s:%s' % (self.build.lower(), rs)
@@ -73,7 +86,7 @@ class Ensembl:
         # Remove empty dicts
         rs_info_dict = {k: v for k, v in rs_info_dict.items() if v}
 
-        # print(' Setting cache for %s keys' % len(rs_info_dict))
+        print(' Setting cache for %s keys' % len(rs_info_dict))
         for rs, info in rs_info_dict.items():
             info = json.dumps(info)
             self._redis_client.setex(self._key(rs), expire_time, info)
@@ -97,11 +110,11 @@ class Ensembl:
         ret = {}
         for i, rs_group in enumerate(in_groups_of(batch_size, rs_list)):
             if i > 0:
-                # print(' Sleep %s seconds' % sleep_time)
+                print(' Sleep %s seconds' % sleep_time)
                 time.sleep(sleep_time)
 
-            # print('Query Ensembl for %s IDs' % len(rs_group))
-            # print(' %s ... %s' % (rs_group[0], rs_group[-1]))
+            print('Query Ensembl for %s IDs' % len(rs_group))
+            print(' %s ... %s' % (rs_group[0], rs_group[-1]))
             payload = json.dumps({'ids': rs_group, 'phenotypes': '1'})
             response = requests.post(url, headers=headers, data=payload)
 
@@ -110,8 +123,8 @@ class Ensembl:
                 self._cache_set(response.json())
             else:
                 reset_time = int(response.headers['X-RateLimit-Reset'])
-                # print(' 400 not OK. Sleeping %s seconds...' % reset_time)
-                # print(' Will retry after sleep.')
+                print(' 400 not OK. Sleeping %s seconds...' % reset_time)
+                print(' Will retry after sleep.')
                 time.sleep(reset_time)
                 self._batch_query(rs_list)
                 # response.raise_for_status()
