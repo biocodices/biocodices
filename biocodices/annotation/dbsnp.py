@@ -19,7 +19,7 @@ class DbSNP:
         Annotate a list of rs IDs (also accepts a single rs ID).
         When use_cache is True, it will prioritize using Redis cache to get
         info from the given rs. When use_web is True, it will get info from
-        Ensembl API. The priority is on the cache, unless explicitely
+        dbSNP web. The priority is on the cache, unless explicitely
         inactivated. It returns a dict where the keys are the passed rs IDs.
 
         * parallel: processes to spawn in parallel when querying dbSNP web.
