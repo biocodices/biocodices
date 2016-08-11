@@ -1,3 +1,4 @@
+import re
 import requests
 import redis
 import time
@@ -115,42 +116,57 @@ class Clinvar:
             raise HTTPError('Status code was', response.status_code)
 
     def _extract_info_from_xml(self, raw_xml):
-        parsed_xml = raw_xml.split('\n')[1:]
-        parsed_xml = '\n'.join(parsed_xml)
+        parsed_xml = '\n'.join(raw_xml.split('\n')[1:])
         soup = BeautifulSoup(parsed_xml, 'lxml-xml')
 
-        for variation in soup.find_all('VariationReport'):
-            variation_id = variation['VariationID']
+        variations = soup.find_all('VariationReport')
+        if len(variations) > 1:
+            raise Exception('Many variations in this XML')
 
-            rs_list = []
-            starts_G37 = []
-            stops_G37 = []
-            chroms_G37 = []
+        variation =  variations[0]
+        variation_id = variation['VariationID']
 
-            for allele in variation.find_all('Allele'):
-                rs_elements = allele.find_all('XRef', attrs={'DB': 'dbSNP', 'Type': 'rs'})
+        rs_list = []
+        starts_G37 = []
+        stops_G37 = []
+        chroms_G37 = []
+        pubmed_ids = set()
 
-                for rs_element in rs_elements:
-                    rs_list.append('rs' + rs_element['ID'])
+        for allele in variation.find_all('Allele'):
+            rs_elements = allele.find_all('XRef', attrs={'DB': 'dbSNP', 'Type': 'rs'})
 
-                for seq_location in allele.find_all('SequenceLocation', attrs={'Assembly': 'GRCh37'}):
-                    starts_G37.append(seq_location['start'])
-                    stops_G37.append(seq_location['stop'])
-                    chroms_G37.append(seq_location['Chr'])
+            for rs_element in rs_elements:
+                rs_list.append('rs' + rs_element['ID'])
 
-            if not starts_G37: print('No starts for', variation_id)
-            if not stops_G37: print('No stops for', variation_id)
+            for seq_location in allele.find_all('SequenceLocation', attrs={'Assembly': 'GRCh37'}):
+                starts_G37.append(seq_location['start'])
+                stops_G37.append(seq_location['stop'])
+                chroms_G37.append(seq_location['Chr'])
 
-            rs_id = '|'.join(rs_list) or None # don't assign empty string to rs_id
-            start = '|'.join(starts_G37)
-            stop = '|'.join(stops_G37)
-            chrom = '|'.join(chroms_G37)
+        # Publications are listed for the Variation, not for each Allele
+        for clinical_significance in variation.find_all('ClinicalSignificance'):
+            desc = clinical_significance.find('Description').text
+            if not re.search(r'patho|assoc', desc, flags=re.IGNORECASE):
+                continue
 
-            if not rs_id:
-                rs_id = '%s:%s-%s' % (chrom, start, stop)
-                print('No rs IDs for', variation_id, '-> Assign %s' % rs_id)
+            for pubmed in clinical_significance.find_all('ID', attrs={'Source': 'PubMed'}):
+                pubmed_ids.add(pubmed.text)
 
-            return {'rs_id': rs_id,
-                    'chrom_G37': chrom,
-                    'start_G37': start,
-                    'stop_G37': stop}
+        if not starts_G37: print('No starts for', variation_id)
+        if not stops_G37: print('No stops for', variation_id)
+
+        rs_id = '|'.join(rs_list) or None # don't assign empty string to rs_id
+        start = '|'.join(starts_G37)
+        stop = '|'.join(stops_G37)
+        chrom = '|'.join(chroms_G37)
+        pubmed_ids = '|'.join(list(pubmed_ids))
+
+        if not rs_id:
+            rs_id = '%s:%s-%s' % (chrom, start, stop)
+            print('No rs IDs for', variation_id, '-> Assign %s' % rs_id)
+
+        return {'rs_id': rs_id,
+                'chrom_G37': chrom,
+                'start_G37': start,
+                'stop_G37': stop,
+                'pubmed_ids': pubmed_ids}
