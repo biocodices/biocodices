@@ -67,7 +67,7 @@ class Clinvar:
 
     def _cache(self, cln_id):
         xml_response = self._redis_client.get(self._key(cln_id))
-        if not xml_response == b'None':
+        if xml_response and not xml_response == b'None':
             return xml_response.decode('utf8')
 
     def _batch_query(self, cln_ids, parallel, sleep_time):
