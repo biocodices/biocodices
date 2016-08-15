@@ -2,6 +2,7 @@ from os import mkdir
 from os.path import join, expanduser, abspath, basename, isdir
 from glob import glob
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 class Project:
@@ -51,3 +52,8 @@ class Project:
         print('Written to', filepath)
 
         return filepath
+
+    def save_last_plot(self, filename):
+        filepath = self.results_file(filename)
+        plt.savefig(filepath, bbox_inches='tight')
+        print('Written to', filepath)
