@@ -32,7 +32,13 @@ class DbSNP:
         if type(rs_list) == str:
             rs_list = [rs_list]
 
-        rs_list = set([rs for rs in rs_list if rs])
+        weird_ids = [rs for rs in rs_list if rs and 'rs' not in rs]
+
+        if weird_ids:
+            print('Leave out %s ids without "rs"' % len(weird_ids))
+
+        rs_list = set([rs for rs in rs_list if rs and rs not in weird_ids])
+        # Leave out identifiers that ar not rs\d+
         info_dict = {}
 
         if use_cache:
@@ -84,9 +90,9 @@ class DbSNP:
         """
         url = self._url(rs)
         headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-        print('%s : Query %s' % (rs, url))
+        # print('%s : Query %s' % (rs, url))
         response = requests.get(url, headers)
-        print(' -> %s %s' % (response.status_code, response.reason))
+        # print(' -> %s %s' % (response.status_code, response.reason))
 
         if response.ok:
             expire_after = 60 * 60 * 24 * 30  # One month
