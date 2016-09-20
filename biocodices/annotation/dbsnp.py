@@ -2,7 +2,7 @@ import time
 import requests
 import json
 import redis
-from multiprocessing import Pool
+from multiprocessing import Pool, TimeoutError
 from itertools import chain
 
 from biocodices.helpers.general import in_groups_of
@@ -95,7 +95,8 @@ class DbSNP:
         # print(' -> %s %s' % (response.status_code, response.reason))
 
         if response.ok:
-            expire_after = 60 * 60 * 24 * 30  # One month
+            expire_after = 60 * 60 * 24 * 30 * 5  # Five months
+
             dump = json.dumps(response.json())
             self._redis_client.setex(self._key(rs), expire_after, dump)
             return self._cache(rs)
@@ -124,12 +125,15 @@ class DbSNP:
                 results = {}
                 print('Query dbSNP for %s rs IDs' % len(rs_group))
                 print(' %s ... %s' % (rs_group[0], rs_group[-1]))
-                for rs in set(rs_list):
+                for rs in set(rs_group):
                     results[rs] = pool.apply_async(self._query, (rs,))
 
                 for rs, result in results.items():
-                    info = result.get(timeout=20)
-                    if info:  # Don't save empty dicts
-                        info_dict[rs] = info
+                    try:
+                        info = result.get(timeout=20)
+                        if info:  # Don't save empty dicts
+                            info_dict[rs] = info
+                    except TimeoutError:
+                        print(rs, 'gave a TimeoutError')
 
         return info_dict

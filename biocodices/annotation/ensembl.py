@@ -81,7 +81,7 @@ class Ensembl:
          'rs234': <dict with info about rs234>,
           ... }
         """
-        expire_time = expire_time or (60 * 60 * 24 * 30)  # One month
+        expire_time = expire_time or (60 * 60 * 24 * 30 * 5)  # Five months
 
         # Remove empty dicts
         rs_info_dict = {k: v for k, v in rs_info_dict.items() if v}

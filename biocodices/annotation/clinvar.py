@@ -99,7 +99,7 @@ class Clinvar:
         return xml_dict
 
     def _query(self, cln_id):
-        expiration_time = 60 * 60 * 24 * 30  # One month in seconds
+        expiration_time = 60 * 60 * 24 * 30 * 5  # Five months in seconds
         url = self._url(cln_id)
         print('Visiting:', url)
 
