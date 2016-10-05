@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 class Project:
     def __init__(self, base_dir):
         self.dir = abspath(expanduser(base_dir))
-        self.id = basename(self.dir)
+        self.name = basename(self.dir)
         self.data_dir = join(self.dir, 'data')
         self.results_dir = join(self.dir, 'results')
 
@@ -17,7 +17,7 @@ class Project:
                 mkdir(directory)
 
     def __repr__(self):
-        return '<{} "{}">'.format(self.__class__.__name__, self.id)
+        return '<{} "{}">'.format(self.__class__.__name__, self.name)
 
     def data_files(self, pattern=None):
         return [fn for fn in glob(join(self.data_dir, (pattern or '*')))]
@@ -31,11 +31,20 @@ class Project:
     def data_file(self, filename):
         return join(self.data_dir, filename)
 
-    def dump_df(self, df, filename, index=None):
+    def dump_df(self, df, filename, index=None, **kwargs):
         """
         Dump the dataframe to a CSV in the results dir with the given filename.
+        Include '.tsv' in the filename to make it a TSV file!
+        Extra **kwargs are passed to pandas.DataFrame.to_csv()
         """
-        if not filename.endswith('.csv'):
+
+        if 'sep' not in kwargs:
+            if filename.endswith('.tsv'):
+                kwargs['sep'] = '\t'
+            else:
+                kwargs['sep'] = ','
+
+        if kwargs['sep'] == ',' and not filename.endswith('.csv'):
             filename += '.csv'
 
         if index is None:
@@ -48,7 +57,7 @@ class Project:
             index = (type(df.index) not in num_index_types)
 
         filepath = self.results_file(filename)
-        df.to_csv(filepath, index=index)
+        df.to_csv(filepath, index=index, **kwargs)
         print('Written to', filepath)
 
         return filepath
