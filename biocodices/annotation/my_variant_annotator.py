@@ -39,12 +39,15 @@ class MyVariantAnnotator(BaseAnnotator):
         with Pool(parallel) as pool:
             for i, ids_group in enumerate(in_groups_of(parallel, identifiers)):
                 if i > 0:
-                    print(' Sleep %s seconds' % sleep_time)
+                    # print(' Sleep %s seconds' % sleep_time)
                     time.sleep(sleep_time)
 
-                results = {}
-                print('Query MyVariant.info for %s IDs' % len(ids_group))
+                msg = 'Batch {0}/{1}. Query MyVariant.info for {2} variants'
+                print(msg.format(i+1, len(identifiers)//parallel, len(ids_group)))
                 print(' %s ... %s' % (ids_group[0], ids_group[-1]))
+
+                results = {}
+
                 for id_ in set(ids_group):
                     results[id_] = pool.apply_async(self._query, (id_,))
 

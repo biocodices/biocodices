@@ -18,7 +18,7 @@ class BaseAnnotator():
         # Remove empty dicts
         id_info_dict = {k: v for k, v in id_info_dict.items() if v}
 
-        print(' Setting cache for %s keys' % len(id_info_dict))
+        # print(' Setting cache for %s keys' % len(id_info_dict))
         for identifier, info in id_info_dict.items():
             info = json.dumps(info)
             self._redis_client.setex(self._key(identifier), expire_time, info)
@@ -32,7 +32,8 @@ class BaseAnnotator():
                 info = json.loads(info.decode('utf8'))
                 ret.update({identifier: info})
 
-        print('Found %s/%s in dbSNP cache' % (len(ret), len(id_list)))
+        if len(id_list) > 1:
+            print('Found %s/%s in dbSNP cache' % (len(ret), len(id_list)))
         return ret
 
     def annotate(self):
