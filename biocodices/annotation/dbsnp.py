@@ -5,14 +5,11 @@ import redis
 from multiprocessing import Pool, TimeoutError
 from itertools import chain
 
+from biocodices.annotation import BaseAnnotator
 from biocodices.helpers.general import in_groups_of
 
 
-class DbSNP:
-    # FIXME: this should check if Redis is present in the system!
-    # FIXME: redis config should be read from a YML
-    _redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
-
+class DbSNP(BaseAnnotator):
     def annotate(self, rs_list, use_cache=True, use_web=True, parallel=5,
                  sleep_time=10):
         """
@@ -32,21 +29,12 @@ class DbSNP:
         if type(rs_list) == str:
             rs_list = [rs_list]
 
-        weird_ids = [rs for rs in rs_list if rs and 'rs' not in rs]
+        rs_list = set(self.remove_non_rs_ids(rs_list))
 
-        if weird_ids:
-            print('Leave out %s ids without "rs"' % len(weird_ids))
-
-        rs_list = set([rs for rs in rs_list if rs and rs not in weird_ids])
-        # Leave out identifiers that ar not rs\d+
         info_dict = {}
 
         if use_cache:
-            for rs in rs_list:
-                if self._cache(rs):
-                    info_dict[rs] = self._cache(rs)
-
-            print('Found %s/%s in dbSNP cache' % (len(info_dict), len(rs_list)))
+            info_dict.update(self._cache_get(rs_list))
             rs_list = rs_list - info_dict.keys()
 
         if use_web:
@@ -95,18 +83,10 @@ class DbSNP:
         # print(' -> %s %s' % (response.status_code, response.reason))
 
         if response.ok:
-            expire_after = 60 * 60 * 24 * 30 * 5  # Five months
-
-            dump = json.dumps(response.json())
-            self._redis_client.setex(self._key(rs), expire_after, dump)
-            return self._cache(rs)
+            self._cache_set({rs: response.json()})
+            return self._cache_get([rs])[rs]
         else:
             return
-
-    def _cache(self, rs):
-        """Get dbSNP cached data from an rs if there's. None otherwise."""
-        cache = self._redis_client.get(self._key(rs))
-        return json.loads(cache.decode('utf8')) if cache else None
 
     def _batch_query(self, rs_list, parallel, sleep_time):
         """

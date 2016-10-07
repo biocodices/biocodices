@@ -1,3 +1,5 @@
+from .base_annotator import BaseAnnotator
+from .my_variant_annotator import MyVariantAnnotator
 from .ensembl_parser import EnsemblParser
 from .myvariant_parser import MyvariantParser
 from .variant_annotator import VariantAnnotator

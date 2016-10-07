@@ -11,12 +11,7 @@ class VariantAnnotator:
     @classmethod
     def annotate_in_batch(cls, identifiers, processes=10, timeout=10,
                           myvariant=True, ensembl=True):
-        """Query MyVariant.info and Ensembl for a list of rs IDs or strings
-        like 'chr1:1234:1235'. Runs in parallel. Returns a dictionary with:
-            'detail': a merged pandas DataFrame with the SNPs as indices.
-            'publications': a list of dicts, each dict is a publication with
-                            phenotype, title, and ID.
-        """
+        """Dead code, left here not to break old notebooks."""
         with Pool(processes) as pool:
             annotate_args = dict(myvariant=myvariant, ensembl=ensembl)
             results = [pool.apply_async(cls.annotate, (identifier,), annotate_args)
@@ -33,15 +28,7 @@ class VariantAnnotator:
     @classmethod
     def annotate(cls, identifier, myvariant=True, ensembl=True,
                  myvariant_fields=['all']):
-        """
-        Query MyVariant.info and Ensembl for info about an rs ID. It also
-        accepts identifiers like 'chr1:1234-1235'.
-        Returns a dict with the following keys:
-        'myvariant': a pandas DF with selected info from MyVariant.info.
-        'ensembl': a dict with selected info from Ensembl.
-        'publications': a list of publications that mention this rs/identifier
-                        taken both from GRASP via Myvariant and Ensembl.
-        """
+        """Dead code, left here not to break old notebooks."""
         if myvariant:
             myvariant_df, myvariant_publications = \
                 cls.parse_myvariant(cls.query_myvariant(identifier))
@@ -71,10 +58,12 @@ class VariantAnnotator:
 
     @staticmethod
     def query_myvariant(identifier, fields=['all']):
+        """Dead code, left here not to break old notebooks."""
         return MyVariantInfo().query(identifier, fields=fields)
 
     @staticmethod
     def parse_myvariant(results):
+        """Dead code, left here not to break old notebooks."""
         summary = MyvariantParser.parse_query_results(results)
         publications = MyvariantParser.parse_publications(results)
         return summary, publications

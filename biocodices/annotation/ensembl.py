@@ -3,10 +3,11 @@ import time
 import redis
 import requests
 
+from biocodices.annotation import BaseAnnotator
 from biocodices.helpers.general import in_groups_of
 
 
-class Ensembl:
+class Ensembl(BaseAnnotator):
     # FIXME: this should check if Redis is present in the system!
     # FIXME: redis config should be read from a YML
     _redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
@@ -114,6 +115,7 @@ class Ensembl:
                 time.sleep(sleep_time)
 
             print('Query Ensembl for %s IDs' % len(rs_group))
+            print(url)
             print(' %s ... %s' % (rs_group[0], rs_group[-1]))
             payload = json.dumps({'ids': rs_group, 'phenotypes': '1'})
             response = requests.post(url, headers=headers, data=payload)

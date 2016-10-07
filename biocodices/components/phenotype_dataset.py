@@ -64,6 +64,8 @@ class PhenotypeDataset:
                 msg = 'This pheno is neither binary nor quanti? {}'
                 print(msg.format(phenotype_name))
 
+            new_fam_df = new_fam_df.fillna(-9)
+            new_fam_df['phenotype'] = new_fam_df['phenotype'].map(int)
             new_fam_df.to_csv(new_fam_filepath, sep='\t', header=False)
             new_famfiles[phenotype_name] = new_fam_filepath
 
