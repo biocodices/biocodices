@@ -1,4 +1,4 @@
-from .base_annotator import BaseAnnotator
+from .annotator_with_cache import AnnotatorWithCache
 from .my_variant_annotator import MyVariantAnnotator
 from .ensembl_parser import EnsemblParser
 from .myvariant_parser import MyvariantParser

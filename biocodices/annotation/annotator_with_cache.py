@@ -2,8 +2,37 @@ import json
 import redis
 
 
-class BaseAnnotator():
+class AnnotatorWithCache():
+    """
+    Abstract Base Class for Annotators like DbSNP and MyVariant.
+    The point of this class is to provide a shared logic of caching the
+    responses of remote APIs.
+    To use this class, create a new annotator class that implements
+    `_batch_query()`, `_query()` and `_key()` methods.
+    """
     _redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+
+    def annotate(self, identifiers, parallel=10, sleep_time=10, use_cache=True,
+                 use_web=True):
+        """
+        Annotate a list of variant identifiers, such as rs# IDs or HGVS
+        notation. Responses are cached.
+        """
+        if type(identifiers) == str:
+            identifiers = [identifiers]
+
+        identifiers = set(identifiers)
+        info_dict = {}
+
+        if use_cache:
+            info_dict.update(self._cache_get(identifiers))
+            identifiers = identifiers - info_dict.keys()
+
+        if use_web:
+            info_from_api = self._batch_query(identifiers, parallel, sleep_time)
+            info_dict.update(info_from_api)
+
+        return info_dict
 
     def _cache_set(self, id_info_dict, expire_time=None):
         """
@@ -33,11 +62,8 @@ class BaseAnnotator():
                 ret.update({identifier: info})
 
         if len(id_list) > 1:
-            print('Found %s/%s in dbSNP cache' % (len(ret), len(id_list)))
+            print('Found %s/%s in cache' % (len(ret), len(id_list)))
         return ret
-
-    def annotate(self):
-        raise NotImplementedError()
 
     def _query(self):
         raise NotImplementedError()

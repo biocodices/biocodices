@@ -1,68 +1,13 @@
 import time
 import requests
-import json
-import redis
 from multiprocessing import Pool, TimeoutError
 from itertools import chain
 
-from biocodices.annotation import BaseAnnotator
+from biocodices.annotation import AnnotatorWithCache
 from biocodices.helpers.general import in_groups_of
 
 
-class DbSNP(BaseAnnotator):
-    def annotate(self, rs_list, use_cache=True, use_web=True, parallel=5,
-                 sleep_time=10):
-        """
-        Annotate a list of rs IDs (also accepts a single rs ID).
-        When use_cache is True, it will prioritize using Redis cache to get
-        info from the given rs. When use_web is True, it will get info from
-        dbSNP web. The priority is on the cache, unless explicitely
-        inactivated. It returns a dict where the keys are the passed rs IDs.
-
-        * parallel: processes to spawn in parallel when querying dbSNP web.
-        * sleep_time: time to sleep between queries.
-
-        Example:
-            > dbsnp.annotate(['rs12345', 'rs234'])
-            # => {'rs12345': { ... }, 'rs234': { ... }}
-        """
-        if type(rs_list) == str:
-            rs_list = [rs_list]
-
-        rs_list = set(self.remove_non_rs_ids(rs_list))
-
-        info_dict = {}
-
-        if use_cache:
-            info_dict.update(self._cache_get(rs_list))
-            rs_list = rs_list - info_dict.keys()
-
-        if use_web:
-            info_from_api = self._batch_query(rs_list, parallel, sleep_time)
-            info_dict.update(info_from_api)
-
-        return info_dict
-
-    def genes(self, rs, use_web=False):
-        """Annotate the genes for a given rs."""
-        ann = self.annotate(rs, use_web=use_web).get(rs)
-        if not ann:
-            return []
-
-        mappings = ann.get('assembly', {}).values()
-        mappings = chain(*mappings)
-
-        gene_models = [m['geneModel'] for m in mappings if 'geneModel' in m]
-        gene_models = chain(*gene_models)
-
-        unique_genes = set()
-        for gene in gene_models:
-            gene_str = gene['geneSymbol'] or ''
-            genes_set = set(gene_str.split('|'))
-            unique_genes.update(genes_set)
-
-        return sorted(list(unique_genes))
-
+class DbSNP(AnnotatorWithCache):
     @staticmethod
     def _key(rs):
         return 'dbsnp:%s' % rs
@@ -117,3 +62,24 @@ class DbSNP(BaseAnnotator):
                         print(rs, 'gave a TimeoutError')
 
         return info_dict
+
+    def genes(self, rs, use_web=False):
+        """Annotate the genes for a given rs."""
+        ann = self.annotate(rs, use_web=use_web).get(rs)
+        if not ann:
+            return []
+
+        mappings = ann.get('assembly', {}).values()
+        mappings = chain(*mappings)
+
+        gene_models = [m['geneModel'] for m in mappings if 'geneModel' in m]
+        gene_models = chain(*gene_models)
+
+        unique_genes = set()
+        for gene in gene_models:
+            gene_str = gene['geneSymbol'] or ''
+            genes_set = set(gene_str.split('|'))
+            unique_genes.update(genes_set)
+
+        return sorted(list(unique_genes))
+
