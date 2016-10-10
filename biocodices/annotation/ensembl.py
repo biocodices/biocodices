@@ -1,6 +1,5 @@
 import json
 import time
-import redis
 import requests
 
 from biocodices.annotation import AnnotatorWithCache
@@ -8,10 +7,6 @@ from biocodices.helpers.general import in_groups_of
 
 
 class Ensembl(AnnotatorWithCache):
-    # FIXME: this should check if Redis is present in the system!
-    # FIXME: redis config should be read from a YML
-    _redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
-
     def __init__(self, build='GRCh37'):
         self.build = build
 
