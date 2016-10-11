@@ -17,6 +17,7 @@ dependencies = [
     'python-ternary',
     'pyvcf',
     'luigi',
+    'biopython',
 ]
 
 setup(name=__program_name__,

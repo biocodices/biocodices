@@ -6,4 +6,5 @@ from .variant_annotator import VariantAnnotator
 from .gene_annotation import annotate_gene
 from .ensembl import Ensembl
 from .dbsnp import DbSNP
-# from .clinvar import Clinvar
+from .clinvar_variation import ClinvarVariation
+from .clinvar_accession import ClinvarAccession
