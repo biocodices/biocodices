@@ -36,3 +36,6 @@ class ClinvarAccession(AnnotatorWithCache):
         self._cache_set(info_dict)
         return info_dict
 
+    @staticmethod
+    def parse_xml(xml):
+        pass
