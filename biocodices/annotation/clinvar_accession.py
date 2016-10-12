@@ -27,6 +27,8 @@ class ClinvarAccession(AnnotatorWithCache):
                 if i > 0:
                     time.sleep(sleep_time)
 
+                print('Query Entrez for %s clinvar accessions' % len(accn_group))
+                print(' %s ... %s' % (accn_group[0], accn_group[-1]))
                 group_results = {}
 
                 for accession_number in accn_group:
