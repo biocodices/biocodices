@@ -43,10 +43,18 @@ class ClinvarAccession(AnnotatorWithCache):
 
     @classmethod
     def parse_xml_dict(cls, xml_dict):
+        """
+        Parses a dict like { 'RCV1234': '<xml ...>' }. Meant for the result
+        of #annotate() for this class.
+        Returns a dict like { 'RCV1234': { data about the accession } }
+        """
         return {key: cls.parse_xml(xml) for key, xml in xml_dict.items()}
 
     @staticmethod
     def parse_xml(xml):
+        """
+        Parses an accession XML response from Entrez/Clinvar.
+        """
         soup = BeautifulSoup(xml, 'xml')
 
         variation_ids = []
