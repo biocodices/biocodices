@@ -1,4 +1,3 @@
-from os.path import isfile
 import re
 import time
 from Bio import Entrez
@@ -10,14 +9,6 @@ from biocodices.helpers.general import in_groups_of
 
 
 class ClinvarVariation(AnnotatorWithCache):
-
-    _fn = '~/.mail_address_for_Entrez'
-    if isfile(_fn):
-        with open(_fn) as f:
-            Entrez.email = f.read().strip()
-    else:
-        Entrez.email = 'johndoe@example.org'
-
     @staticmethod
     def _key(cln_id):
         return 'clinvar:variation:%s' % cln_id
