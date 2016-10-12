@@ -8,12 +8,12 @@ from .ensembl import Ensembl
 from .dbsnp import DbSNP
 
 from Bio import Entrez
-from os.path import isfile
+from os.path import isfile, expanduser
 
 # We need to set an e-mail address for Entrez services
 # Warnings about usage will be sent to that address before
 # attempting a ban, so it will be nice to receive the warn.
-_fn = '~/.mail_address_for_Entrez'
+_fn = expanduser('~/.mail_address_for_Entrez')
 if isfile(_fn):
     with open(_fn) as f:
         Entrez.email = f.read().strip()
