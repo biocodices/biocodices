@@ -4,7 +4,29 @@ from itertools import product, zip_longest
 from os.path import join
 import requests
 import sys
+import numpy as np
 
+
+def randomize_sleep_time(base_seconds, extra_sleep_time=None):
+    """
+    Adds a random amount of seconds to your base seconds. It optionally takes
+    the param extra_sleep_time as the mean of the normal distribution where
+    it takes the extra seconds from.
+    """
+    if extra_sleep_time is None:
+        extra_sleep_time = base_seconds * 0.25
+    if extra_sleep_time < 5:
+        extra_sleep_time = 5
+
+    # Use extra_sleep_time as the mean added time, but randomize around that
+    # value. The varianze is as big as the mean itself:
+    randomized_extra_time = np.random.normal(loc=extra_sleep_time,
+                                             scale=extra_sleep_time)
+
+    # Always go higher than the base_seconds, never sleep less seconds
+    if randomized_extra_time < 0:
+        randomized_extra_time = 0
+    return base_seconds + randomized_extra_time
 
 def in_groups_of(n, iterable):
     # Python recipe taken from:
