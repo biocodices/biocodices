@@ -26,7 +26,8 @@ def randomize_sleep_time(base_seconds, extra_sleep_time=None):
     # Always go higher than the base_seconds, never sleep less seconds
     if randomized_extra_time < 0:
         randomized_extra_time = 0
-    return base_seconds + randomized_extra_time
+
+    return base_seconds + round(randomized_extra_time, 2)
 
 def in_groups_of(n, iterable):
     # Python recipe taken from:

@@ -6,6 +6,7 @@ from .variant_annotator import VariantAnnotator
 from .gene_annotation import annotate_gene
 from .ensembl import Ensembl
 from .dbsnp import DbSNP
+from .omim import Omim
 
 from Bio import Entrez
 from os.path import isfile, expanduser
