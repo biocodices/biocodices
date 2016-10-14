@@ -36,10 +36,10 @@ class ClinvarAccession(AnnotatorWithCache):
                             self._query, (accession_number, ))
 
                 for accession_number, result in group_results.items():
-                    id_list = result.get()
-                    info_dict[accession_number] = id_list
-
-        self._cache_set(info_dict)
+                    xml = result.get()
+                    info_dict[accession_number] = xml
+                    # Update the cache as you go along, not at the end
+                    self._cache_set({accession_number: xml})
 
         return info_dict
 

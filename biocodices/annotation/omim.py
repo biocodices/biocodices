@@ -32,24 +32,26 @@ class Omim(AnnotatorWithCache):
     def _batch_query(self, mim_ids, parallel, sleep_time):
         html_dict = {}
 
-        for i, mim_id in enumerate(mim_ids):
-            print('Visit %s' % self._url(mim_id))
-            html_dict[mim_id] = self._query(mim_id)
+        # OMIM seems to be very strict against web crawlers and bans IPs.
+        # Never ommit the sleeping step between queries, and never let it
+        # be less than a couple of seconds, just in case:
+        if sleep_time < 3:
+            sleep_time = 3
 
-            if i > 0:
-                # OMIM seems to be very strict against web crawlers and bans IPs
-                # Never ommit this sleeping step between queries, and never let it
-                # be less than a couple of seconds, just in case:
-                if sleep_time < 5:
-                    sleep_time = 5
+        for mim_id in mim_ids:
+            print('Visit %s' % self._url(mim_id))
+            html = self._query(mim_id)
+            self._cache_set({mim_id: html})
+            html_dict[mim_id] = html
+
+            if len(mim_ids) > 1:
                 # To further simulate real human behavior when visiting the page,
                 # randomize the sleeping time:
-                sleep_time = randomize_sleep_time(sleep_time)
-                print('Sleep random time: %s seconds' % sleep_time)
-                time.sleep(sleep_time)
+                random_sleep_time = randomize_sleep_time(sleep_time)
+                print('Random sleep: {0:.2f} seconds'.format(random_sleep_time))
+                time.sleep(random_sleep_time)
 
-        self._cache_set(html_dict)
-        return self._cache_get([mim_ids])
+        return html_dict
 
     @classmethod
     def parse_html_dict(cls, html_dict):
@@ -62,7 +64,7 @@ class Omim(AnnotatorWithCache):
 
     @staticmethod
     def parse_html(html):
-        soup = BeautifulSoup(html)
+        soup = BeautifulSoup(html, 'html.parser')
 
         info = {
         }
