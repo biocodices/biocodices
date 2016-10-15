@@ -25,7 +25,7 @@ class Omim(AnnotatorWithCache):
         response = requests.get(cls._url(mim_id),
                                 headers={'user-agent': user_agent})
         if not response.ok:
-            response.raise_for_status()
+            print(response.status_code, 'status code for id "{0}"'.format(mim_id))
 
         return response.text
 
