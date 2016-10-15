@@ -1,6 +1,7 @@
 import re
 import time
 import requests
+import json
 from multiprocessing import Pool
 
 import pandas as pd
@@ -77,6 +78,9 @@ class Omim(AnnotatorWithCache):
         Returns a DataFrame of the OMIM variants per OMIM entry.
         """
         entries = cls._entries_from_htmls(html_dict)
+        for entry in entries:
+            if 'pubmeds' in entry:
+                entry['pubmeds'] = json.dumps(entry['pubmeds'])
         df = pd.DataFrame(entries)
 
         df['sub_id'] = df['pheno'].str.extract(r'\.(\d+) ', expand=False)

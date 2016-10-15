@@ -50,7 +50,15 @@ class ClinvarAccession(AnnotatorWithCache):
         of #annotate() for this class.
         Returns a dict like { 'RCV1234': { data about the accession } }
         """
-        return {key: cls.parse_xml(xml) for key, xml in xml_dict.items()}
+        info_dict = {}
+        with Pool(6) as pool:
+            results = {key: pool.apply_async(cls.parse_xml, (xml, ))
+                       for key, xml in xml_dict.items()}
+
+            for key, result in results.items():
+                info_dict[key] = result.get()
+
+        return info_dict
 
     @staticmethod
     def parse_xml(xml):
