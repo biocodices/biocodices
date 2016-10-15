@@ -1,6 +1,9 @@
+import re
 import time
 import requests
+from multiprocessing import Pool
 
+import pandas as pd
 from bs4 import BeautifulSoup
 
 from biocodices.helpers import randomize_sleep_time
@@ -54,18 +57,93 @@ class Omim(AnnotatorWithCache):
         return html_dict
 
     @classmethod
-    def parse_html_dict(cls, html_dict):
+    def _entries_from_htmls(cls, html_dict):
+        entries = []
+
+        with Pool(7) as pool:
+            results = [pool.apply_async(cls._entries_from_omim_html, (html, omim_id))
+                       for omim_id, html in html_dict.items()]
+            for result in results:
+                entries += (result.get() or [])
+
+        return entries
+
+
+    @classmethod
+    def dataframe_from_htmls(cls, html_dict):
         """
         Parses a dict like { '60555': '<html ...>' }. Meant for the result
         of #annotate() for this class.
-        Returns a dict like { '60555': { data about the OMIM ID } }
+        Returns a DataFrame of the OMIM variants per OMIM entry.
         """
-        return {key: cls.parse_html(html) for key, html in html_dict.items()}
+        entries = cls._entries_from_htmls(html_dict)
+        df = pd.DataFrame(entries)
 
-    @staticmethod
-    def parse_html(html):
+        df['sub_id'] = df['pheno'].str.extract(r'\.(\d+) ', expand=False)
+        df['phenotype'] = df['pheno'].str.extract(r'\.\d+ (.*)', expand=False)
+        df.drop('pheno', axis=1, inplace=True)
+
+        df['gene'] = df['variant'].str.extract(r'^(\w+),', expand=False)
+        df['rs'] = df['variant'].str.extract(r'dbSNP:(rs\d+)', expand=False)
+        prot_regex = r'\w+, (.+?)(?:,| \[| -| \()'
+        df['prot_change'] = df['variant'].str.extract(prot_regex, expand=False)
+        return df
+
+    @classmethod
+    def _entries_from_omim_html(cls, html, omim_id):
         soup = BeautifulSoup(html, 'html.parser')
+        entry_type = ' '.join([e['title'] for e in soup.select('.title.definition')])
+        if 'Phenotype description' in entry_type:
+            return None
 
-        info = {
-        }
-        return info
+        entries = []
+        current_entry = {}
+
+        in_the_variants_section = False
+        table_rows = soup.select('td#floatingEntryContainer .wrapper-table td')
+        for td in [td for td in table_rows if td.text]:
+            inner_text = re.sub(r'\s+', ' ', td.text).strip()
+
+            # Detect start and end of the ALLELIC VARIANTS section
+            if not in_the_variants_section:
+                in_the_variants_section = re.search(r'Table View', inner_text)
+                continue
+            elif re.search(r'REFERENCES', inner_text):
+                entries.append(current_entry) if current_entry else None
+                break
+
+            # Title of new entry
+            if re.match(r'\.\d{4} ', inner_text):
+                entries.append(current_entry) if current_entry else None
+                current_entry = {}
+                if not re.search(r'REMOVED FROM|MOVED TO', inner_text):
+                    current_entry['pheno'] = inner_text
+                continue
+
+            if 'variant' not in current_entry:
+                if '[ClinVar]' in inner_text:
+                    current_entry['variant'] = inner_text.replace(' [ClinVar]', '')
+                else:
+                    current_entry['pheno'] += ' {0}'.format(inner_text)
+                continue
+
+            # Rest of the entry will be the review
+            # Extract the PubMed references
+            if 'pubmed' not in current_entry:
+                current_entry['pubmeds'] = {}
+
+            for anchor in td.select('a.entry-reference'):
+                current_entry['pubmeds'][anchor.text] = anchor.get('pmid')
+
+            # Get the review text
+            if 'review' not in current_entry:
+                current_entry['review'] = td.text
+                continue
+
+            current_entry['review'] += td.text
+
+        for entry in entries:
+            entry['omim_id'] = omim_id
+
+        return entries
+
