@@ -43,27 +43,25 @@ class Ensembl(AnnotatorWithCache):
         if batch_size > 1000:
             batch_size = 1000
 
-        ret = {}
+        info_dict = {}
         for i, rs_group in enumerate(in_groups_of(batch_size, rs_list)):
             if i > 0:
                 print(' Sleep %s seconds' % sleep_time)
                 time.sleep(sleep_time)
 
             print('Query Ensembl for %s IDs' % len(rs_group))
-            print(url)
             print(' %s ... %s' % (rs_group[0], rs_group[-1]))
             payload = json.dumps({'ids': rs_group, 'phenotypes': '1'})
             response = requests.post(url, headers=headers, data=payload)
 
             if response.ok:
                 self._cache_set(response.json())
-                ret.update(self._cache_get(rs_group))
+                info_dict.update(self._cache_get(rs_group))
             else:
                 reset_time = int(response.headers['X-RateLimit-Reset'])
                 print(' 400 not OK. Sleeping %s seconds...' % reset_time)
                 print(' Will retry after sleep.')
                 time.sleep(reset_time)
                 self._batch_query(rs_list)
-                # response.raise_for_status()
 
-        return ret
+        return info_dict

@@ -37,6 +37,8 @@ class Omim(AnnotatorWithCache):
         html_dict = {}
 
         # OMIM seems to be very strict against web crawlers and bans IPs.
+        # That's why we override the _batch_query method and avoid
+        # parallelization here.
         # Never ommit the sleeping step between queries, and never let it
         # be less than a couple of seconds, just in case:
         if sleep_time < 3:
@@ -58,29 +60,18 @@ class Omim(AnnotatorWithCache):
         return html_dict
 
     @classmethod
-    def _entries_from_htmls(cls, html_dict):
-        entries = []
-
-        with Pool(7) as pool:
-            results = [pool.apply_async(cls._entries_from_omim_html, (html, omim_id))
-                       for omim_id, html in html_dict.items()]
-            for result in results:
-                entries += (result.get() or [])
-
-        return entries
-
-
-    @classmethod
-    def dataframe_from_htmls(cls, html_dict):
+    def parse_html_dict(cls, html_dict):
         """
         Parses a dict like { '60555': '<html ...>' }. Meant for the result
         of #annotate() for this class.
         Returns a DataFrame of the OMIM variants per OMIM entry.
         """
-        entries = cls._entries_from_htmls(html_dict)
+        entries = cls._html_dict_to_entries_list(html_dict)
+
         for entry in entries:
             if 'pubmeds' in entry:
                 entry['pubmeds'] = json.dumps(entry['pubmeds'])
+
         df = pd.DataFrame(entries)
 
         df['sub_id'] = df['pheno'].str.extract(r'\.(\d+) ', expand=False)
@@ -94,7 +85,19 @@ class Omim(AnnotatorWithCache):
         return df
 
     @classmethod
-    def _entries_from_omim_html(cls, html, omim_id):
+    def _html_dict_to_entries_list(cls, html_dict):
+        entries = []
+
+        with Pool(7) as pool:
+            results = [pool.apply_async(cls._parse_html, (html, omim_id))
+                       for omim_id, html in html_dict.items()]
+            for result in results:
+                entries += (result.get() or [])
+
+        return entries
+
+    @classmethod
+    def _parse_html(cls, html, omim_id):
         soup = BeautifulSoup(html, 'html.parser')
         entry_type = ' '.join([e['title'] for e in soup.select('.title.definition')])
         if 'Phenotype description' in entry_type:

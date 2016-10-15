@@ -19,36 +19,12 @@ class ClinvarAccession(AnnotatorWithCache):
                                id=accession_number)
         return handle.read()
 
-    def _batch_query(self, accn_list, parallel, sleep_time):
-        info_dict = {}
-
-        with Pool(parallel) as pool:
-            for i, accn_group in enumerate(in_groups_of(parallel, accn_list)):
-                if i > 0:
-                    time.sleep(sleep_time)
-
-                print('Query Entrez for %s clinvar accessions' % len(accn_group))
-                print(' %s ... %s' % (accn_group[0], accn_group[-1]))
-                group_results = {}
-
-                for accession_number in accn_group:
-                    group_results[accession_number] = pool.apply_async(
-                            self._query, (accession_number, ))
-
-                for accession_number, result in group_results.items():
-                    xml = result.get()
-                    info_dict[accession_number] = xml
-                    # Update the cache as you go along, not at the end
-                    self._cache_set({accession_number: xml})
-
-        return info_dict
-
     @classmethod
     def parse_xml_dict(cls, xml_dict):
         """
         Parses a dict like { 'RCV1234': '<xml ...>' }. Meant for the result
-        of #annotate() for this class.
-        Returns a dict like { 'RCV1234': { data about the accession } }
+        of #annotate() for this class. Returns a dict like:
+        { 'RCV1234': { data about the accession } }
         """
         info_dict = {}
         with Pool(6) as pool:

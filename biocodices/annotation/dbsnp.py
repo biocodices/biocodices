@@ -1,10 +1,7 @@
-import time
 import requests
-from multiprocessing import Pool, TimeoutError
 from itertools import chain
 
 from biocodices.annotation import AnnotatorWithCache
-from biocodices.helpers.general import in_groups_of
 
 
 class DbSNP(AnnotatorWithCache):
@@ -23,45 +20,13 @@ class DbSNP(AnnotatorWithCache):
         """
         url = self._url(rs)
         headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-        # print('%s : Query %s' % (rs, url))
         response = requests.get(url, headers)
-        # print(' -> %s %s' % (response.status_code, response.reason))
 
         if response.ok:
             self._cache_set({rs: response.json()})
             return self._cache_get([rs])[rs]
         else:
             return
-
-    def _batch_query(self, rs_list, parallel, sleep_time):
-        """
-        Query NCBI's dbSNP site for a list of rs IDs. It returns a dict with
-        mappings and some data. Runs in <parallel> processes and
-        sleeps <sleep> seconds between queries.
-        """
-        with Pool(parallel) as pool:
-            info_dict = {}
-
-            for i, rs_group in enumerate(in_groups_of(parallel, rs_list)):
-                if i > 0:
-                    print(' Sleep %s seconds' % sleep_time)
-                    time.sleep(sleep_time)
-
-                results = {}
-                print('Query dbSNP for %s rs IDs' % len(rs_group))
-                print(' %s ... %s' % (rs_group[0], rs_group[-1]))
-                for rs in set(rs_group):
-                    results[rs] = pool.apply_async(self._query, (rs,))
-
-                for rs, result in results.items():
-                    try:
-                        info = result.get(timeout=20)
-                        if info:  # Don't save empty dicts
-                            info_dict[rs] = info
-                    except TimeoutError:
-                        print(rs, 'gave a TimeoutError')
-
-        return info_dict
 
     def genes(self, rs, use_web=False):
         """Annotate the genes for a given rs."""
