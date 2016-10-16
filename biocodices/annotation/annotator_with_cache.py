@@ -14,12 +14,18 @@ class AnnotatorWithCache():
     `_batch_query()` for services that you want to parallelize in a different
     way.
     """
-    _redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+    def set_redis_client(self, host, port=6379, db=0):
+        klass = self.__class__
+        klass._redis_client = redis.StrictRedis(host=host, port=port, db=db)
+        conn = klass._redis_client.connection_pool.connection_kwargs
+        print('{0} connected to Redis cache: {1}:{2} db={3}'.format(
+            self.name, conn['host'], conn['port'], conn['db']))
 
-    def __init__(self):
+    def __init__(self, redis_host='localhost', redis_port=6379, redis_db=0):
         self.name = self.__class__.__name__
         # Time for cache to expire:
         self.expire_time = 60 * 60 * 24 * 30 * 5  # Five months in seconds
+        self.set_redis_client(redis_host, redis_port, redis_db)
 
     def annotate(self, ids, parallel=10, sleep_time=10, use_cache=True,
                  use_web=True):
