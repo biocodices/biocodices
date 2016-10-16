@@ -43,7 +43,7 @@ class AnnotatorWithCache():
             info_dict.update(self._cache_get(ids))
             ids = ids - info_dict.keys()
 
-        if use_web:
+        if use_web and ids:
             info_from_api = self._batch_query(ids, parallel, sleep_time)
             info_dict.update(info_from_api)
             ids = ids - info_dict.keys()
@@ -54,6 +54,7 @@ class AnnotatorWithCache():
         return info_dict
 
     def _batch_query(self, ids, parallel, sleep_time):
+        print('🌎 Get %s data for %s ids' % (self.name, len(ids)))
         with Pool(parallel) as pool:
             for i, ids_group in enumerate(in_groups_of(parallel, ids)):
                 if i > 0:
