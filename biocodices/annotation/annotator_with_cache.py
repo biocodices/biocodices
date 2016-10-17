@@ -61,8 +61,11 @@ class AnnotatorWithCache():
                     print('  Sleep for %s seconds' % sleep_time)
                     time.sleep(sleep_time)
 
-                msg = '%s fetch %s IDs: %s .. %s'
-                print(msg % (self.name, len(ids_group), ids_group[0], ids_group[-1]))
+
+                print('[{}-{}/{}] {} fetch {} IDs: {} .. {}'.format(
+                    (i*parallel)+1, (i*parallel)+parallel, len(ids), self.name,
+                    len(ids_group), ids_group[0], ids_group[-1]))
+
                 group_results = {id_: pool.apply_async(self._query, (id_, ))
                                  for id_ in ids_group}
 
