@@ -44,18 +44,18 @@ class Omim(AnnotatorWithCache):
         if sleep_time < 3:
             sleep_time = 3
 
-        for mim_id in mim_ids:
-            print('Visit %s' % self._url(mim_id))
-            html = self._query(mim_id)
-            self._cache_set({mim_id: html})
-            html_dict[mim_id] = html
-
-            if len(mim_ids) > 1:
+        for i, mim_id in enumerate(mim_ids):
+            if i > 0:
                 # To further simulate real human behavior when visiting the page,
                 # randomize the sleeping time:
                 random_sleep_time = randomize_sleep_time(sleep_time)
-                print('Random sleep: {0:.2f} seconds'.format(random_sleep_time))
+                print('  Random sleep: {0:.2f} seconds'.format(random_sleep_time))
                 time.sleep(random_sleep_time)
+
+            print('[%s/%s] Visit %s' % (i+1, len(mim_ids), self._url(mim_id)))
+            html = self._query(mim_id)
+            self._cache_set({mim_id: html})
+            html_dict[mim_id] = html
 
         return html_dict
 
