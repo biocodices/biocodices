@@ -54,7 +54,7 @@ class AnnotatorWithCache():
         return info_dict
 
     def _batch_query(self, ids, parallel, sleep_time):
-        print('🌎 Get %s data for %s ids' % (self.name, len(ids)))
+        print('🌎  Get %s data for %s ids' % (self.name, len(ids)))
         with Pool(parallel) as pool:
             for i, ids_group in enumerate(in_groups_of(parallel, ids)):
                 if i > 0:
