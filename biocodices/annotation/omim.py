@@ -72,7 +72,8 @@ class Omim(AnnotatorWithCache):
             if 'pubmeds' not in entry:
                 continue
             pmids = entry['pubmeds'].values()
-            entry['pubmeds'] = [ref for ref in references if ref['pmid'] in pmids]
+            entry['pubmeds'] = [ref for ref in references
+                                if ref.get('pmid') in pmids]
 
         df = pd.DataFrame(entries)
 

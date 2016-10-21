@@ -1,6 +1,7 @@
 from os import mkdir
 from os.path import join, expanduser, abspath, basename, isdir
 from glob import glob
+import json
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -35,9 +36,9 @@ class Project:
         """
         Dump the dataframe to a CSV in the results dir with the given filename.
         Include '.tsv' in the filename to make it a TSV file!
+        It will JSONify dicts and lists.
         Extra **kwargs are passed to pandas.DataFrame.to_csv()
         """
-
         if 'sep' not in kwargs:
             if filename.endswith('.tsv'):
                 kwargs['sep'] = '\t'
@@ -57,8 +58,25 @@ class Project:
             index = (type(df.index) not in num_index_types)
 
         filepath = self.results_file(filename)
+
+        columns_to_jsonify = []
+        for column_name, series in df.iteritems():
+            types = series.dropna().map(type).unique()
+            if len(types) == 1 and types[0] in (list, dict):
+                columns_to_jsonify.append(column_name)
+
+        if columns_to_jsonify:
+            # I need to copy the df to serialize some columns without modifying
+            # the original dataframe that was passed as an argument.
+            df = df.copy()
+            for column_name in columns_to_jsonify:
+                df[column_name] = df[column_name].map(json.dumps)
+
         df.to_csv(filepath, index=index, **kwargs)
         print('Written to', filepath)
+
+        if columns_to_jsonify:
+            print('JSONified columns: %s' % columns_to_jsonify)
 
         return filepath
 
