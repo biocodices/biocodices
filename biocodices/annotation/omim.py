@@ -1,7 +1,6 @@
 import re
 import time
 import requests
-import json
 from multiprocessing import Pool
 
 import pandas as pd
@@ -67,10 +66,13 @@ class Omim(AnnotatorWithCache):
         Returns a DataFrame of the OMIM variants per OMIM entry.
         """
         entries = cls._html_dict_to_entries_list(html_dict)
+        references = cls._html_dict_to_references_list(html_dict)
 
         for entry in entries:
-            if 'pubmeds' in entry:
-                entry['pubmeds'] = json.dumps(entry['pubmeds'])
+            if 'pubmeds' not in entry:
+                continue
+            pmids = entry['pubmeds'].values()
+            entry['pubmeds'] = [ref for ref in references if ref['pmid'] in pmids]
 
         df = pd.DataFrame(entries)
 
@@ -85,6 +87,18 @@ class Omim(AnnotatorWithCache):
         return df
 
     @classmethod
+    def _html_dict_to_references_list(cls, html_dict):
+        references = []
+
+        with Pool(7) as pool:
+            results = [pool.apply_async(cls._parse_html_references, (html, ))
+                       for html in html_dict.values()]
+            for result in results:
+                references += (result.get() or [])
+
+        return references
+
+    @classmethod
     def _html_dict_to_entries_list(cls, html_dict):
         entries = []
 
@@ -95,6 +109,40 @@ class Omim(AnnotatorWithCache):
                 entries += (result.get() or [])
 
         return entries
+
+    @classmethod
+    def _parse_html_references(cls, html):
+        soup = BeautifulSoup(html, 'html.parser')
+        references = []
+
+        in_the_references_section = False
+        for td in soup.select('td#floatingEntryContainer .wrapper-table td'):
+            if not in_the_references_section:
+                # Check again if the section started:
+                in_the_references_section = (td.get('id') == 'references')
+                continue
+
+            # Get in the references section
+            for td2 in td.select('.wrapper-table td.text'):
+                if td2.get('id') and 'reference' in td2.get('id'):
+                    continue
+
+                fields = ['authors', 'title', 'publication', 'pubmed_str']
+                values = [span.text.strip() for span in td2.select('span')]
+                reference = dict(zip(fields, values))
+
+                if 'pubmed_str' in reference:
+                    pubmed_match = re.search(r'PubMed: (\d+)',
+                                             reference['pubmed_str'])
+                    if pubmed_match:
+                        reference['pmid'] = pubmed_match.group(1)
+                    del(reference['pubmed_str'])
+
+                references.append(reference)
+
+            break  # Leaving the references section, ignore the rest of <td>s
+
+        return references
 
     @classmethod
     def _parse_html(cls, html, omim_id):
