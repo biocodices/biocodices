@@ -42,14 +42,18 @@ class AnnotatorWithCache():
         if use_cache:
             info_dict.update(self._cache_get(ids))
             ids = ids - info_dict.keys()
+        else:
+            print(' Not using web')
 
         if use_web and ids:
             info_from_api = self._batch_query(ids, parallel, sleep_time)
             info_dict.update(info_from_api)
             ids = ids - info_dict.keys()
+        else:
+            print(' Not using cache')
 
         if ids:
-            print("No info for %s IDs" % len(ids))
+            print(" No info for %s IDs" % len(ids))
 
         return info_dict
 

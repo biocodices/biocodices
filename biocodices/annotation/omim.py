@@ -69,11 +69,11 @@ class Omim(AnnotatorWithCache):
         references = cls._html_dict_to_references_list(html_dict)
 
         for entry in entries:
-            if 'pubmeds' not in entry:
+            if 'pubmeds_summary' not in entry:
                 continue
-            pmids = entry['pubmeds'].values()
+            pmids = [pmid for pmid in entry['pubmeds_summary'].values() if pmid]
             entry['pubmeds'] = [ref for ref in references
-                                if ref.get('pmid') in pmids]
+                                if 'pmid' in ref and ref['pmid'] in pmids]
 
         df = pd.DataFrame(entries)
 
@@ -82,7 +82,8 @@ class Omim(AnnotatorWithCache):
         df.drop('pheno', axis=1, inplace=True)
 
         df['gene'] = df['variant'].str.extract(r'^(\w+),', expand=False)
-        df['rs'] = df['variant'].str.extract(r'dbSNP:(rs\d+)', expand=False)
+        df['rs'] = df['variant'].str.findall(r'dbSNP:(rs\d+)').str.join('|')
+
         prot_regex = r'\w+, (.+?)(?:,| \[| -| \()'
         df['prot_change'] = df['variant'].str.extract(prot_regex, expand=False)
         return df
@@ -186,10 +187,10 @@ class Omim(AnnotatorWithCache):
             # Rest of the entry will be the review
             # Extract the PubMed references
             if 'pubmed' not in current_entry:
-                current_entry['pubmeds'] = {}
+                current_entry['pubmeds_summary'] = {}
 
             for anchor in td.select('a.entry-reference'):
-                current_entry['pubmeds'][anchor.text] = anchor.get('pmid')
+                current_entry['pubmeds_summary'][anchor.text] = anchor.get('pmid')
 
             # Get the review text
             if 'review' not in current_entry:
