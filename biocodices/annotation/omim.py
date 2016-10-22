@@ -148,6 +148,11 @@ class Omim(AnnotatorWithCache):
 
     @classmethod
     def _parse_html(cls, html, omim_id):
+        html = html.replace('<br>', '<br/>')
+        # ^ Need this so the parser doesn't think what comes after a <br>
+        # is the <br>'s children. Added it to keep the newlines in OMIM
+        # review texts.
+
         soup = BeautifulSoup(html, 'html.parser')
         entry_type = ' '.join([e['title'] for e in soup.select('.title.definition')])
         if 'Phenotype description' in entry_type:
@@ -193,11 +198,23 @@ class Omim(AnnotatorWithCache):
                 current_entry['pubmeds_summary'][anchor.text] = anchor.get('pmid')
 
             # Get the review text
+            def extract_texts(element):
+                texts = []
+                for child in element.children:
+                    if child.name == 'br':
+                        texts.append('\n')
+                    else:
+                        try:
+                            texts.append(child.text)
+                        except AttributeError:
+                            texts.append(child)
+                return ''.join(texts)
+
             if 'review' not in current_entry:
-                current_entry['review'] = td.text
+                current_entry['review'] = extract_texts(td)
                 continue
 
-            current_entry['review'] += td.text
+            current_entry['review'] += '\n\n' + extract_texts(td)
 
         for entry in entries:
             entry['omim_id'] = omim_id
