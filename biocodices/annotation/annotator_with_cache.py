@@ -45,10 +45,11 @@ class AnnotatorWithCache():
         else:
             print(' Not using cache')
 
-        if use_web and ids:
-            info_from_api = self._batch_query(ids, parallel, sleep_time)
-            info_dict.update(info_from_api)
-            ids = ids - info_dict.keys()
+        if use_web:
+            if ids:
+                info_from_api = self._batch_query(ids, parallel, sleep_time)
+                info_dict.update(info_from_api)
+                ids = ids - info_dict.keys()
         else:
             print(' Not using web')
 
