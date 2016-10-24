@@ -77,10 +77,6 @@ class Omim(AnnotatorWithCache):
 
         df = pd.DataFrame(entries)
 
-        df['sub_id'] = df['pheno'].str.extract(r'\.(\d+) ', expand=False)
-        df['phenotype'] = df['pheno'].str.extract(r'\.\d+ (.*)', expand=False)
-        df.drop('pheno', axis=1, inplace=True)
-
         df['gene'] = df['variant'].str.extract(r'^(\w+),', expand=False)
         df['rs'] = df['variant'].str.findall(r'dbSNP:(rs\d+)').str.join('|')
 
@@ -148,6 +144,9 @@ class Omim(AnnotatorWithCache):
 
     @classmethod
     def _parse_html(cls, html, omim_id):
+        """
+        Parse OMIM Gene entries HTML.
+        """
         html = html.replace('<br>', '<br/>')
         # ^ Need this so the parser doesn't think what comes after a <br>
         # is the <br>'s children. Added it to keep the newlines in OMIM
@@ -175,29 +174,35 @@ class Omim(AnnotatorWithCache):
                 break
 
             # Title of new entry
-            if re.match(r'\.\d{4} ', inner_text):
+            title_match = re.match(r'\.(\d{4}) (.+)', inner_text)
+            if title_match:
                 entries.append(current_entry) if current_entry else None
-                current_entry = {}
+
                 if not re.search(r'REMOVED FROM|MOVED TO', inner_text):
-                    current_entry['pheno'] = inner_text
+                    current_entry = {
+                            'sub_id': title_match.group(1),
+                            'phenotypes': [title_match.group(2)]
+                    }
                 continue
 
             if 'variant' not in current_entry:
                 if '[ClinVar]' in inner_text:
                     current_entry['variant'] = inner_text.replace(' [ClinVar]', '')
                 else:
-                    current_entry['pheno'] += ' {0}'.format(inner_text)
+                    phenos = [pheno for pheno in inner_text.split(', INCLUDED') if pheno]
+                    current_entry['phenotypes'] += phenos
                 continue
 
             # Rest of the entry will be the review
-            # Extract the PubMed references
+
+            # Extract the PubMed references from the text
             if 'pubmed' not in current_entry:
                 current_entry['pubmeds_summary'] = {}
 
             for anchor in td.select('a.entry-reference'):
                 current_entry['pubmeds_summary'][anchor.text] = anchor.get('pmid')
 
-            # Get the review text
+            # Get the review text itself without HTML elements
             def extract_texts(element):
                 texts = []
                 for child in element.children:
