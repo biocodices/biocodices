@@ -7,6 +7,13 @@ import sys
 import numpy as np
 
 
+def make_chromosome_series_categorical(series):
+    chromosomes = [str(chrom) for chrom in range(1, 23)] + ['X', 'Y']
+    new_series = series.replace(23, 'X').replace(24, 'Y').astype(str)
+    new_series = new_series.astype('category', categories=chromosomes,
+                                   ordered=True)
+    return new_series
+
 def randomize_sleep_time(base_seconds):
     """
     Adds a random amount of seconds to your base seconds. It optionally takes
