@@ -6,6 +6,27 @@ import requests
 import sys
 import numpy as np
 
+from io import StringIO
+
+
+class CapturingSTDOUT(list):
+    """
+    Context Manger taken from https://goo.gl/zvPFcd. It's meant to capture the
+    STDOUT output from any Python code that's executed within the context.
+
+    Usage:
+    > with CapturingSTDOUT() as output:
+    >     do_something(my_object)
+    >
+    > print('\n'.join(output))
+    """
+    def __enter__(self):
+        self._stdout = sys.stdout
+        sys.stdout = self._stringio = StringIO()
+        return self
+    def __exit__(self, *args):
+        self.extend(self._stringio.getvalue().splitlines())
+        sys.stdout = self._stdout
 
 def make_chromosome_series_categorical(series):
     chromosomes = [str(chrom) for chrom in range(1, 23)] + ['X', 'Y']

@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from biocodices.helpers import CapturingSTDOUT
+
 
 class Project:
     def __init__(self, base_dir):
@@ -101,10 +103,14 @@ class Project:
                 df[column_name] = series.fillna('""')\
                                         .map(json.loads)\
                                         .replace('', np.nan)
-                print(' Parsed "{}" as JSON'.format(column_name))
+                print('  Parsed "{}" as JSON'.format(column_name))
             except (TypeError, json.JSONDecodeError):
                 pass
 
+        with CapturingSTDOUT() as output:
+            df.info(memory_usage='deep')
+
+        print('\n'.join([line for line in output if 'memory' in line]), '\n')
         return df
 
     def read_results_df(self, filename, **kwargs):
