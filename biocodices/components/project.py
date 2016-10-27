@@ -5,8 +5,8 @@ import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
-from biocodices.helpers import CapturingSTDOUT
+from contextlib import redirect_stdout
+from io import StringIO
 
 
 class Project:
@@ -107,10 +107,12 @@ class Project:
             except (TypeError, json.JSONDecodeError):
                 pass
 
-        with CapturingSTDOUT() as output:
+        f = StringIO()
+        with redirect_stdout(f):
             df.info(memory_usage='deep')
 
-        print('\n'.join([line for line in output if 'memory' in line]), '\n')
+        info_lines = [line for line in f.getvalue().split('\n') if 'memory' in line]
+        print('\n'.join(info_lines), '\n')
         return df
 
     def read_results_df(self, filename, **kwargs):
