@@ -2,6 +2,7 @@ from os import mkdir
 from os.path import join, expanduser, abspath, basename, isdir
 from glob import glob
 import json
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -79,6 +80,32 @@ class Project:
             print('JSONified columns: %s' % columns_to_jsonify)
 
         return filepath
+
+    def read_csv(self, filename, subdir='results', **kwargs):
+        """
+        Read a CSV file in any of the Project's subdirectories
+        (default='results'). It will try to parse as JSON the fields with
+        dtype=np.object and convert them to Python objects.
+        Extra arguments are passed to pd.read_csv().
+        """
+        filepath = join(self.dir, subdir, filename)
+        print('Reading "{}"'.format(filename))
+        df = pd.read_csv(filepath, **kwargs)
+
+        for column_name, series in df.items():
+            if not series.dtype == np.dtype('object'):
+                # It's faster to skip non-object columns than to try and fail
+                continue
+
+            try:
+                df[column_name] = series.fillna('""')\
+                                        .map(json.loads)\
+                                        .replace('', np.nan)
+                print(' Parsed "{}" as JSON'.format(column_name))
+            except (TypeError, json.JSONDecodeError):
+                pass
+
+        return df
 
     def read_results_df(self, filename, **kwargs):
         return pd.read_csv(self.results_file(filename), **kwargs)
