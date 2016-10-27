@@ -203,23 +203,29 @@ class Omim(AnnotatorWithCache):
                 current_entry['pubmeds_summary'][anchor.text] = anchor.get('pmid')
 
             # Get the review text itself without HTML elements
-            def extract_texts(element):
+            def extract_review_texts(element):
                 texts = []
                 for child in element.children:
-                    if child.name == 'br':
+                    if child.name == 'div' and 'change' in child['class']:
+                        # Nested div.change with the review texts
+                        texts += extract_review_texts(child)
+                    elif child.name == 'br':
                         texts.append('\n')
                     else:
                         try:
                             texts.append(child.text)
                         except AttributeError:
                             texts.append(child)
-                return ''.join(texts)
+
+                return texts
+
+            texts = ''.join(extract_review_texts(td))
 
             if 'review' not in current_entry:
-                current_entry['review'] = extract_texts(td)
+                current_entry['review'] = texts
                 continue
 
-            current_entry['review'] += '\n\n' + extract_texts(td)
+            current_entry['review'] += '\n\n' + texts
 
         for entry in entries:
             entry['omim_id'] = omim_id
