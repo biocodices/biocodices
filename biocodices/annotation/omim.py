@@ -91,7 +91,6 @@ class Omim(AnnotatorWithCache):
         df = pd.DataFrame(variants)
 
         if not df.empty:
-            df['gene'] = df['variant'].str.extract(r'^(\w+),', expand=False)
             df['rs'] = df['variant'].str.findall(r'dbSNP:(rs\d+)').str.join('|')
 
             prot_regex = r'\w+, (.+?)(?:,| \[| -| \()'
@@ -192,6 +191,15 @@ class Omim(AnnotatorWithCache):
             return None
         omim_id = omim_id.replace('*', '')
 
+        name_symbol = re.split(r';\s*', soup.select('td.title')[0].text.strip())
+        if len(name_symbol) == 1:
+            gene_name = name_symbol[0]
+            hgcn_text = soup.select('td.subheading.italic.bold.text-font')
+            if hgcn_text:
+                gene_symbol = hgcn_text[0].text.split(': ')[-1]
+        else:
+            gene_name, gene_symbol = name_symbol
+
         entries = []
         current_entry = {}
 
@@ -280,6 +288,8 @@ class Omim(AnnotatorWithCache):
 
         for entry in entries:
             entry['omim_id'] = omim_id
+            entry['gene_name'] = gene_name
+            entry['gene_symbol'] = gene_symbol
 
         return [entry for entry in entries if 'review' in entry]
 
