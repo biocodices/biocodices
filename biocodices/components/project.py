@@ -95,6 +95,10 @@ class Project:
         df = pd.read_csv(filepath, **kwargs)
 
         for column_name, series in df.items():
+            if column_name in kwargs.get('dtype', {}):
+                # Don't try to parse it as JSON if a dtype was already specified
+                continue
+
             if not series.dtype == np.dtype('object'):
                 # It's faster to skip non-object columns than to try and fail
                 continue
