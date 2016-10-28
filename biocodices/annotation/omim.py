@@ -2,6 +2,7 @@ import re
 import time
 import requests
 from multiprocessing import Pool
+from functools import lru_cache
 
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -14,6 +15,11 @@ class Omim(AnnotatorWithCache):
     @staticmethod
     def _key(mim_id):
         return 'omim:%s' % mim_id
+
+    @staticmethod
+    @lru_cache()
+    def _make_soup(html):
+        return BeautifulSoup(html, 'html.parser')
 
     @staticmethod
     def _url(mim_id):
@@ -62,55 +68,51 @@ class Omim(AnnotatorWithCache):
     def parse_html_dict(cls, html_dict):
         """
         Parses a dict like { '60555': '<html ...>' }. Meant for the result
-        of #annotate() for this class.
-        Returns a DataFrame of the OMIM variants per OMIM entry.
+        of #annotate() for this class. Returns a DataFrame of OMIM variants.
         """
-        entries = cls._html_dict_to_entries_list(html_dict)
-        references = cls._html_dict_to_references_list(html_dict)
+        variants = cls._parallel_parse_html_dict(
+                cls._extract_variants_from_html, html_dict)
+        references = cls._parallel_parse_html_dict(
+                cls._extract_references_from_html, html_dict)
+        phenotypes = cls._parallel_parse_html_dict(
+                cls._extract_phenotypes_from_html, html_dict)
 
-        for entry in entries:
-            if 'pubmeds_summary' not in entry:
-                continue
-            pmids = [pmid for pmid in entry['pubmeds_summary'].values() if pmid]
-            entry['pubmeds'] = [ref for ref in references
+        # Add the corresponding references found in the page to each variant
+        for variant in variants:
+            pmids = [pmid for pmid in variant['pubmeds_summary'].values() if pmid]
+            variant['pubmeds'] = [ref for ref in references
                                 if 'pmid' in ref and ref['pmid'] in pmids]
 
-        df = pd.DataFrame(entries)
+            variant_phenotypes = [pheno for pheno in phenotypes
+                                        for pheno_id in variant['phenotype_ids']
+                                        if pheno['id'] == pheno_id]
+            variant['phenotypes'] = (variant_phenotypes or None)
 
-        df['gene'] = df['variant'].str.extract(r'^(\w+),', expand=False)
-        df['rs'] = df['variant'].str.findall(r'dbSNP:(rs\d+)').str.join('|')
+        df = pd.DataFrame(variants)
 
-        prot_regex = r'\w+, (.+?)(?:,| \[| -| \()'
-        df['prot_change'] = df['variant'].str.extract(prot_regex, expand=False)
+        if not df.empty:
+            df['gene'] = df['variant'].str.extract(r'^(\w+),', expand=False)
+            df['rs'] = df['variant'].str.findall(r'dbSNP:(rs\d+)').str.join('|')
+
+            prot_regex = r'\w+, (.+?)(?:,| \[| -| \()'
+            df['prot_change'] = df['variant'].str.extract(prot_regex, expand=False)
+
         return df
 
     @classmethod
-    def _html_dict_to_references_list(cls, html_dict):
-        references = []
-
-        with Pool(7) as pool:
-            results = [pool.apply_async(cls._parse_html_references, (html, ))
+    def _parallel_parse_html_dict(cls, parse_function, html_dict):
+        ret = []
+        with Pool(8) as pool:
+            results = [pool.apply_async(parse_function, (html, ))
                        for html in html_dict.values()]
             for result in results:
-                references += (result.get() or [])
+                ret += (result.get() or [])
 
-        return references
-
-    @classmethod
-    def _html_dict_to_entries_list(cls, html_dict):
-        entries = []
-
-        with Pool(7) as pool:
-            results = [pool.apply_async(cls._parse_html, (html, omim_id))
-                       for omim_id, html in html_dict.items()]
-            for result in results:
-                entries += (result.get() or [])
-
-        return entries
+        return ret
 
     @classmethod
-    def _parse_html_references(cls, html):
-        soup = BeautifulSoup(html, 'html.parser')
+    def _extract_references_from_html(cls, html):
+        soup = cls._make_soup(html)
         references = []
 
         in_the_references_section = False
@@ -143,19 +145,52 @@ class Omim(AnnotatorWithCache):
         return references
 
     @classmethod
-    def _parse_html(cls, html, omim_id):
+    def _extract_phenotypes_from_html(cls, html):
         """
-        Parse OMIM Gene entries HTML.
+        Parse the HTML of an OMIM Entry page for a gene and return a list of
+        phenotype dictionaries with name and id keys.
+        """
+        soup = cls._make_soup(html)
+
+        # Find the table title and advance to the next element
+        table_title = soup.select('td#geneMap')
+
+        if not table_title:  # Usually means we're in a Phenotype entry
+            return []
+
+        table_title = table_title[0]
+        next_sib = [element for element in table_title.parent.next_siblings
+                    if element != '\n'][0]
+
+        phenotypes = []
+        fields = 'name', 'id', 'inheritance', 'key'
+
+        for tr in next_sib.select('.embedded-table tr')[1:]:  # Skips header
+            row = [td.text.strip() for td in tr.select('td')
+                   if 'rowspan' not in td.attrs]  # Skips Location column
+            phenotype = dict(zip(fields, row))
+            phenotypes.append(phenotype)
+
+        return phenotypes
+
+
+    @classmethod
+    def _extract_variants_from_html(cls, html):
+        """
+        Parses the HTML of an OMIM Gene Entry. Returns a list of variant
+        entries found in the page.
         """
         html = html.replace('<br>', '<br/>')
         # ^ Need this so the parser doesn't think what comes after a <br>
         # is the <br>'s children. Added it to keep the newlines in OMIM
         # review texts.
 
-        soup = BeautifulSoup(html, 'html.parser')
-        entry_type = ' '.join([e['title'] for e in soup.select('.title.definition')])
-        if 'Phenotype description' in entry_type:
+        soup = cls._make_soup(html)
+
+        omim_id = soup.select('span#title')[0].text.strip()
+        if '*' not in omim_id:  # * signals a GeneEntry
             return None
+        omim_id = omim_id.replace('*', '')
 
         entries = []
         current_entry = {}
@@ -181,7 +216,7 @@ class Omim(AnnotatorWithCache):
                 if not re.search(r'REMOVED FROM|MOVED TO', inner_text):
                     current_entry = {
                             'sub_id': title_match.group(1),
-                            'phenotypes': [title_match.group(2)]
+                            'phenotype_names': [title_match.group(2)]
                     }
                 continue
 
@@ -190,7 +225,7 @@ class Omim(AnnotatorWithCache):
                     current_entry['variant'] = inner_text.replace(' [ClinVar]', '')
                 else:
                     phenos = [pheno for pheno in inner_text.split(', INCLUDED') if pheno]
-                    current_entry['phenotypes'] += phenos
+                    current_entry['phenotype_names'] += phenos
                 continue
 
             # Rest of the entry will be the review
@@ -201,6 +236,22 @@ class Omim(AnnotatorWithCache):
 
             for anchor in td.select('a.entry-reference'):
                 current_entry['pubmeds_summary'][anchor.text] = anchor.get('pmid')
+
+            # Extract the linked phenotype MIM IDs from the text
+            if 'phenotype_ids' not in current_entry:
+                current_entry['phenotype_ids'] = []
+
+            omim_links = [anchor for anchor in td.select('a')
+                          if anchor.get('href', '').startswith('/entry/')]
+            for anchor in omim_links:
+                current_entry['phenotype_ids'].append(anchor.text)
+
+            # Extract the linked phenotypes acronyms from the text
+            if 'phenotype_symbols' not in current_entry:
+                current_entry['phenotype_symbols'] = []
+
+            pheno_symbols = re.findall(r'\((\w+); \d+\)', td.text)
+            current_entry['phenotype_symbols'] += pheno_symbols
 
             # Get the review text itself without HTML elements
             def extract_review_texts(element):
@@ -230,5 +281,5 @@ class Omim(AnnotatorWithCache):
         for entry in entries:
             entry['omim_id'] = omim_id
 
-        return entries
+        return [entry for entry in entries if 'review' in entry]
 
