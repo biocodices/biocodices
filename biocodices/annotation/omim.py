@@ -81,11 +81,11 @@ class Omim(AnnotatorWithCache):
         for variant in variants:
             pmids = [pmid for pmid in variant['pubmeds_summary'].values() if pmid]
             variant['pubmeds'] = [ref for ref in references
-                                if 'pmid' in ref and ref['pmid'] in pmids]
+                                  if 'pmid' in ref and ref['pmid'] in pmids]
 
             variant_phenotypes = [pheno for pheno in phenotypes
-                                        for pheno_id in variant['phenotype_ids']
-                                        if pheno['id'] == pheno_id]
+                                        for mim_id in variant['linked_mim_ids']
+                                        if pheno['id'] == mim_id]
             variant['phenotypes'] = (variant_phenotypes or None)
 
         df = pd.DataFrame(variants)
@@ -172,6 +172,25 @@ class Omim(AnnotatorWithCache):
 
         return phenotypes
 
+    @staticmethod
+    def _extract_mim_id(soup):
+        mim_id = soup.select('span#title')[0].text.strip()
+        # The MIM id is preceded by a * or #
+        entry_type = {'*': 'gene', '#': 'phenotype'}[mim_id[0]]
+        return {'id': mim_id[1:], 'type': entry_type}
+
+    @staticmethod
+    def _extract_gene(soup):
+        name_symbol = re.split(r';\s*', soup.select('td.title')[0].text.strip())
+        if len(name_symbol) == 1:
+            gene_name = name_symbol[0]
+            # No symbol in the title --try in a different part of the page:
+            hgcn_text = soup.select('td.subheading.italic.bold.text-font')
+            gene_symbol = (hgcn_text and hgcn_text[0].text.split(': ')[-1])
+        else:
+            gene_name, gene_symbol = name_symbol
+
+        return {'name': gene_name, 'symbol': gene_symbol}
 
     @classmethod
     def _extract_variants_from_html(cls, html):
@@ -186,21 +205,23 @@ class Omim(AnnotatorWithCache):
 
         soup = cls._make_soup(html)
 
-        omim_id = soup.select('span#title')[0].text.strip()
-        if '*' not in omim_id:  # * signals a GeneEntry
+        omim_id = cls._extract_mim_id(soup)
+        if not omim_id['type'] == 'gene':
             return None
-        omim_id = omim_id.replace('*', '')
 
-        name_symbol = re.split(r';\s*', soup.select('td.title')[0].text.strip())
-        if len(name_symbol) == 1:
-            gene_name = name_symbol[0]
-            hgcn_text = soup.select('td.subheading.italic.bold.text-font')
-            if hgcn_text:
-                gene_symbol = hgcn_text[0].text.split(': ')[-1]
-        else:
-            gene_name, gene_symbol = name_symbol
+        gene = cls._extract_gene(soup)
+        variants = cls._extract_variants(soup)
 
-        entries = []
+        for variant in variants:
+            variant['omim_id'] = omim_id['id']
+            variant['gene_name'] = gene['name']
+            variant['gene_symbol'] = gene['symbol']
+
+        return [variant for variant in variants if 'review' in variant]
+
+    @staticmethod
+    def _extract_variants(soup):
+        variants = []
         current_entry = {}
 
         in_the_variants_section = False
@@ -213,13 +234,13 @@ class Omim(AnnotatorWithCache):
                 in_the_variants_section = re.search(r'Table View', inner_text)
                 continue
             elif re.search(r'REFERENCES', inner_text):
-                entries.append(current_entry) if current_entry else None
+                variants.append(current_entry) if current_entry else None
                 break
 
             # Title of new entry
             title_match = re.match(r'\.(\d{4}) (.+)', inner_text)
             if title_match:
-                entries.append(current_entry) if current_entry else None
+                variants.append(current_entry) if current_entry else None
 
                 if not re.search(r'REMOVED FROM|MOVED TO', inner_text):
                     current_entry = {
@@ -246,19 +267,19 @@ class Omim(AnnotatorWithCache):
                 current_entry['pubmeds_summary'][anchor.text] = anchor.get('pmid')
 
             # Extract the linked phenotype MIM IDs from the text
-            if 'phenotype_ids' not in current_entry:
-                current_entry['phenotype_ids'] = []
+            if 'linked_mim_ids' not in current_entry:
+                current_entry['linked_mim_ids'] = []
 
             omim_links = [anchor for anchor in td.select('a')
                           if anchor.get('href', '').startswith('/entry/')]
             for anchor in omim_links:
-                current_entry['phenotype_ids'].append(anchor.text)
+                current_entry['linked_mim_ids'].append(anchor.text)
 
             # Extract the linked phenotypes acronyms from the text
             if 'phenotype_symbols' not in current_entry:
                 current_entry['phenotype_symbols'] = []
 
-            pheno_symbols = re.findall(r'\((\w+); \d+\)', td.text)
+            pheno_symbols = re.findall(r'\((\w+); (?:see )?\d+\)', td.text)
             current_entry['phenotype_symbols'] += pheno_symbols
 
             # Get the review text itself without HTML elements
@@ -286,10 +307,5 @@ class Omim(AnnotatorWithCache):
 
             current_entry['review'] += '\n\n' + texts
 
-        for entry in entries:
-            entry['omim_id'] = omim_id
-            entry['gene_name'] = gene_name
-            entry['gene_symbol'] = gene_symbol
-
-        return [entry for entry in entries if 'review' in entry]
+        return variants
 
