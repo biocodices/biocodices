@@ -74,18 +74,35 @@ class Omim(AnnotatorWithCache):
                 cls._extract_variants_from_html, html_dict)
         references = cls._parallel_parse_html_dict(
                 cls._extract_references_from_html, html_dict)
-        phenotypes = cls._parallel_parse_html_dict(
+        all_phenotypes = cls._parallel_parse_html_dict(
                 cls._extract_phenotypes_from_html, html_dict)
 
-        # Add the corresponding references found in the page to each variant
         for variant in variants:
+            # Add the references found in the page to each variant,
+            # if mentioned in the variant's review text.
             pmids = [pmid for pmid in variant['pubmeds_summary'].values() if pmid]
             variant['pubmeds'] = [ref for ref in references
                                   if 'pmid' in ref and ref['pmid'] in pmids]
 
-            variant_phenotypes = [pheno for pheno in phenotypes
-                                        for mim_id in variant['linked_mim_ids']
-                                        if pheno['id'] == mim_id]
+            # Add the phenotypes cited in the table at the top of the page,
+            # if they're mentioned in the variant's entry
+            variant_phenotypes = []
+            for pheno in all_phenotypes:
+                for mim_id in variant['linked_mim_ids']:
+                    if pheno['id'] == mim_id:
+                        variant_phenotypes.append(pheno)
+
+                for variant_pheno_name in variant['phenotype_names']:
+                    # This is a somewhat loose check of phenotype names
+                    # because the names are not always exactly the same
+                    # in the top table and in the variant entry.
+                    match1 = variant_pheno_name.lower() in pheno['name'].lower()
+                    match2 = pheno['name'].lower() in variant_pheno_name.lower()
+                    already_added = any(p for p in variant_phenotypes
+                                        if p['id'] == pheno['id'])
+                    if (match1 or match2) and not already_added:
+                        variant_phenotypes.append(pheno)
+
             variant['phenotypes'] = (variant_phenotypes or None)
 
         df = pd.DataFrame(variants)
@@ -176,8 +193,15 @@ class Omim(AnnotatorWithCache):
     def _extract_mim_id(soup):
         mim_id = soup.select('span#title')[0].text.strip()
         # The MIM id is preceded by a * or #
-        entry_type = {'*': 'gene', '#': 'phenotype'}[mim_id[0]]
-        return {'id': mim_id[1:], 'type': entry_type}
+        entry_symbol, entry_id = re.search(r'(\*|#|%|\+)?(\d+)', mim_id).groups()
+        entry_types = {
+            '*': 'gene',
+            '#': 'phenotype',
+            '%': 'pheno_or_gene',
+            '+': 'gene_and_pheno',
+            None: 'other',
+        }
+        return {'id': entry_id, 'type': entry_types[entry_symbol]}
 
     @staticmethod
     def _extract_gene(soup):
@@ -206,14 +230,14 @@ class Omim(AnnotatorWithCache):
         soup = cls._make_soup(html)
 
         omim_id = cls._extract_mim_id(soup)
-        if not omim_id['type'] == 'gene':
+        if 'gene' not in omim_id['type']:
             return None
 
         gene = cls._extract_gene(soup)
         variants = cls._extract_variants(soup)
 
         for variant in variants:
-            variant['omim_id'] = omim_id['id']
+            variant['gene_id'] = omim_id['id']
             variant['gene_name'] = gene['name']
             variant['gene_symbol'] = gene['symbol']
 
