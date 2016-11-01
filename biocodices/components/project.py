@@ -1,12 +1,14 @@
+import time
 from os import mkdir
 from os.path import join, expanduser, abspath, basename, isdir
 from glob import glob
+from contextlib import redirect_stdout
+from io import StringIO
 import json
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from contextlib import redirect_stdout
-from io import StringIO
 
 
 class Project:
@@ -90,6 +92,7 @@ class Project:
         dtype=np.object and convert them to Python objects.
         Extra arguments are passed to pd.read_csv().
         """
+        t0 = time.time()
         filepath = join(self.dir, subdir, filename)
         print('Reading "{}"'.format(filename))
         df = pd.read_csv(filepath, **kwargs)
@@ -116,7 +119,10 @@ class Project:
             df.info(memory_usage='deep')
 
         info_lines = [line for line in f.getvalue().split('\n') if 'memory' in line]
-        print('\n'.join(info_lines), '\n')
+        print('\n'.join(info_lines))
+
+        elapsed = time.time() - t0
+        print('Took {:.2f} seconds'.format(elapsed), '\n')
         return df
 
     def read_results_df(self, filename, **kwargs):
