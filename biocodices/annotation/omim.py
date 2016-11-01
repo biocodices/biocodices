@@ -93,15 +93,18 @@ class Omim(AnnotatorWithCache):
                         variant_phenotypes.append(pheno)
 
                 for variant_pheno_name in variant['phenotype_names']:
-                    # This is a somewhat loose check of phenotype names
+                    # This is a somewhat loose extra check of phenotype names
                     # because the names are not always exactly the same
                     # in the top table and in the variant entry.
                     match1 = variant_pheno_name.lower() in pheno['name'].lower()
                     match2 = pheno['name'].lower() in variant_pheno_name.lower()
-                    already_added = any(p for p in variant_phenotypes
-                                        if p['id'] == pheno['id'])
-                    if (match1 or match2) and not already_added:
+
+                    if match1 or match2:
                         variant_phenotypes.append(pheno)
+
+            # Remove duplicated phenotypes
+            tupleized_entries = set(tuple(item.items()) for item in variant_phenotypes)
+            variant_phenotypes = [dict(tupleized) for tupleized in tupleized_entries]
 
             variant['phenotypes'] = (variant_phenotypes or None)
 
