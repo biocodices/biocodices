@@ -1,6 +1,7 @@
 import re
 import time
 import requests
+from itertools import chain
 from multiprocessing import Pool
 from functools import lru_cache
 
@@ -120,14 +121,10 @@ class Omim(AnnotatorWithCache):
 
     @classmethod
     def _parallel_parse_html_dict(cls, parse_function, html_dict):
-        ret = []
         with Pool(8) as pool:
-            results = [pool.apply_async(parse_function, (html, ))
-                       for html in html_dict.values()]
-            for result in results:
-                ret += (result.get() or [])
+            results = pool.map(parse_function, html_dict.values())
 
-        return ret
+        return list(chain.from_iterable(results))
 
     @classmethod
     def _extract_references_from_html(cls, html):
@@ -206,19 +203,6 @@ class Omim(AnnotatorWithCache):
         }
         return {'id': entry_id, 'type': entry_types[entry_symbol]}
 
-    @staticmethod
-    def _extract_gene(soup):
-        name_symbol = re.split(r';\s*', soup.select('td.title')[0].text.strip())
-        if len(name_symbol) == 1:
-            gene_name = name_symbol[0]
-            # No symbol in the title --try in a different part of the page:
-            hgcn_text = soup.select('td.subheading.italic.bold.text-font')
-            gene_symbol = (hgcn_text and hgcn_text[0].text.split(': ')[-1])
-        else:
-            gene_name, gene_symbol = name_symbol
-
-        return {'name': gene_name, 'symbol': gene_symbol}
-
     @classmethod
     def _extract_variants_from_html(cls, html):
         """
@@ -231,13 +215,15 @@ class Omim(AnnotatorWithCache):
         # review texts.
 
         soup = cls._make_soup(html)
+        if soup.title.text.strip() == 'OMIM Error':
+            return []
 
         omim_id = cls._extract_mim_id(soup)
         if 'gene' not in omim_id['type']:
-            return None
+            return []
 
-        gene = cls._extract_gene(soup)
-        variants = cls._extract_variants(soup)
+        gene = cls._extract_gene_from_soup(soup)
+        variants = cls._extract_variants_from_soup(soup)
 
         for variant in variants:
             variant['gene_id'] = omim_id['id']
@@ -247,7 +233,20 @@ class Omim(AnnotatorWithCache):
         return [variant for variant in variants if 'review' in variant]
 
     @staticmethod
-    def _extract_variants(soup):
+    def _extract_gene_from_soup(soup):
+        name_symbol = re.split(r';\s*', soup.select('td.title')[0].text.strip())
+        if len(name_symbol) == 1:
+            gene_name = name_symbol[0]
+            # No symbol in the title --try in a different part of the page:
+            hgcn_text = soup.select('td.subheading.italic.bold.text-font')
+            gene_symbol = (hgcn_text and hgcn_text[0].text.split(': ')[-1])
+        else:
+            gene_name, gene_symbol = name_symbol
+
+        return {'name': gene_name, 'symbol': gene_symbol}
+
+    @staticmethod
+    def _extract_variants_from_soup(soup):
         variants = []
         current_entry = {}
 
