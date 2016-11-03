@@ -1,7 +1,7 @@
 import json
 import redis
 import time
-from multiprocessing import Pool
+from concurrent import futures
 from biocodices.helpers import in_groups_of
 
 class AnnotatorWithCache():
@@ -58,27 +58,27 @@ class AnnotatorWithCache():
 
         return info_dict
 
+    def _query_and_set_cache(self, id_):
+        reponse = self._query(id_)
+        if response:
+            self._cache_set({id: response})
+        return response
+
     def _batch_query(self, ids, parallel, sleep_time):
         print('🌎  Get %s data for %s ids' % (self.name, len(ids)))
-        with Pool(parallel) as pool:
+
+        with futures.ThreadPoolExecutor(max_workers=parallel) as executor:
             for i, ids_group in enumerate(in_groups_of(parallel, ids)):
                 if i > 0:
                     print('  Sleep for %s seconds' % sleep_time)
                     time.sleep(sleep_time)
 
-
                 print('[{}-{}/{}] {} fetch {} IDs: {} .. {}'.format(
-                    (i*parallel)+1, (i*parallel)+parallel, len(ids), self.name,
-                    len(ids_group), ids_group[0], ids_group[-1]))
+                      (i*parallel)+1, min((i*parallel)+parallel, len(ids)),
+                      len(ids), self.name, len(ids_group), ids_group[0],
+                      ids_group[-1]))
 
-                group_results = {id_: pool.apply_async(self._query, (id_, ))
-                                 for id_ in ids_group}
-
-                for id_, result in group_results.items():
-                    group_results[id_] = result.get()
-
-                print('  Set cache for %s IDs' % len(ids_group))
-                self._cache_set(group_results)
+                executor.map(self._query_and_set_cache, ids_group)
 
         # After caching all the responses, use the logic in #_cache_get()
         # to bring them from cache. The jsons will be json-loaded, the xml

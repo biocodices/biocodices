@@ -23,10 +23,10 @@ class DbSNP(AnnotatorWithCache):
         response = requests.get(url, headers)
 
         if response.ok:
-            self._cache_set({rs: response.json()})
-            return self._cache_get([rs])[rs]
+            return response.json()
         else:
-            return
+            print('{} status code for "{}"'.format(response.status_code, rs))
+            return None
 
     def genes(self, rs, use_web=False):
         """Annotate the genes for a given rs."""
