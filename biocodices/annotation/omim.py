@@ -1,8 +1,7 @@
 import re
 import time
 import requests
-from itertools import chain
-from multiprocessing import Pool
+from concurrent import futures
 from functools import lru_cache
 
 import pandas as pd
@@ -67,28 +66,29 @@ class Omim(AnnotatorWithCache):
 
     @classmethod
     def parse_html_dict(cls, html_dict):
-        """
-        Parses a dict like { '60555': '<html ...>' }. Meant for the result
-        of #annotate() for this class. Returns a DataFrame of OMIM variants.
-        """
-        variants = cls._parallel_parse_html_dict(
-                cls._extract_variants_from_html, html_dict)
-        references = cls._parallel_parse_html_dict(
-                cls._extract_references_from_html, html_dict)
-        all_phenotypes = cls._parallel_parse_html_dict(
-                cls._extract_phenotypes_from_html, html_dict)
+        with futures.ProcessPoolExecutor() as executor:
+            results = executor.map(cls._variants_html_to_df, html_dict.values())
 
-        for variant in variants:
+        return pd.concat(results, ignore_index=True)
+
+    @classmethod
+    def _variants_html_to_df(cls, html):
+        """
+        Take the HTML from a OMIM Gene Entry and make a DataFrame of the variants.
+        """
+        data = cls._extract_data_from_html(html)
+
+        for variant in data['variants']:
             # Add the references found in the page to each variant,
             # if mentioned in the variant's review text.
             pmids = [pmid for pmid in variant['pubmeds_summary'].values() if pmid]
-            variant['pubmeds'] = [ref for ref in references
-                                  if 'pmid' in ref and ref['pmid'] in pmids]
+            variant['pubmeds'] = [ref for ref in data['references']
+                                if 'pmid' in ref and ref['pmid'] in pmids]
 
             # Add the phenotypes cited in the table at the top of the page,
             # if they're mentioned in the variant's entry
             variant_phenotypes = []
-            for pheno in all_phenotypes:
+            for pheno in data['phenotypes']:
                 for mim_id in variant['linked_mim_ids']:
                     if pheno['id'] == mim_id:
                         variant_phenotypes.append(pheno)
@@ -106,10 +106,9 @@ class Omim(AnnotatorWithCache):
             # Remove duplicated phenotypes
             tupleized_entries = set(tuple(item.items()) for item in variant_phenotypes)
             variant_phenotypes = [dict(tupleized) for tupleized in tupleized_entries]
-
             variant['phenotypes'] = (variant_phenotypes or None)
 
-        df = pd.DataFrame(variants)
+        df = pd.DataFrame(data['variants'])
 
         if not df.empty:
             df['rs'] = df['variant'].str.findall(r'dbSNP:(rs\d+)').str.join('|')
@@ -120,11 +119,12 @@ class Omim(AnnotatorWithCache):
         return df
 
     @classmethod
-    def _parallel_parse_html_dict(cls, parse_function, html_dict):
-        with Pool(8) as pool:
-            results = pool.map(parse_function, html_dict.values())
-
-        return list(chain.from_iterable(results))
+    def _extract_data_from_html(cls, html):
+        return {
+            'variants': cls._extract_variants_from_html(html),
+            'phenotypes': cls._extract_phenotypes_from_html(html),
+            'references': cls._extract_references_from_html(html)
+        }
 
     @classmethod
     def _extract_references_from_html(cls, html):
@@ -189,20 +189,6 @@ class Omim(AnnotatorWithCache):
 
         return phenotypes
 
-    @staticmethod
-    def _extract_mim_id(soup):
-        mim_id = soup.select('span#title')[0].text.strip()
-        # The MIM id is preceded by a * or #
-        entry_symbol, entry_id = re.search(r'(\*|#|%|\+)?(\d+)', mim_id).groups()
-        entry_types = {
-            '*': 'gene',
-            '#': 'phenotype',
-            '%': 'pheno_or_gene',
-            '+': 'gene_and_pheno',
-            None: 'other',
-        }
-        return {'id': entry_id, 'type': entry_types[entry_symbol]}
-
     @classmethod
     def _extract_variants_from_html(cls, html):
         """
@@ -218,7 +204,7 @@ class Omim(AnnotatorWithCache):
         if soup.title.text.strip() == 'OMIM Error':
             return []
 
-        omim_id = cls._extract_mim_id(soup)
+        omim_id = cls._extract_mim_id_from_soup(soup)
         if 'gene' not in omim_id['type']:
             return []
 
@@ -231,6 +217,20 @@ class Omim(AnnotatorWithCache):
             variant['gene_symbol'] = gene['symbol']
 
         return [variant for variant in variants if 'review' in variant]
+
+    @staticmethod
+    def _extract_mim_id_from_soup(soup):
+        mim_id = soup.select('span#title')[0].text.strip()
+        # The MIM id is preceded by a * or #
+        entry_symbol, entry_id = re.search(r'(\*|#|%|\+)?(\d+)', mim_id).groups()
+        entry_types = {
+            '*': 'gene',
+            '#': 'phenotype',
+            '%': 'pheno_or_gene',
+            '+': 'gene_and_pheno',
+            None: 'other',
+        }
+        return {'id': entry_id, 'type': entry_types[entry_symbol]}
 
     @staticmethod
     def _extract_gene_from_soup(soup):

@@ -19,7 +19,7 @@ class AnnotatorWithCache():
         klass._redis_client = redis.StrictRedis(host=host, port=port, db=db)
         conn = klass._redis_client.connection_pool.connection_kwargs
         print('{0} connected to Redis cache: {1}:{2} db={3}'.format(
-            self.name, conn['host'], conn['port'], conn['db']))
+              self.name, conn['host'], conn['port'], conn['db']))
 
     def __init__(self, redis_host='localhost', redis_port=6379, redis_db=0):
         self.name = self.__class__.__name__
