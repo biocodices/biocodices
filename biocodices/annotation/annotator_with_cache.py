@@ -83,7 +83,7 @@ class AnnotatorWithCache():
         # After caching all the responses, use the logic in #_cache_get()
         # to bring them from cache. The jsons will be json-loaded, the xml
         # will be left as they are, etc.
-        return self._cache_get(ids)
+        return self._cache_get(ids, verbose=False)
 
     def _cache_set(self, info_dict):
         """
@@ -103,7 +103,7 @@ class AnnotatorWithCache():
                 info = json.dumps(info)
             self._redis_client.setex(self._key(identifier), self.expire_time, info)
 
-    def _cache_get(self, ids):
+    def _cache_get(self, ids, verbose=True):
         """
         Get a list of IDs data from cache. Returns a dict with the form:
         {
@@ -123,7 +123,7 @@ class AnnotatorWithCache():
 
                 info_dict[identifier] = cached_info
 
-        if len(ids) > 1:
+        if verbose and len(ids) > 1:
             msg = '📂 %s found %s/%s in cache'
             print(msg % (self.name, len(info_dict), len(ids)))
 
