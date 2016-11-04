@@ -4,8 +4,8 @@ from os.path import join, expanduser, abspath, basename, isdir
 from glob import glob
 from contextlib import redirect_stdout
 from io import StringIO
-import json
 
+import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -85,6 +85,15 @@ class Project:
 
         return filepath
 
+    def _series_as_JSON(self, series):
+        """Try to read a pandas Series as JSON. Returns None if it fails."""
+        try:
+            new_series = series.fillna('""').map(json.loads).replace('', np.nan)
+            print('  Parsed %s as JSON' % series.name)
+            return new_series
+        except (TypeError, json.JSONDecodeError):
+            return None
+
     def read_csv(self, filename, subdir='results', **kwargs):
         """
         Read a CSV file in any of the Project's subdirectories
@@ -97,28 +106,22 @@ class Project:
         print('Reading "{}"'.format(filename))
         df = pd.read_csv(filepath, **kwargs)
 
-        for column_name, series in df.items():
-            if column_name in kwargs.get('dtype', {}):
-                # Don't try to parse it as JSON if a dtype was already specified
-                continue
+        # Don't try to parse a column as JSON if a dtype was already specified
+        # And only keep 'object' dtypes, since they have strings in them!
+        maybe_JSON_series = [series for colname, series in df.iteritems()
+                             if colname not in kwargs.get('dtype', {}) and
+                             series.dtype == np.dtype('object')]
 
-            if not series.dtype == np.dtype('object'):
-                # It's faster to skip non-object columns than to try and fail
-                continue
+        for new_series in map(self._series_as_JSON, maybe_JSON_series):
+            if new_series is not None:
+                df[new_series.name] = new_series
 
-            try:
-                df[column_name] = series.fillna('""')\
-                                        .map(json.loads)\
-                                        .replace('', np.nan)
-                print('  Parsed "{}" as JSON'.format(column_name))
-            except (TypeError, json.JSONDecodeError):
-                pass
+        captured_output = StringIO()
+        with redirect_stdout(captured_output):
+            df.info(memory_usage='deep')  # This function prints to stdout
 
-        f = StringIO()
-        with redirect_stdout(f):
-            df.info(memory_usage='deep')
-
-        info_lines = [line for line in f.getvalue().split('\n') if 'memory' in line]
+        info_lines = [line for line in captured_output.getvalue().split('\n')
+                      if 'memory' in line]
         print('\n'.join(info_lines))
 
         elapsed = time.time() - t0
