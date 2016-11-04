@@ -1,7 +1,7 @@
 import json
 import redis
 import time
-from concurrent import futures
+from concurrent.futures import ThreadPoolExecutor
 from biocodices.helpers import in_groups_of
 
 class AnnotatorWithCache():
@@ -67,7 +67,7 @@ class AnnotatorWithCache():
     def _batch_query(self, ids, parallel, sleep_time):
         print('🌎  Get %s data for %s ids' % (self.name, len(ids)))
 
-        with futures.ThreadPoolExecutor(max_workers=parallel) as executor:
+        with ThreadPoolExecutor(max_workers=parallel) as executor:
             for i, ids_group in enumerate(in_groups_of(parallel, ids)):
                 if i > 0:
                     print('  Sleep for %s seconds' % sleep_time)

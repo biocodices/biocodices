@@ -1,7 +1,7 @@
 import re
 import time
 import requests
-from concurrent import futures
+from concurrent.futures import ProcessPoolExecutor
 from functools import lru_cache
 
 import pandas as pd
@@ -38,7 +38,7 @@ class Omim(AnnotatorWithCache):
 
         return response.text
 
-    def _batch_query(self, mim_ids, parallel, sleep_time):
+    def _batch_query(self, mim_ids, _, sleep_time):
         html_dict = {}
 
         # OMIM seems to be very strict against web crawlers and bans IPs.
@@ -66,10 +66,11 @@ class Omim(AnnotatorWithCache):
 
     @classmethod
     def parse_html_dict(cls, html_dict):
-        with futures.ProcessPoolExecutor() as executor:
-            results = executor.map(cls._variants_html_to_df, html_dict.values())
+        with ProcessPoolExecutor() as executor:
+            variant_dataframes = executor.map(cls._variants_html_to_df,
+                                              html_dict.values())
 
-        return pd.concat(results, ignore_index=True)
+        return pd.concat(variant_dataframes, ignore_index=True)
 
     @classmethod
     def _variants_html_to_df(cls, html):
@@ -112,7 +113,6 @@ class Omim(AnnotatorWithCache):
 
         if not df.empty:
             df['rs'] = df['variant'].str.findall(r'dbSNP:(rs\d+)').str.join('|')
-
             prot_regex = r'\w+, (.+?)(?:,| \[| -| \()'
             df['prot_change'] = df['variant'].str.extract(prot_regex, expand=False)
 
