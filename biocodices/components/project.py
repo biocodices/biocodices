@@ -5,7 +5,7 @@ from glob import glob
 from contextlib import redirect_stdout
 from io import StringIO
 
-import json
+import ujson
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -75,7 +75,7 @@ class Project:
             # the original dataframe that was passed as an argument.
             df = df.copy()
             for column_name in columns_to_jsonify:
-                df[column_name] = df[column_name].map(json.dumps)
+                df[column_name] = df[column_name].map(ujson.dumps)
 
         df.to_csv(filepath, index=index, **kwargs)
         print('Written to', filepath)
@@ -88,10 +88,10 @@ class Project:
     def _series_as_JSON(self, series):
         """Try to read a pandas Series as JSON. Returns None if it fails."""
         try:
-            new_series = series.fillna('""').map(json.loads).replace('', np.nan)
+            new_series = series.fillna('""').map(ujson.loads).replace('', np.nan)
             print('  Parsed %s as JSON' % series.name)
             return new_series
-        except (TypeError, json.JSONDecodeError):
+        except ValueError:
             return None
 
     def read_csv(self, filename, subdir='results', **kwargs):
