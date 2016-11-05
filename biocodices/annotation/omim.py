@@ -1,17 +1,30 @@
+import sys
 import re
 import time
 import requests
 from concurrent.futures import ProcessPoolExecutor
 from functools import lru_cache
 
+from numpy.random import random_sample
 import pandas as pd
 from bs4 import BeautifulSoup
+from tqdm import tqdm
 
-from biocodices.helpers import randomize_sleep_time
 from biocodices.annotation import AnnotatorWithCache
 
 
 class Omim(AnnotatorWithCache):
+    """
+    Annotates genes from OMIM, given MIM IDs.
+
+    Example:
+        >>> omim_annotator = Omim()
+        >>> html_dict = omim_annotator.annotate(['605557'])
+        >>> omim_annotator.parse_html_dict(html_dict)
+        >>> # => dict with the data for the given MIM ids
+    """
+    MIN_SLEEP_TIME = 3
+
     @staticmethod
     def _key(mim_id):
         return 'omim:%s' % mim_id
@@ -46,18 +59,21 @@ class Omim(AnnotatorWithCache):
         # parallelization here.
         # Never ommit the sleeping step between queries, and never let it
         # be less than a couple of seconds, just in case:
-        if sleep_time < 3:
-            sleep_time = 3
+        if sleep_time < self.MIN_SLEEP_TIME:
+            print('Force sleep time to ', self.MIN_SLEEP_TIME)
+            sleep_time = self.MIN_SLEEP_TIME
 
-        for i, mim_id in enumerate(mim_ids):
+        sys.stdout.flush()  # Necesary for tqdm stdout correctly
+        for i, mim_id in enumerate(tqdm(mim_ids)):
             if i > 0:
                 # To further simulate real human behavior when visiting the page,
                 # randomize the sleeping time:
-                random_sleep_time = randomize_sleep_time(sleep_time)
-                print('  Random sleep: {0:.2f} seconds'.format(random_sleep_time))
+                # random_sleep_time = randomize_sleep_time(sleep_time)
+                #  print('  Random sleep: {0:.2f} seconds'.format(random_sleep_time))
+                random_sleep_time = sleep_time + random_sample() * sleep_time
                 time.sleep(random_sleep_time)
 
-            print('[%s/%s] Visit %s' % (i+1, len(mim_ids), self._url(mim_id)))
+            #  print('[%s/%s] Visit %s' % (i+1, len(mim_ids), self._url(mim_id)))
             html = self._query(mim_id)
             self._cache_set({mim_id: html})
             html_dict[mim_id] = html

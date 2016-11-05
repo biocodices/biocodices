@@ -1,4 +1,4 @@
-import json
+import ujson
 import redis
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -24,7 +24,6 @@ class AnnotatorWithCache():
     def __init__(self, redis_host='localhost', redis_port=6379, redis_db=0):
         self.name = self.__class__.__name__
         # Time for cache to expire:
-        self.expire_time = 60 * 60 * 24 * 30 * 5  # Five months in seconds
         self.set_redis_client(redis_host, redis_port, redis_db)
 
     def annotate(self, ids, parallel=10, sleep_time=10, use_cache=True,
@@ -33,7 +32,7 @@ class AnnotatorWithCache():
         Annotate a list of variant identifiers, such as rs# IDs or HGVS
         notation. Responses are cached.
         """
-        if isinstance(ids, str):
+        if isinstance(ids, str) or isinstance(ids, int):
             ids = [ids]
         ids = set(ids)
 
@@ -96,12 +95,15 @@ class AnnotatorWithCache():
         It will json-dump the dicts.
         """
         # Remove empty responses
-        info_dict = {k: v for k, v in info_dict.items() if v}
+        data_to_cache = {}
+        for id_, value in info_dict.items():
+            if not value:
+                continue
+            if isinstance(value, dict) or isinstance(value, list):
+                value = ujson.dumps(value)
+            data_to_cache[self._key(id_)] = value
 
-        for identifier, info in info_dict.items():
-            if isinstance(info, dict):
-                info = json.dumps(info)
-            self._redis_client.setex(self._key(identifier), self.expire_time, info)
+        self._redis_client.mset(data_to_cache)
 
     def _cache_get(self, ids, verbose=True):
         """
@@ -112,16 +114,12 @@ class AnnotatorWithCache():
             ...
         }
         """
-        info_dict = {}
-        for identifier in ids:
-            cached_info = self._redis_client.get(self._key(identifier))
-            if cached_info:
-                try:
-                    cached_info = json.loads(cached_info.decode('utf8'))
-                except ValueError:  # Not valid JSON, leave response as is
-                    cached_info = cached_info.decode('utf8')
+        keys = [self._key(id_) for id_ in ids]
+        info_dict = {k: v for k, v in zip(ids, self._redis_client.mget(keys)) if v}
 
-                info_dict[identifier] = cached_info
+        for k, v in info_dict.items():
+            v = self._decode_and_try_deserialize(v)
+            info_dict[k] = v
 
         if verbose and len(ids) > 1:
             msg = '📂 %s found %s/%s in cache'
@@ -134,4 +132,11 @@ class AnnotatorWithCache():
 
     def _key(self):
         raise NotImplementedError()
+
+    @staticmethod
+    def _decode_and_try_deserialize(data):
+        try:
+            return ujson.loads(data.decode('utf8'))
+        except ValueError:  # Not valid JSON, leave response as is
+            return data.decode('utf8')
 
