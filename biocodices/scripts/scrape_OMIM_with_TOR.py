@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
-from beeprint import pp
 from glob import glob
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from math import ceil
+from random import shuffle
 
+from pprint import pprint
 import requests
 import pandas as pd
 #  from stem import Signal
@@ -48,10 +49,9 @@ def get_mim_ids():
     return list(omim_genes.mim.dropna())
 
 def annotate_mim_ids_in_tor_node(mim_ids, tor_node):
-    proxies = tor_node_to_proxy(tor_node)
     omim_annotator = Omim()
-    omim_annotator.PROXIES = proxies
-    node_ip = my_ip(proxies)
+    omim_annotator.PROXIES = tor_node_to_proxy(tor_node)
+    node_ip = my_ip(omim_annotator.PROXIES)
     omim_annotator.TQDM_PREFIX = 'TOR @ %s' % node_ip
     html_dict = omim_annotator.annotate(mim_ids)
     return html_dict
@@ -59,10 +59,17 @@ def annotate_mim_ids_in_tor_node(mim_ids, tor_node):
 
 def main():
     tor_nodes = get_running_tor_nodes()
+    print('Found %s tor nodes running' % len(tor_nodes))
+    pprint(tor_nodes)
     mim_ids = get_mim_ids()
+    shuffle(mim_ids)
     group_size = ceil(len(mim_ids) / len(tor_nodes))
     grouped_mim_ids = in_groups_of(group_size, mim_ids)
 
+    ## Not in parallel
+    #  annotate_mim_ids_in_tor_node(mim_ids, tor_nodes[0])
+
+    ## In parallel
     with ThreadPoolExecutor(max_workers=len(tor_nodes)) as executor:
         for tor_node, mim_ids_group in zip(tor_nodes, grouped_mim_ids):
             executor.submit(annotate_mim_ids_in_tor_node, mim_ids_group, tor_node)
