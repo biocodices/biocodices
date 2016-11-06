@@ -24,6 +24,8 @@ class Omim(AnnotatorWithCache):
         >>> # => dict with the data for the given MIM ids
     """
     MIN_SLEEP_TIME = 3
+    PROXIES = {}  # You can override this for an Omim instance
+    TQDM_PREFIX = None
 
     @staticmethod
     def _key(mim_id):
@@ -38,13 +40,12 @@ class Omim(AnnotatorWithCache):
     def _url(mim_id):
         return 'http://omim.org/entry/{0}'.format(mim_id)
 
-    @classmethod
-    def _query(cls, mim_id):
+    def _query(self, mim_id):
         user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) ' + \
                      'AppleWebKit/537.36 (KHTML, like Gecko) ' + \
                      'Chrome/39.0.2171.95 Safari/537.36'
 
-        response = requests.get(cls._url(mim_id),
+        response = requests.get(self._url(mim_id), proxies=self.PROXIES,
                                 headers={'user-agent': user_agent})
         if not response.ok:
             print(response.status_code, 'status code for id "{0}"'.format(mim_id))
@@ -64,16 +65,14 @@ class Omim(AnnotatorWithCache):
             sleep_time = self.MIN_SLEEP_TIME
 
         sys.stdout.flush()  # Necesary for tqdm stdout correctly
-        for i, mim_id in enumerate(tqdm(mim_ids)):
+        for i, mim_id in enumerate(tqdm(mim_ids, desc=self.TQDM_PREFIX)):
             if i > 0:
                 # To further simulate real human behavior when visiting the page,
                 # randomize the sleeping time:
                 # random_sleep_time = randomize_sleep_time(sleep_time)
-                #  print('  Random sleep: {0:.2f} seconds'.format(random_sleep_time))
                 random_sleep_time = sleep_time + random_sample() * sleep_time
                 time.sleep(random_sleep_time)
 
-            #  print('[%s/%s] Visit %s' % (i+1, len(mim_ids), self._url(mim_id)))
             html = self._query(mim_id)
             self._cache_set({mim_id: html})
             html_dict[mim_id] = html
