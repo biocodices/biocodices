@@ -44,6 +44,7 @@ class Project:
         It will JSONify dicts and lists.
         Extra **kwargs are passed to pandas.DataFrame.to_csv()
         """
+        t0 = time.time()
         if 'sep' not in kwargs:
             if filename.endswith('.tsv'):
                 kwargs['sep'] = '\t'
@@ -80,7 +81,7 @@ class Project:
                 df[column_name] = df[column_name].map(json.dumps)
 
         df.to_csv(filepath, index=index, **kwargs)
-        print()
+        print('Took {:.2f} seconds\n'.format(time.time() - t0))
 
         return filepath
 
