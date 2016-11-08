@@ -128,9 +128,6 @@ class Project:
         print('Took {:.2f} seconds'.format(elapsed), '\n')
         return df
 
-    def read_results_df(self, filename, **kwargs):
-        return pd.read_csv(self.results_file(filename), **kwargs)
-
     def save_last_plot(self, filename):
         filepath = self.results_file(filename)
         plt.savefig(filepath, bbox_inches='tight')
