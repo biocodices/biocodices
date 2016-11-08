@@ -124,12 +124,31 @@ class Omim(AnnotatorWithCache):
             variant_phenotypes = [dict(tupleized) for tupleized in tupleized_entries]
             variant['phenotypes'] = (variant_phenotypes or None)
 
-        df = pd.DataFrame(data['variants'])
+        df = cls._prepare_dataframe(data['variants'])
+        return df
+
+    @staticmethod
+    def _prepare_dataframe(variants):
+        df = pd.DataFrame(variants)
 
         if not df.empty:
             df['rs'] = df['variant'].str.findall(r'dbSNP:(rs\d+)').str.join('|')
+
             prot_regex = r'\w+, (.+?)(?:,| \[| -| \()'
             df['prot_change'] = df['variant'].str.extract(prot_regex, expand=False)
+
+            def parse_prot_change(prot_change):
+                if not prot_change:
+                    return None
+
+                matches = re.search(r'([A-Z]{3})-?(\d+)([A-Z]{3}|=)', prot_change)
+                if matches:
+                    old_aa, pos, new_aa = matches.groups()
+                    return 'p.{}{}{}'.format(old_aa.capitalize(), pos, new_aa.capitalize())
+                else:
+                    return prot_change
+
+            df['prot_change'] = df['prot_change'].fillna(False).map(parse_prot_change)
 
         return df
 
