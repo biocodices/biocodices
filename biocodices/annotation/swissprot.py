@@ -87,13 +87,18 @@ class SwissProt():
 
     def _parse_variant(self, feature):
         variant = {
+            'id': self.id,
+            'url': 'http://www.uniprot.org/uniprot/{}'.format(self.id),
             'variant_id': feature[4],
             'desc': feature[3],
             'pos': feature[1],
             'pos_stop': feature[2],
             'gene_symbol': self.gene_symbol,
-            'id': self.id,
         }
+
+        variant_url = 'http://web.expasy.org/variant_pages/{}.html'
+        variant['variant_url'] = variant_url.format(variant['variant_id'])
+
         regex = r'(?P<old_aa>[A-Z]+) -> (?P<new_aa>[A-Z]+)'
         match = re.search(regex, variant['desc'])
         if match:

@@ -1,7 +1,10 @@
+import sys
 import ujson
 import redis
 import time
 from concurrent.futures import ThreadPoolExecutor
+
+from tqdm import tqdm
 from biocodices.helpers import in_groups_of
 
 class AnnotatorWithCache():
@@ -58,24 +61,23 @@ class AnnotatorWithCache():
         return info_dict
 
     def _query_and_set_cache(self, id_):
-        reponse = self._query(id_)
+        response = self._query(id_)
         if response:
-            self._cache_set({id: response})
+            self._cache_set({id_: response})
         return response
 
     def _batch_query(self, ids, parallel, sleep_time):
-        print('🌎  Get %s data for %s ids' % (self.name, len(ids)))
+        grouped_ids = list(in_groups_of(parallel, ids))
+
+        msg = '🌎 Get {} {} entries in {} batches ({} items/batch)'
+        msg += ', sleeping {}s between batches'
+        print(msg.format(len(ids), self.name, len(grouped_ids), parallel, sleep_time))
 
         with ThreadPoolExecutor(max_workers=parallel) as executor:
-            for i, ids_group in enumerate(in_groups_of(parallel, ids)):
+            sys.stdout.flush()  # Necessary for the progress bar correct display
+            for i, ids_group in enumerate(tqdm(grouped_ids, total=len(grouped_ids))):
                 if i > 0:
-                    print('  Sleep for %s seconds' % sleep_time)
                     time.sleep(sleep_time)
-
-                print('[{}-{}/{}] {} fetch {} IDs: {} .. {}'.format(
-                      (i*parallel)+1, min((i*parallel)+parallel, len(ids)),
-                      len(ids), self.name, len(ids_group), ids_group[0],
-                      ids_group[-1]))
 
                 executor.map(self._query_and_set_cache, ids_group)
 
