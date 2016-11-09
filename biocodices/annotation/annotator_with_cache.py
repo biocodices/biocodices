@@ -12,7 +12,7 @@ class AnnotatorWithCache():
     To use this class, create a new annotator class that implements
     `_query()` and `_key()` methods. Optionally, you can override
     `_batch_query()` for services that you want to parallelize in a different
-    way.
+    way or not paralleliza at all.
     """
     def set_redis_client(self, host, port=6379, db=0):
         klass = self.__class__

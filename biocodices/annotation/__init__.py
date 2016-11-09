@@ -8,6 +8,7 @@ from .ensembl import Ensembl
 from .dbsnp import DbSNP
 from .omim import Omim
 from .pubmed import PubMed
+from .swissprot import SwissProt
 
 from Bio import Entrez
 from os.path import isfile, expanduser
