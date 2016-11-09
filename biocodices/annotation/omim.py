@@ -99,7 +99,7 @@ class Omim(AnnotatorWithCache):
             # if mentioned in the variant's review text.
             pmids = [pmid for pmid in variant['pubmeds_summary'].values() if pmid]
             variant['pubmeds'] = [ref for ref in data['references']
-                                if 'pmid' in ref and ref['pmid'] in pmids]
+                                  if 'pmid' in ref and ref['pmid'] in pmids]
 
             # Add the phenotypes cited in the table at the top of the page,
             # if they're mentioned in the variant's entry
