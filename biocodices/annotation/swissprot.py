@@ -115,7 +115,8 @@ class SwissProt():
 
         match = re.search(r'\((.+)\)', variant['desc'])
         if match:
-            variant['review'] = match.group(1)
+            review = re.sub(r'; dbSNP:rs\d+', '', match.group(1))
+            variant['review'] = review
 
         return variant
 
