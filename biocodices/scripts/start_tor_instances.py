@@ -3,11 +3,17 @@
 Start N TOR instances!
 
 Usage:
-    start_tor_instances.py <number-of-nodes> [--start-port 9052]
+    start_tor_instances.py --nodes N [--start-port PORT]
+
+Options:
+    --nodes N           Number of nodes to start.
+    --start-port PORT   Port number to assign to first node's socks port.
+                        Control port will be assigned to socks port + 1; then
+                        the second node socks port will be +2, etc.
+                        Default: 9050.
 """
 
 import os
-from sys import argv
 from concurrent.futures import ThreadPoolExecutor
 from collections import namedtuple
 
@@ -39,5 +45,5 @@ def start_tor_nodes(number_of_nodes, start_port):
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
-    start_tor_nodes(number_of_nodes=int(arguments['<number-of-nodes>']),
+    start_tor_nodes(number_of_nodes=int(arguments['--nodes']),
                     start_port=arguments['--start-port'])
