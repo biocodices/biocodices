@@ -4,6 +4,7 @@ import time
 import requests
 from concurrent.futures import ProcessPoolExecutor
 from functools import lru_cache
+from os.path import isfile, expanduser
 
 from numpy.random import random_sample
 import pandas as pd
@@ -26,6 +27,30 @@ class Omim(AnnotatorWithCache):
     MIN_SLEEP_TIME = 3
     PROXIES = {}  # You can override this for an Omim instance
     TQDM_PREFIX = None
+
+    @property
+    def mim_to_gene(self):
+        """
+        Returns a DataFrame with mappings:
+            - MIM ID
+            - MIM Entry Type
+            - Entre Gene ID
+            - HGNC Symbol (Gene Symbol)
+            - Ensembl Gene ID
+        """
+        cache_file = expanduser('~/.mim2gene.txt')
+
+        if not isfile(cache_file):
+            url = 'https://omim.org/static/omim/data/mim2gene.txt'
+            response = requests.get(url)
+            if response.ok:
+                with open(cache_file, 'w') as f:
+                    f.write(response.text)
+            else:
+                response.raise_for_status()
+
+        fields = 'mim_id entry_type entrez_id gene_symbol ensembl_ids'.split()
+        return pd.read_table(cache_file, comment='#', names=fields)
 
     @staticmethod
     def _key(mim_id):
